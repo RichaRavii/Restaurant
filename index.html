@@ -397,6 +397,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 
 <main id="v-menu" class="wrap" hidden>
   <div class="row"><strong style="flex:1;min-width:0">จัดการเมนู</strong><button class="primary" style="width:auto;margin:0;padding:10px 18px;font-size:15px" data-menu-new>+ เพิ่มเมนู</button></div>
+  <button class="ghost" style="width:100%;margin-top:10px" id="import-btn" data-import hidden></button>
   <p class="note">กด "ของหมด" เมื่อวัตถุดิบหมด ลูกค้าจะเห็นว่าหมดและสั่งไม่ได้ทันที กดอีกครั้งเมื่อมีของ · เพิ่ม แก้ไข ลบเมนู และใส่รูป ทำได้เฉพาะ admin</p>
   <input type="file" id="img-file" accept="image/*" hidden>
   <div id="menu-admin"></div>
@@ -3005,12 +3006,58 @@ function shrink(file, max = 640){
 }
 let imgFor = null;
 function renderMenuAdmin(){
+  const ip = importPlan(), n = ip.price.length + ip.add.length; $('import-btn').hidden = !n; $('import-btn').textContent = `📥 นำเข้าเมนูชุด Ravii (${n} รายการ)`;
   $('menu-admin').innerHTML = menu.map(it => `<div class="mrow ${it.available === false ? 'out' : ''}">${thumb(it)}
     <div class="info"><div>${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
     <div class="acts"><button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
     <button class="ghost" data-img="${esc(it.id)}">${okImg(it.image) ? 'เปลี่ยนรูป' : 'ใส่รูป'}</button>
     <button class="ghost" data-menu-edit="${esc(it.id)}">แก้ไข</button></div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
 }
+/* ---------- นำเข้าเมนูชุด Ravii (จากไฟล์ Ravii_Mala_Menu_Import ที่เจ้าของร้านส่งมา) ----------
+   prices = ปรับราคาเมนูเดิมตาม id, add = เมนูใหม่ [หมวด, รหัสไม้, ชื่อ, ราคา]
+   กดซ้ำได้: รายการที่ราคาตรงแล้วหรือมีชื่อนี้อยู่แล้วจะถูกข้าม */
+const MENU_IMPORT = {
+  prices: { m001:20, m002:25, m003:25, m004:20, m005:29, m006:30, m007:18, m008:18, m009:15, m010:15, m011:15, m012:39, m013:29, m014:29, m015:129, m016:20, m017:20, m018:2, m019:100, m020:249 },
+  add: [
+    ['เนื้อสัตว์','P001','หมูสันคอหมัก',25], ['เนื้อสัตว์','P002','หมูหมักงา',20], ['เนื้อสัตว์','P003','หัวใจไก่',15], ['เนื้อสัตว์','P004','สะโพกไก่',20],
+    ['เนื้อสัตว์','P005','ไส้ย่าง',25], ['เนื้อสัตว์','P006','ไส้กรอกอีสาน',25], ['เนื้อสัตว์','B001','เนื้อวัวหมัก',25], ['เนื้อสัตว์','B002','เนื้อวัวติดมัน',29],
+    ['เนื้อสัตว์','SF001','ปลาดอลลี่',20], ['เนื้อสัตว์','SF002','ปลาหมึกสด',25], ['เนื้อสัตว์','SF003','หนวดปลาหมึก',25], ['เนื้อสัตว์','SF004','ปลาไข่',25],
+    ['ลูกชิ้น · เต้าหู้','S001','เต้าหู้ชีส',20], ['ลูกชิ้น · เต้าหู้','S002','ไส้กรอกชีส',20], ['ลูกชิ้น · เต้าหู้','S003','ไส้กรอกหนังกรอบ',15], ['ลูกชิ้น · เต้าหู้','S004','ไส้กรอกแดง',15],
+    ['ลูกชิ้น · เต้าหู้','S005','ปูอัด',15], ['ลูกชิ้น · เต้าหู้','S006','ลูกชิ้นเอ็นเนื้อ',20], ['ลูกชิ้น · เต้าหู้','S007','หมูยอ',15], ['ลูกชิ้น · เต้าหู้','S008','ลูกชิ้นปลากลม',15],
+    ['ลูกชิ้น · เต้าหู้','S009','ไก่จ๊อสาหร่าย',20], ['ลูกชิ้น · เต้าหู้','S010','ฟองเต้าหู้',15], ['ลูกชิ้น · เต้าหู้','S011','เบคอนพันไส้กรอก',25],
+    ['ผัก · เห็ด','V001','บรอกโคลี',15], ['ผัก · เห็ด','V002','เห็ดเข็มทอง',15], ['ผัก · เห็ด','V003','เห็ดหอม',20], ['ผัก · เห็ด','V004','ข้าวโพดอ่อน',15],
+    ['ผัก · เห็ด','V005','หน่อไม้ฝรั่งพันเบคอน',30], ['ผัก · เห็ด','V006','พริกหยวกพันหมู',25], ['ผัก · เห็ด','V007','ผักบุ้ง',15]
+  ]
+};
+function importPlan(){
+  const price = menu.filter(m => MENU_IMPORT.prices[m.id] !== undefined && MENU_IMPORT.prices[m.id] !== m.price).map(m => ({ m, to: MENU_IMPORT.prices[m.id] }));
+  const add = MENU_IMPORT.add.filter(([c, code, name]) => !menu.some(m => m.name === name || (code && m.code === code)));
+  return { price, add };
+}
+let importing = false;
+function sheetImport(msg){
+  const { price, add } = importPlan();
+  openSheet(head('นำเข้าเมนูชุด Ravii') + (msg ? `<p class="note"><strong>${esc(msg)}</strong></p>` : '') +
+    (!price.length && !add.length ? `<p class="empty">เมนูในระบบตรงกับรายการที่เตรียมไว้ครบแล้ว</p>` :
+     `<p class="note">ตรวจรายการก่อนกดนำเข้า ถ้าชื่อหรือราคาไม่ถูก แก้ทีหลังได้ที่ปุ่ม "แก้ไข" ของแต่ละเมนู</p>
+      ${price.length ? `<div class="round-head">ปรับราคา ${price.length} รายการ</div>` + price.map(p => `<div class="line"><div class="info">${label(p.m)}</div><span class="num">${baht(p.m.price)} → <strong>${baht(p.to)}</strong></span></div>`).join('') : ''}
+      ${add.length ? `<div class="round-head">เพิ่มเมนูใหม่ ${add.length} รายการ</div>` + add.map(([c, code, name, pr]) => `<div class="line"><div class="info"><div>${esc(name)} (${esc(code)})</div><div class="opt">${esc(c)}</div></div><span class="num">${baht(pr)}</span></div>`).join('') : ''}
+      <div class="err" id="imp-status" style="color:var(--muted);min-height:22px;margin-top:10px"></div>
+      <button class="primary" style="margin-top:6px" data-import-go>นำเข้า ${price.length + add.length} รายการ</button>`));
+}
+async function runImport(btn){
+  if (importing) return; importing = true; btn.disabled = true;
+  const { price, add } = importPlan(), total = price.length + add.length; let done = 0, failed = 0, stop = '';
+  const tick = () => { const el = $('imp-status'); if (el) el.textContent = `กำลังนำเข้า ${done} / ${total} อย่าปิดหน้านี้`; };
+  const one = async it => { try { await db.saveMenu(it); } catch(e){ console.error(e); failed++; if (e.message === 'forbidden') stop = 'เฉพาะพนักงานที่ role = admin นำเข้าเมนูได้'; if (e.message === 'unknown_action') stop = 'หลังบ้านยังเป็นเวอร์ชันเก่า ต้องอัปเดต Code.gs ก่อน'; } done++; tick(); };
+  tick();
+  for (const p of price) { if (stop) break; await one({ id: p.m.id, name: p.m.name, price: p.to, code: p.m.code, category: p.m.category, spicy: !!p.m.spicy }); }
+  for (const [category, code, name, pr] of add) { if (stop) break; await one({ id: '', name, price: pr, code, category, spicy: false }); }
+  try { menu = await db.loadMenu(); } catch(e){ console.error(e); }
+  importing = false; renderMenuAdmin();
+  sheetImport(stop || (failed ? `นำเข้าไม่สำเร็จ ${failed} รายการ กดนำเข้าอีกครั้งเพื่อทำส่วนที่เหลือ` : `นำเข้าครบ ${total} รายการแล้ว`));
+}
+
 // ฟอร์มเพิ่ม / แก้ไขเมนู (id ว่าง = เพิ่มใหม่)
 function sheetMenuForm(id, armed){
   const it = id ? menu.find(m => m.id === id) : null; if (id && !it) return closeSheet();
@@ -3323,6 +3370,8 @@ document.addEventListener('click', async e => {
   }
   else if (d.img) { imgFor = d.img; $('img-file').click(); }
   else if (d.imgDel) { closeSheet(); saveImage(d.imgDel, '', 'ลบรูปแล้ว'); }
+  else if ('import' in d) sheetImport();
+  else if ('importGo' in d) runImport(b);
   else if ('menuNew' in d) sheetMenuForm('');
   else if (d.menuEdit) sheetMenuForm(d.menuEdit);
   else if (d.mfCat) { $('mf-cat').value = d.mfCat; }
