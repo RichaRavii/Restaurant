@@ -267,6 +267,14 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 .steps div{border-top-width:5px;border-radius:2px 2px 0 0}
 .steps div.on,.steps div.now{border-radius:3px}
 .toast{border-radius:14px}
+/* แท็บพนักงาน: จอแคบแบ่ง 5 ช่องเท่ากัน ไอคอนอยู่บนชื่อ เห็นครบทุกแท็บโดยไม่ต้องปัด */
+.seg button span{margin-right:6px}
+@media (max-width:759px){
+  .top-in .seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;overflow:visible}
+  .seg button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;font-size:13px;white-space:nowrap}
+  .seg button span{margin:0;font-size:20px;line-height:1.1}
+  .seg button i{position:absolute;top:4px;right:6px;margin:0}
+}
 /* ใบเสร็จ: ขาวดำ ตัวเลขชิดขวา ออกแบบให้พอดีกระดาษความร้อน (ใช้ทั้งตอนพิมพ์และตัวอย่างบนจอ) */
 .rc{background:#fff;color:#000;font-family:var(--body);font-size:13px;line-height:1.35;padding:10px 0}
 .rc h4{font-family:var(--display);font-size:20px;font-weight:600;text-align:center;margin:0}
@@ -327,11 +335,11 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <button class="ghost" id="open-bill" hidden>ดูบิล</button>
   <button class="ghost" id="logout" hidden>ออกจากระบบ</button>
   <div class="seg" id="staff-tabs" role="group" aria-label="มุมมองพนักงาน" hidden>
-    <button data-view="tables">🪑 โต๊ะ</button>
-    <button data-view="kitchen">🍳 ครัว<i id="n-kitchen" hidden></i></button>
-    <button data-view="serve">🛎️ เสิร์ฟ<i id="n-serve" hidden></i></button>
-    <button data-view="menu">📋 เมนู</button>
-    <button data-view="sales">💰 ยอดขาย</button>
+    <button data-view="tables"><span>🪑</span>โต๊ะ</button>
+    <button data-view="kitchen"><span>🍳</span>ครัว<i id="n-kitchen" hidden></i></button>
+    <button data-view="serve"><span>🛎️</span>เสิร์ฟ<i id="n-serve" hidden></i></button>
+    <button data-view="menu"><span>📋</span>เมนู</button>
+    <button data-view="sales"><span>💰</span>ยอดขาย</button>
   </div>
 </div></header>
 
@@ -2856,7 +2864,7 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 /* ---------- สถานะ ---------- */
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
-let calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
@@ -2864,7 +2872,8 @@ async function refresh(){
     if (tbl) { const had = orders.length; const r = await db.custLoad(tbl); valid = r.valid; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut);
       if (had && !orders.length) { closeSheet(); toast('ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
     else { sessions = await db.loadSessions(); orders = await db.loadOrders(); calls = await db.loadCalls(); }
-  } catch(e){ console.error(e); toast('โหลดข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต'); return; }
+    loadFails = 0;
+  } catch(e){ console.error(e); if (++loadFails >= 3) toast('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองใหม่อัตโนมัติ'); return; }   // พลาดครั้งสองครั้งเป็นเรื่องปกติ ไม่ต้องเตือน
   render();
   if (!$('veil').hidden && sheetFn) sheetFn();
 }
