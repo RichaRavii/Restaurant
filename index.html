@@ -108,6 +108,20 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
+.slipbox{flex-wrap:wrap}
+.slipbox .sbtn{display:flex;gap:8px;flex:1 1 100%}
+.slipbox .sbtn button{flex:1;white-space:nowrap}
+#home{padding-inline:12px;white-space:nowrap}
+
+/* ผลตรวจสลิป (Thunder) */
+.vslip{border-radius:14px;padding:12px 14px;margin-top:10px;font-size:14px;border:1.5px solid var(--line);background:var(--surface)}
+.vslip b{display:block;font-size:16px;margin-bottom:2px}
+.vslip.pass{border-color:var(--ok);background:var(--ok-soft)} .vslip.pass b{color:var(--ok)}
+.vslip.warn{border-color:var(--wait);background:var(--wait-soft)} .vslip.warn b{color:var(--wait)}
+.vslip.fail{border-color:var(--accent);background:var(--accent-soft)} .vslip.fail b{color:var(--accent)}
+.vslip ul{margin:4px 0 0;padding-left:18px} .vslip dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;margin:8px 0 0}
+.vslip dt{color:var(--muted)} .vslip dd{margin:0;overflow-wrap:anywhere}
+.keybox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px} .keybox input{flex:1 1 180px;min-width:0;font:inherit;color:inherit;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:9px 10px}
 
 /* รายงานสำหรับพิมพ์ / บันทึกเป็น PDF */
 .rtools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:14px}
@@ -367,6 +381,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <span class="logo" data-logo></span>
   <h1 class="brand"><span id="shop"></span><small id="sub"></small></h1>
   <button class="ghost" id="open-bill" hidden>ดูบิล</button>
+  <button class="ghost" id="home" hidden>← หน้าแรก</button>
   <button class="ghost" id="logout" hidden>ออกจากระบบ</button>
   <div class="seg" id="staff-tabs" role="group" aria-label="มุมมองพนักงาน" hidden>
     <button data-view="tables"><span>🪑</span>โต๊ะ</button>
@@ -448,6 +463,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 <div class="bar" id="bar" hidden><button id="open-cart"><span id="bar-l"></span><span id="bar-r" class="num"></span></button></div>
 <div class="veil" id="veil" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <input type="file" id="slip-file" accept="image/*" capture="environment" hidden>
+<input type="file" id="slip-pick" accept="image/*" hidden>
 <div id="print-area" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -2892,6 +2908,9 @@ function makeGasDb(url){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
       await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async report(from, to){ return await call('report', {from, to}); },
+    async checkSlip(id, dataUrl, total){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
+      return (await call('checkSlip', {sessionId: id, total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''})).result; },
+    async slipKey(key){ return (await call('slipKey', key === undefined ? {} : {key})).has; },
     async setMenuImage(id, dataUrl){   // dataUrl = 'data:image/jpeg;base64,....' หรือ '' เพื่อลบรูป
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       await call('setMenuImage', {id, mime: m ? m[1] : '', data: m ? m[2] : ''}); },
@@ -3003,6 +3022,26 @@ function reportPrintHtml(){
     ${items.length ? `<h2>เมนูที่ขายได้ เรียงจากมากไปน้อย</h2><table><tr><th>เมนู</th><th>ชิ้น</th><th>ยอดขาย</th></tr>${items.map(i => `<tr><td>${label(i)}</td><td>${i.qty}</td><td>${baht(i.total)}</td></tr>`).join('')}</table>` : ''}
   </div>`;
 }
+// ตั้งค่าตรวจสลิปอัตโนมัติ (admin) : key เก็บฝั่ง Apps Script เท่านั้น หน้าเว็บรู้แค่ว่ามีหรือไม่มี
+const slipCfg = { state:'' };   // '' ยังไม่รู้ | on | off | old | demo
+async function loadSlipCfg(){
+  if (!db.slipKey) { slipCfg.state = 'demo'; return; }
+  try { slipCfg.state = (await db.slipKey()) ? 'on' : 'off'; } catch(e){ slipCfg.state = e.message === 'unknown_action' ? 'old' : ''; }
+  if (view === 'sales' && rep.data) renderReport();
+}
+async function saveSlipKey(key){
+  try { slipCfg.state = (await db.slipKey(key)) ? 'on' : 'off'; slipCheckOff = false; toast(key ? 'บันทึก API key แล้ว' : 'ลบ API key แล้ว'); }
+  catch(e){ toast('บันทึกไม่สำเร็จ ลองอีกครั้ง'); }
+  renderReport();
+}
+function slipCfgPanel(){
+  const st = slipCfg.state; if (st === 'demo' || st === '') return '';
+  return `<div class="panel noprint"><h2>ตรวจสลิปอัตโนมัติ (Thunder)</h2>
+    ${st === 'old' ? `<p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 14 ก่อนจึงจะใช้ได้</p>` :
+      `<p class="note">${st === 'on' ? '✅ เปิดใช้อยู่ พนักงานถ่ายสลิปตอนปิดบิลแล้วระบบจะตรวจให้ทันที' : 'ยังไม่ได้ใส่ API key วางจากหน้า Thunder แล้วกดบันทึก'}</p>
+      <div class="keybox"><input id="thunder-key" type="password" autocomplete="off" placeholder="${st === 'on' ? 'วาง key ใหม่เพื่อเปลี่ยน' : 'วาง API key ที่นี่'}">
+        <button class="ghost" data-save-key>บันทึก</button>${st === 'on' ? `<button class="ghost" data-clear-key>ลบ key</button>` : ''}</div>`}</div>`;
+}
 function aggregate(all, from, to, sessions){
   const days = {}, items = {}, methods = {cash:0, transfer:0, other:0}, how = {}; let open = 0;
   (sessions || []).forEach(x => how[x.id] = x.payMethod);
@@ -3030,6 +3069,7 @@ function repRange(){
 }
 async function loadReport(){
   rep.data = null; rep.sel = null; rep.err = ''; renderReport();
+  if (!slipCfg.state) loadSlipCfg();
   const [from, to] = repRange();
   try { rep.data = await db.report(from, to); }
   catch(e){ console.error(e); rep.err = e.message === 'forbidden' ? 'ดูยอดขายได้เฉพาะพนักงานที่ role = admin' : 'โหลดยอดขายไม่ได้ ลองอีกครั้ง'; }
@@ -3081,7 +3121,7 @@ function renderReport(){
       <div class="opts" style="margin:8px 0 0"><button data-rank="top" aria-pressed="${top}">สั่งเยอะสุด 10 อันดับ</button><button data-rank="low" aria-pressed="${!top}">สั่งน้อยสุด 10 อันดับ</button></div>
       <div class="rank"><span class="hd">เมนู</span><span class="hd"></span><span class="hd n">ชิ้น</span><span class="hd m">ยอดขาย</span>
       ${list.map(i => `<span class="nm">${label(i)}</span><span class="meter"><i style="--w:${i.qty / qmax * 100}%"></i></span><span class="n num">${i.qty}</span><span class="m num">${baht(i.total)}</span>`).join('')}</div>
-    </div>`;
+    </div>${slipCfgPanel()}`;
 }
 
 /* ---------- รูปอาหาร ---------- */
@@ -3375,7 +3415,38 @@ function slip(t){
 }
 function renderQr(){ $('qrs').innerHTML = tables.map(slip).join(''); }
 // ขั้นปิดบิล: เลือกวิธีจ่าย ถ้าโอนต้องยืนยันว่าเห็นยอดเงินเข้าบัญชีจริงก่อน (กันสลิปปลอม)
-const payState = { method:'', seen:false, slip:'' };   // slip = รูปสลิปที่ถ่ายไว้ (data URL) เก็บเป็นหลักฐาน
+const payState = { method:'', seen:false, slip:'', check:null };   // check = ผลตรวจสลิปอัตโนมัติ: null | {loading} | {error} | {result}
+let slipCheckOff = false;   // เซิร์ฟเวอร์ยังไม่มี API key หรือยังเป็นรุ่นเก่า: ไม่ต้องส่งตรวจอีกในรอบนี้
+const SLIP_WHY = { not_found:'ไม่พบสลิปนี้ในระบบธนาคาร อาจเป็นสลิปปลอม หรือรูปไม่เห็น QR ชัด', duplicate:'สลิปนี้เคยถูกใช้แล้ว', amount:'ยอดในสลิปไม่ตรงกับบิล',
+  old:'สลิปนี้ไม่ได้โอนเมื่อสักครู่ ดูวันเวลาให้ดี', account:'ระบบเทียบเลขบัญชีผู้รับไม่ได้ ให้ดูชื่อผู้รับว่าเป็นบัญชีร้าน' };
+const SLIP_ERR = { slip_pending:'ธนาคารยังไม่ส่งข้อมูลสลิปนี้ รอ 1–2 นาทีแล้วกดตรวจอีกครั้ง', slip_quota:'โควตาตรวจสลิปของเดือนนี้หมดแล้ว ให้ดูยอดเงินเข้าเอง',
+  slip_key:'API key ของ Thunder ใช้ไม่ได้ ให้เจ้าของตรวจในแท็บยอดขาย', slip_failed:'รูปนี้ส่งตรวจไม่ได้ ลองถ่ายใหม่ให้เห็น QR ชัด' };
+function slipCard(t){
+  const c = payState.check; if (!c) return '';
+  if (c.loading) return `<div class="vslip"><b>กำลังตรวจสลิปกับธนาคาร…</b>ใช้เวลาไม่กี่วินาที</div>`;
+  if (c.error) return `<div class="vslip warn"><b>ตรวจสลิปอัตโนมัติไม่ได้</b>${SLIP_ERR[c.error] || 'ระบบตรวจสลิปขัดข้อง ให้ดูยอดเงินเข้าเอง'}
+    <button class="ghost" style="width:100%;margin-top:8px" data-recheck="${esc(t)}">ตรวจอีกครั้ง</button></div>`;
+  const r = c.result, head = r.status === 'pass' ? '✅ สลิปจริง ยอดตรง บัญชีร้านถูกต้อง' : r.status === 'warn' ? '⚠️ สลิปจริง ยอดตรง แต่มีจุดที่ต้องดูเอง' : '⛔ สลิปนี้ใช้ไม่ได้';
+  return `<div class="vslip ${r.status}"><b>${head}</b>
+    ${r.reasons && r.reasons.length ? `<ul>${r.reasons.map(k => `<li>${SLIP_WHY[k] || esc(k)}</li>`).join('')}</ul>` : ''}
+    ${r.amount !== undefined ? `<dl class="num"><dt>ยอดในสลิป</dt><dd>${baht(r.amount)}${r.amount !== r.expected ? ` (บิล ${baht(r.expected)})` : ''}</dd>
+      <dt>ผู้รับ</dt><dd>${esc(r.receiver || '-')} ${esc(r.receiverBank || '')} ${esc(r.receiverAccount || '')}</dd>
+      <dt>ผู้โอน</dt><dd>${esc(r.sender || '-')} ${esc(r.senderBank || '')}</dd>
+      ${r.date ? `<dt>เวลาโอน</dt><dd>${new Date(r.date).toLocaleDateString('th-TH')} ${time(r.date)}${r.ageMin !== null && r.ageMin >= 0 ? ` · ${r.ageMin} นาทีที่แล้ว` : ''}</dd>` : ''}</dl>` : ''}</div>`;
+}
+async function runSlipCheck(t){
+  if (slipCheckOff || !db.checkSlip || !payState.slip) return;
+  const s = sessOf(t); if (!s) return;
+  const mine = orders.filter(o => o.sessionId === s.id), slip = payState.slip;
+  payState.check = {loading:true}; sheetTable(t, 'pay');
+  let out;
+  try { out = { result: await db.checkSlip(s.id, slip, grand(mine.flatMap(o => o.items))) }; }
+  catch(e){ if (e.message === 'no_slip_key' || e.message === 'unknown_action') { slipCheckOff = true; out = null; } else out = { error: e.message }; }
+  if (payState.slip !== slip) return;   // ถ่ายรูปใหม่หรือเปลี่ยนโต๊ะไปแล้ว
+  payState.check = out;
+  if (out && out.result && out.result.status === 'pass') payState.seen = true;   // ธนาคารยืนยันครบทุกข้อ ติ๊กให้เลย
+  if ($('seen') || document.querySelector('.vslip')) sheetTable(t, 'pay');
+}   // slip = รูปสลิปที่ถ่ายไว้ (data URL) เก็บเป็นหลักฐาน
 function payStep(t, mine){
   const amt = grand(mine.flatMap(o => o.items)), m = payState.method;
   const ready = !mine.length || m === 'cash' || (m === 'transfer' && payState.seen);
@@ -3386,7 +3457,8 @@ function payStep(t, mine){
       <span><strong>เห็นยอด ${baht(amt)} เข้าบัญชีร้านแล้ว</strong><br>ดูจากแจ้งเตือนเงินเข้าหรือแอปธนาคารของร้าน อย่าดูจากรูปสลิปของลูกค้า</span></label>` : ''}` : '') +
     (mine.length && m === 'transfer' ? `<div class="slipbox">${payState.slip ? `<img alt="รูปสลิป" src="${payState.slip}">` : ''}
       <div class="info"><b>${payState.slip ? 'แนบรูปสลิปแล้ว' : 'ถ่ายรูปสลิปเก็บเป็นหลักฐาน'}</b>${payState.slip ? 'จะบันทึกพร้อมบิลนี้' : 'ไม่บังคับ แต่ควรถ่ายทุกครั้ง'}</div>
-      <button class="ghost" data-slip="${esc(t)}">${payState.slip ? 'ถ่ายใหม่' : 'ถ่ายรูป'}</button></div>` : '') +
+      <div class="sbtn"><button class="ghost" data-slip="${esc(t)}">📷 ${payState.slip ? 'ถ่ายใหม่' : 'ถ่ายรูป'}</button>
+        <button class="ghost" data-slip-pick="${esc(t)}">🖼️ เลือกจากเครื่อง</button></div></div>${slipCard(t)}` : '') +
     `<button class="primary" data-pay="${esc(t)}" ${ready ? '' : 'disabled'}>${mine.length ? 'ยืนยันรับเงิน ปิดบิล' : 'ปิดโต๊ะ'}</button>
      <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`;
 }
@@ -3506,6 +3578,7 @@ function render(){
   if (tbl) return renderMenu();
   renderAlerts();
   document.body.classList.toggle('pq', view === 'qr');
+  $('home').hidden = view === 'tables';
   for (const v of ['tables','kitchen','serve','menu','qr','sales']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
   badge('n-kitchen', orders.filter(o => o.status === 'new' || o.status === 'cooking').length);
@@ -3567,7 +3640,7 @@ document.addEventListener('click', async e => {
   else if (d.ack) {
     b.disabled = true;
     await act(() => db.ackCall(d.ack));
-    if (d.open) { view = 'tables'; render(); payState.method = ''; payState.seen = false; payState.slip = ''; sheetTable(d.open, 'bill'); }
+    if (d.open) { view = 'tables'; render(); payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.open, 'bill'); }
   }
   else if ('bill' in d) sheetBill();
   else if ('payqr' in d) sheetPay();
@@ -3582,10 +3655,14 @@ document.addEventListener('click', async e => {
                 items: cart.map(({id,name,code,price,qty,opt}) => ({id,name,code,price,qty,opt,served:false})) };
     if (await act(() => db.addOrder(o), 'ส่งออเดอร์แล้ว')) { cart = []; renderMenu(); sheetBill(); } else b.disabled = false;
   }
-  else if (d.table) { payState.method = ''; payState.seen = false; payState.slip = ''; sheetTable(d.table, 'bill'); }
+  else if (d.table) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.table, 'bill'); }
   else if (d.tmode) sheetTable(d.t, d.tmode);
   else if ('print' in d) window.print();
   else if (d.slip) { slipFor = d.slip; $('slip-file').click(); }
+  else if (d.slipPick) { slipFor = d.slipPick; $('slip-pick').click(); }
+  else if (d.recheck) runSlipCheck(d.recheck);
+  else if ('saveKey' in d) { const k = $('thunder-key').value.trim(); if (!k) return toast('วาง API key ก่อนกดบันทึก'); saveSlipKey(k); }
+  else if ('clearKey' in d) saveSlipKey('');
   else if (d.method) { payState.method = d.method; payState.seen = false; sheetTable(d.t, 'pay'); }
   else if (d.printBill) { const s = sessOf(d.printBill); if (s) printHtml(receiptHtml(d.printBill, orders.filter(o => o.sessionId === s.id), null)); }
   else if ('printReceipt' in d) printHtml(lastReceipt);
@@ -3621,12 +3698,14 @@ $('open-bill').onclick = sheetBill;
 $('open-cart').onclick = sheetCart;
 document.addEventListener('input', e => { if (e.target.closest('.form') && $('mf-err')) $('mf-err').textContent = ''; });
 let slipFor = null;
-$('slip-file').addEventListener('change', async e => {
+const onSlip = async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f || !slipFor) return;
   try { payState.slip = await shrink(f, 1280); } catch(err){ return toast('เปิดไฟล์รูปนี้ไม่ได้ ลองถ่ายใหม่'); }
-  sheetTable(slipFor, 'pay');
-});
+  payState.check = null; sheetTable(slipFor, 'pay'); runSlipCheck(slipFor);
+};
+$('slip-file').addEventListener('change', onSlip); $('slip-pick').addEventListener('change', onSlip);
+$('home').onclick = () => { closeSheet(); view = 'tables'; render(); window.scrollTo(0, 0); };
 $('logout').onclick = () => { if (db.logout) return db.logout(); try { localStorage.removeItem('mala_pass_ok'); } catch(e){} location.reload(); };
 document.addEventListener('change', e => { if (e.target.id === 'seen') { payState.seen = e.target.checked; sheetTable(e.target.dataset.t, 'pay'); } });
 $('search').addEventListener('input', e => { find = e.target.value; renderMenu(); });
