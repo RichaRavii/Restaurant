@@ -3424,6 +3424,10 @@ const SLIP_ERR = { slip_pending:'ธนาคารยังไม่ส่ง�
 function slipCard(t){
   const c = payState.check; if (!c) return '';
   if (c.loading) return `<div class="vslip"><b>กำลังตรวจสลิปกับธนาคาร…</b>ใช้เวลาไม่กี่วินาที</div>`;
+  if (c.off) return `<div class="vslip warn"><b>ยังไม่ได้เปิดตรวจสลิปอัตโนมัติ</b>${c.error === 'unknown_action'
+    ? 'ระบบหลังบ้านยังเป็นรุ่นเก่า ต้องวาง Code.gs รุ่น 14 แล้ว Deploy เป็นเวอร์ชันใหม่'
+    : 'ยังไม่ได้ใส่ API key ของ Thunder ให้ Admin ไปที่แท็บ ยอดขาย เลื่อนลงล่างสุด วาง key แล้วกดบันทึก'}
+    <button class="ghost" style="width:100%;margin-top:8px" data-recheck="${esc(t)}">ตรวจอีกครั้ง</button></div>`;
   if (c.error) return `<div class="vslip warn"><b>ตรวจสลิปอัตโนมัติไม่ได้</b>${SLIP_ERR[c.error] || 'ระบบตรวจสลิปขัดข้อง ให้ดูยอดเงินเข้าเอง'}
     <button class="ghost" style="width:100%;margin-top:8px" data-recheck="${esc(t)}">ตรวจอีกครั้ง</button></div>`;
   const r = c.result, head = r.status === 'pass' ? '✅ สลิปจริง ยอดตรง บัญชีร้านถูกต้อง' : r.status === 'warn' ? '⚠️ สลิปจริง ยอดตรง แต่มีจุดที่ต้องดูเอง' : '⛔ สลิปนี้ใช้ไม่ได้';
@@ -3435,13 +3439,13 @@ function slipCard(t){
       ${r.date ? `<dt>เวลาโอน</dt><dd>${new Date(r.date).toLocaleDateString('th-TH')} ${time(r.date)}${r.ageMin !== null && r.ageMin >= 0 ? ` · ${r.ageMin} นาทีที่แล้ว` : ''}</dd>` : ''}</dl>` : ''}</div>`;
 }
 async function runSlipCheck(t){
-  if (slipCheckOff || !db.checkSlip || !payState.slip) return;
+  if (!db.checkSlip || !payState.slip) return;
   const s = sessOf(t); if (!s) return;
   const mine = orders.filter(o => o.sessionId === s.id), slip = payState.slip;
   payState.check = {loading:true}; sheetTable(t, 'pay');
   let out;
   try { out = { result: await db.checkSlip(s.id, slip, grand(mine.flatMap(o => o.items))) }; }
-  catch(e){ if (e.message === 'no_slip_key' || e.message === 'unknown_action') { slipCheckOff = true; out = null; } else out = { error: e.message }; }
+  catch(e){ out = { error: e.message, off: e.message === 'no_slip_key' || e.message === 'unknown_action' }; if (out.off && !GAS_URL) out = null; }
   if (payState.slip !== slip) return;   // ถ่ายรูปใหม่หรือเปลี่ยนโต๊ะไปแล้ว
   payState.check = out;
   if (out && out.result && out.result.status === 'pass') payState.seen = true;   // ธนาคารยืนยันครบทุกข้อ ติ๊กให้เลย
