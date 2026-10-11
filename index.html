@@ -266,6 +266,14 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 .steps div{border-top-width:5px;border-radius:2px 2px 0 0}
 .steps div.on,.steps div.now{border-radius:3px}
 .toast{border-radius:14px}
+/* ฟอร์มเพิ่ม / แก้ไขเมนู */
+.form{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.form label{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted)}
+.form input[type=text],.form input[type=number]{font:inherit;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;width:100%}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .check{flex-direction:row;gap:12px;background:var(--sunk);margin:0;align-items:center;font-size:16px}
+.form .err{color:var(--accent);font-size:14px;min-height:20px}
+.danger{color:var(--accent);border-color:var(--accent)}
 /* ลูกค้า: ปุ่มเรียกพนักงาน / เช็คบิล */
 .callrow{display:flex;gap:10px;margin-top:12px}
 .callrow .ghost{flex:1 1 0;padding:12px 8px;font-weight:500}
@@ -366,8 +374,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 </main>
 
 <main id="v-menu" class="wrap" hidden>
-  <strong>จัดการเมนู</strong>
-  <p class="note">กด "ของหมด" เมื่อวัตถุดิบหมด ลูกค้าจะเห็นว่าหมดและสั่งไม่ได้ทันที กดอีกครั้งเมื่อมีของ · ใส่รูปได้เฉพาะ admin</p>
+  <div class="row"><strong style="flex:1;min-width:0">จัดการเมนู</strong><button class="primary" style="width:auto;margin:0;padding:10px 18px;font-size:15px" data-menu-new>+ เพิ่มเมนู</button></div>
+  <p class="note">กด "ของหมด" เมื่อวัตถุดิบหมด ลูกค้าจะเห็นว่าหมดและสั่งไม่ได้ทันที กดอีกครั้งเมื่อมีของ · เพิ่ม แก้ไข ลบเมนู และใส่รูป ทำได้เฉพาะ admin</p>
   <input type="file" id="img-file" accept="image/*" hidden>
   <div id="menu-admin"></div>
 </main>
@@ -2736,6 +2744,7 @@ function toast(msg){ $('toast').textContent = msg; $('toast').hidden = false; cl
 
 /* ---------- ชั้นข้อมูล: Google Apps Script หรือ localStorage ---------- */
 const outIds = () => { try { return JSON.parse(localStorage.getItem('mala-out-v1')) || []; } catch(e){ return []; } };
+const localMenu = () => { try { return JSON.parse(localStorage.getItem('mala-menu-v1')) || SAMPLE_MENU; } catch(e){ return SAMPLE_MENU; } };
 function makeLocalDb(){
   const KEY = 'mala-db-v2';
   const read = () => { try { return ({calls:[], ...(JSON.parse(localStorage.getItem(KEY)) || {sessions:[],orders:[]})}) } catch(e){ return {sessions:[],orders:[],calls:[]} } };
@@ -2743,7 +2752,12 @@ function makeLocalDb(){
   return {
     demo: true,
     async loadMenu(){ let m = {}; try { m = JSON.parse(localStorage.getItem('mala-img-v1')) || {}; } catch(e){}
-      return SAMPLE_MENU.map(i => ({...i, image: m[i.id] || '', available: !outIds().includes(i.id)})); },
+      return localMenu().map(i => ({...i, image: m[i.id] || '', available: !outIds().includes(i.id)})); },
+    async saveMenu(it){ const list = localMenu();
+      if (it.id) { const i = list.findIndex(x => x.id === it.id); if (i >= 0) list[i] = {...list[i], ...it}; }
+      else list.push({...it, id: 'm' + String(Math.max(0, ...list.map(x => +(/^m(\d+)$/.exec(x.id) || [0, 0])[1])) + 1).padStart(3, '0')});
+      localStorage.setItem('mala-menu-v1', JSON.stringify(list)); },
+    async deleteMenu(id){ localStorage.setItem('mala-menu-v1', JSON.stringify(localMenu().filter(x => x.id !== id))); },
     async setAvailable(id, on){ const o = outIds().filter(x => x !== id); if (!on) o.push(id); localStorage.setItem('mala-out-v1', JSON.stringify(o)); },
     async setMenuImage(id, dataUrl){ let m = {}; try { m = JSON.parse(localStorage.getItem('mala-img-v1')) || {}; } catch(e){}
       if (dataUrl) m[id] = dataUrl; else delete m[id];
@@ -2803,6 +2817,8 @@ function makeGasDb(url){
     async addOrder(o){ await call('custOrder', {table: o.tableNo, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined}); },
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
+    async saveMenu(it){ await call('saveMenu', it); },
+    async deleteMenu(id){ await call('deleteMenu', {id}); },
     async paySession(id, info){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
       await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
@@ -2961,7 +2977,29 @@ function renderMenuAdmin(){
     <div class="info"><div>${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
     <div class="acts"><button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
     <button class="ghost" data-img="${esc(it.id)}">${okImg(it.image) ? 'เปลี่ยนรูป' : 'ใส่รูป'}</button>
-    ${okImg(it.image) ? `<button class="ghost" data-img-del="${esc(it.id)}" aria-label="ลบรูป ${esc(it.name)}">ลบรูป</button>` : ''}</div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
+    <button class="ghost" data-menu-edit="${esc(it.id)}">แก้ไข</button></div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
+}
+// ฟอร์มเพิ่ม / แก้ไขเมนู (id ว่าง = เพิ่มใหม่)
+function sheetMenuForm(id, armed){
+  const it = id ? menu.find(m => m.id === id) : null; if (id && !it) return closeSheet();
+  const cats = [...new Set(menu.map(m => m.category))];
+  const v = k => esc(it ? it[k] : '');
+  openSheet(head(it ? 'แก้ไขเมนู' : 'เพิ่มเมนูใหม่') + `<div class="form">
+    <label>ชื่อเมนู<input type="text" id="mf-name" maxlength="80" value="${v('name')}" placeholder="เช่น ปีกไก่ย่าง"></label>
+    <div class="two"><label>ราคา (บาท)<input type="number" id="mf-price" inputmode="decimal" min="0" step="1" value="${it ? it.price : ''}" placeholder="0"></label>
+      <label>รหัสไม้ (ไม่บังคับ)<input type="text" id="mf-code" maxlength="10" value="${v('code')}" placeholder="เช่น O5"></label></div>
+    <label>หมวด<input type="text" id="mf-cat" maxlength="40" list="mf-cats" value="${v('category')}" placeholder="เลือกหรือพิมพ์หมวดใหม่"></label>
+    <datalist id="mf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="chips" style="padding:0">${cats.map(c => `<button type="button" data-mf-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('')}</div>
+    <label class="check"><input type="checkbox" id="mf-spicy" ${it && it.spicy ? 'checked' : ''}><span style="color:var(--fg)">ให้ลูกค้าเลือกระดับความเผ็ด</span></label>
+    <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-menu-save="${esc(id || '')}">${it ? 'บันทึกการแก้ไข' : 'เพิ่มเมนู'}</button>
+    ${it && okImg(it.image) ? `<button class="ghost" style="width:100%;margin-top:8px" data-img-del="${esc(it.id)}">ลบรูปของเมนูนี้</button>` : ''}
+    ${it ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-menu-del="${esc(it.id)}" data-armed="${armed ? 1 : ''}">${armed ? 'กดอีกครั้งเพื่อยืนยันลบ ' + esc(it.name) : 'ลบเมนูนี้'}</button>` : `<p class="note" style="text-align:center">บันทึกแล้วค่อยกด "ใส่รูป" ที่รายการเพื่อเพิ่มรูปอาหาร</p>`}`);
+}
+async function menuAction(fn, okMsg){
+  try { await fn(); menu = await db.loadMenu(); toast(okMsg); closeSheet(); renderMenuAdmin(); return true; }
+  catch(e){ console.error(e); const el = $('mf-err'), msg = e.message === 'forbidden' ? 'เฉพาะพนักงานที่ role = admin แก้เมนูได้' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; if (el) el.textContent = msg; else toast(msg); return false; }
 }
 async function saveImage(id, dataUrl, okMsg){
   try { await db.setMenuImage(id, dataUrl); menu = await db.loadMenu(); toast(okMsg); }
@@ -3224,7 +3262,23 @@ document.addEventListener('click', async e => {
     renderMenuAdmin();
   }
   else if (d.img) { imgFor = d.img; $('img-file').click(); }
-  else if (d.imgDel) saveImage(d.imgDel, '', 'ลบรูปแล้ว');
+  else if (d.imgDel) { closeSheet(); saveImage(d.imgDel, '', 'ลบรูปแล้ว'); }
+  else if ('menuNew' in d) sheetMenuForm('');
+  else if (d.menuEdit) sheetMenuForm(d.menuEdit);
+  else if (d.mfCat) { $('mf-cat').value = d.mfCat; }
+  else if ('menuSave' in d) {
+    const it = { id: d.menuSave, name: $('mf-name').value.trim(), price: Number($('mf-price').value), code: $('mf-code').value.trim(), category: $('mf-cat').value.trim(), spicy: $('mf-spicy').checked };
+    if (!it.name) return $('mf-err').textContent = 'กรอกชื่อเมนู';
+    if ($('mf-price').value === '' || !(it.price >= 0)) return $('mf-err').textContent = 'กรอกราคาเป็นตัวเลข';
+    if (!it.category) return $('mf-err').textContent = 'เลือกหรือพิมพ์หมวด';
+    b.disabled = true;
+    if (!await menuAction(() => db.saveMenu(it), it.id ? 'บันทึกแล้ว' : `เพิ่ม ${it.name} แล้ว`)) b.disabled = false;
+  }
+  else if (d.menuDel) {
+    if (!d.armed) return sheetMenuForm(d.menuDel, true);
+    b.disabled = true;
+    if (!await menuAction(() => db.deleteMenu(d.menuDel), 'ลบเมนูแล้ว')) b.disabled = false;
+  }
   else if (d.cat) { cat = d.cat; renderMenu(); }
   else if (d.add) { const it = menu.find(i => i.id === d.add); if (!it || it.available === false) return renderMenu(); if (it.spicy) { pick = {it, opt:SPICE[0], qty:1}; drawOption(); } else addToCart(it, '', 1); }
   else if (d.dec) {   // ลดจากรายการล่าสุดของเมนูนั้น (กรณีสั่งหลายระดับเผ็ด)
@@ -3280,6 +3334,7 @@ document.addEventListener('click', async e => {
 });
 $('open-bill').onclick = sheetBill;
 $('open-cart').onclick = sheetCart;
+document.addEventListener('input', e => { if (e.target.closest('.form') && $('mf-err')) $('mf-err').textContent = ''; });
 let slipFor = null;
 $('slip-file').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
