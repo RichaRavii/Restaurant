@@ -108,7 +108,14 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
-@media (max-width:430px){ #home,#logout{font-size:13px;padding:8px 9px} }
+/* iPhone ซูมหน้าจอเองเมื่อช่องกรอกตัวเล็กกว่า 16px แล้วหน้าจะล้นจอ */
+.form input,.form select,.rtools input,.keybox input,.search input,.brow input{font-size:16px}
+.stools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .stools button{flex:1 1 150px}
+.brow{display:grid;grid-template-columns:minmax(0,1fr) 5.2em;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.brow span{min-width:0;overflow-wrap:anywhere} .brow small{display:block;color:var(--muted);font-size:13px}
+.brow input{font-family:inherit;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:9px 8px;width:100%;text-align:right}
+.bcat{font-weight:600;margin-top:14px;font-size:14px;color:var(--muted)}
+@media (max-width:430px){ #home,#logout{font-size:13px;padding:8px 9px} #logout .lg{display:none} }
 
 /* สต็อก + รายจ่าย */
 .srow{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:14px;margin-top:10px}
@@ -117,7 +124,7 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .srow .nm{flex:1;min-width:0} .srow .nm b{display:block;font-size:17px;overflow-wrap:anywhere} .srow .nm small{color:var(--muted);font-size:13px}
 .srow .nm button{all:unset;cursor:pointer;display:block;font-size:17px;font-weight:600;overflow-wrap:anywhere}
 .srow .q{flex:none;text-align:right} .srow .q b{font-size:22px;display:block;line-height:1.1} .srow .q small{color:var(--muted);font-size:13px}
-.srow .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px} .srow .acts button{padding:9px 4px;font-size:14px;white-space:nowrap}
+.srow .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:10px} .srow .acts button{padding:9px 4px;font-size:14px;white-space:nowrap}
 .slog{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px 10px;font-size:13px;margin-top:8px;align-items:baseline}
 .slog .t{color:var(--muted)} .slog .r{text-align:right} .slog .pos{color:var(--ok);font-weight:600} .slog .neg{color:var(--accent);font-weight:600}
 .xrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
@@ -398,7 +405,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <h1 class="brand"><span id="shop"></span><small id="sub"></small></h1>
   <button class="ghost" id="open-bill" hidden>ดูบิล</button>
   <button class="ghost" id="home" hidden>← หน้าแรก</button>
-  <button class="ghost" id="logout" hidden>ออกจากระบบ</button>
+  <button class="ghost" id="logout" hidden>ออก<span class="lg">จากระบบ</span></button>
   <div class="seg" id="staff-tabs" role="group" aria-label="มุมมองพนักงาน" hidden>
     <button data-view="tables"><span>🪑</span>โต๊ะ</button>
     <button data-view="kitchen"><span>🍳</span>ครัว<i id="n-kitchen" hidden></i></button>
@@ -471,7 +478,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 </main>
 
 <main id="v-stock" class="wrap wide" hidden>
-  <div class="row"><strong style="flex:1;min-width:0">สต็อกวัตถุดิบ</strong><button class="primary" style="width:auto;margin:0;padding:10px 18px;font-size:15px" data-stock-new id="stock-new" hidden>+ เพิ่มวัตถุดิบ</button></div>
+  <div class="row"><strong style="flex:1;min-width:0">สต็อก (นับตามเมนู)</strong><button class="primary" style="width:auto;margin:0;padding:10px 18px;font-size:15px" data-stock-new id="stock-new" hidden>+ เพิ่มเอง</button></div>
   <div id="stock"></div>
 </main>
 
@@ -2911,7 +2918,7 @@ function makeGasDb(url){
     demo: false,
     hasToken: () => !!token(),
     async names(){ const r = await (await fetch(url + '?action=names')).json(); serverVer = +r.version || 0; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} return r.names || []; },
-    async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); localStorage.setItem('mala_admin', r.admin ? '1' : '0'); } catch(e){} isAdmin = !!r.admin; },
+    async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); localStorage.setItem('mala_admin', r.admin ? '1' : '0'); localStorage.setItem('mala_role', r.role || ''); } catch(e){} isAdmin = !!r.admin; myRole = r.role || ''; },
     logout(){ try { localStorage.removeItem(TKEY); localStorage.removeItem('mala_name'); } catch(e){} location.reload(); },
     async loadMenu(){ this._boot = await (await fetch(url + '?action=menu')).json(); return this._boot.menu || []; },
     async loadTables(){ return (this._boot && this._boot.tables) || []; },
@@ -2921,7 +2928,7 @@ function makeGasDb(url){
     async loadCalls(){ return this._sync.calls || []; },
     async addCall(t, type){ await call('custCall', {table: t, type}); },
     async ackCall(id){ await call('ackCall', {id}); },
-    async loadSessions(){ this._sync = await call('sync'); if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; return this._sync.sessions; },
+    async loadSessions(){ this._sync = await call('sync'); if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.role === 'string') myRole = this._sync.role; return this._sync.sessions; },
     async addOrder(o){ await call('custOrder', {table: o.tableNo, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined}); },
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
@@ -2937,7 +2944,10 @@ function makeGasDb(url){
     async saveStock(it){ await call('saveStock', it); },
     async deleteStock(id){ await call('deleteStock', {id}); },
     async stockMove(x){ await call('stockMove', x); },
+    async stockFromMenu(){ return (await call('stockFromMenu', {})).added; },
+    async stockBulk(x){ return (await call('stockBulk', x)).done; },
     async addExpense(x){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(x.slip || ''); await call('addExpense', {date: x.date, category: x.category, note: x.note, amount: x.amount, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
+    async checkExpense(id){ await call('checkExpense', {id}); },
     async deleteExpense(id){ await call('deleteExpense', {id}); },
     async readSlip(dataUrl){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || ''); return await call('readSlip', {slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async slipKey(key){ return (await call('slipKey', key === undefined ? {} : {key})).has; },
@@ -2953,6 +2963,8 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
 let isAdmin = false; try { isAdmin = localStorage.getItem('mala_admin') === '1'; } catch(e){}
+let myRole = ''; try { myRole = localStorage.getItem('mala_role') || ''; } catch(e){}
+const canBuy = () => isAdmin || myRole === 'stock';
 let stockList = [], stockLog = [], stockState = '';
 let serverVer = 0, ksub = 'kit'; try { serverVer = +localStorage.getItem('ravii-sv') || 0; } catch(e){}
 const canCook = () => !GAS_URL || serverVer >= 12;   // ขั้น "กำลังย่าง" ต้องใช้ Code.gs v12 ขึ้นไป
@@ -3052,6 +3064,7 @@ function reportPrintHtml(){
       ${M.other ? `<tr><td>ไม่ระบุวิธีจ่าย</td><td>${baht(M.other)}</td></tr>` : ''}${D.open ? `<tr><td>บิลที่ยังไม่ปิด (ไม่นับในยอดขาย)</td><td>${baht(D.open)}</td></tr>` : ''}</table>
     ${days.length ? `<h2>ยอดขายรายวัน</h2><table><tr><th>วันที่</th><th>บิล</th><th>ชิ้น</th><th>ยอดขาย</th></tr>${days.map(d => `<tr><td>${dm(d.date)}</td><td>${d.bills}</td><td>${d.qty}</td><td>${baht(d.total)}</td></tr>`).join('')}</table>` : ''}
     ${D.expenses && D.expenses.length ? `<h2>รายจ่าย</h2><table><tr><th>วันที่</th><th>หมวด</th><th>รายละเอียด</th><th>จำนวนเงิน</th></tr>${D.expenses.map(x => `<tr><td>${dm(x.date)}</td><td style="text-align:left">${esc(x.category)}</td><td style="text-align:left">${esc(x.note)}</td><td>${baht(x.amount)}</td></tr>`).join('')}</table>` : ''}
+    ${D.prep && prepRows(D).length ? `<h2>เตรียมกับขายจริง (${D.prepDays} วันที่มีการขาย)</h2><table><tr><th>เมนู</th><th>เตรียม</th><th>ขาย</th><th>เสีย</th><th>เบิกอื่น</th><th>ขายเฉลี่ย/วัน</th><th>ขายสูงสุด/วัน</th></tr>${prepRows(D).map(p => `<tr><td>${esc(p.name)}</td><td>${num(p.made)}</td><td>${num(p.sold)}</td><td>${num(p.waste)}</td><td>${num(p.used)}</td><td>${num(p.avg)}</td><td>${num(p.maxDay)}</td></tr>`).join('')}</table>` : ''}
     ${T && T.ndays ? `<h2>ตามช่วงเวลา (รวมทั้งช่วง ${T.ndays} วันที่มีออเดอร์)</h2><table>${thead('ช่วง')}${T.hours.map((h, i) => h.orders || h.tables || h.done ? trow(hh(i), h) : '').join('')}</table>
       ${T.ndays > 1 ? `<h2>ตามวันในสัปดาห์ (รวมทั้งช่วง)</h2><table>${thead('วัน')}${[1,2,3,4,5,6,0].filter(i => T.dowDays[i]).map(i => trow(`${DOW[i]} (${T.dowDays[i]} วัน)`, T.dow[i])).join('')}</table>` : ''}` : ''}
     ${items.length ? `<h2>เมนูที่ขายได้ เรียงจากมากไปน้อย</h2><table><tr><th>เมนู</th><th>ชิ้น</th><th>ยอดขาย</th></tr>${items.map(i => `<tr><td>${label(i)}</td><td>${i.qty}</td><td>${baht(i.total)}</td></tr>`).join('')}</table>` : ''}
@@ -3059,7 +3072,7 @@ function reportPrintHtml(){
 }
 /* ---------- สต็อกวัตถุดิบ ---------- */
 const num = n => (Math.round(n * 100) / 100).toLocaleString('th-TH');
-const MOVE = { in:'รับเข้า', out:'เบิกใช้', waste:'ของเสีย', set:'นับใหม่', sale:'ขาย' };
+const MOVE = { in:'เพิ่ม', out:'เบิกใช้', waste:'ของเสีย', set:'นับใหม่', sale:'ขาย' };
 async function loadStock(quiet){
   if (!db.stock) return renderStock();
   if (!quiet) { stockState = stockList.length ? '' : 'loading'; renderStock(); }
@@ -3073,28 +3086,48 @@ function renderStock(){
   if (stockState === 'loading') return $('stock').innerHTML = `<p class="empty">กำลังโหลด…</p>`;
   if (stockState === 'old') return $('stock').innerHTML = `<p class="empty">ต้องอัปเดต Code.gs เป็นรุ่น 15 ก่อนจึงจะใช้สต็อกได้</p>`;
   if (stockState === 'err') return $('stock').innerHTML = `<p class="empty">โหลดสต็อกไม่ได้ ลองอีกครั้ง</p>`;
-  if (!stockList.length) return $('stock').innerHTML = `<p class="empty">ยังไม่มีวัตถุดิบ${isAdmin ? ' กด "+ เพิ่มวัตถุดิบ" เพื่อเริ่ม เช่น หมูสามชั้น หน่วยเป็นไม้' : ' ให้ Admin เพิ่มรายการก่อน'}</p>`;
+  const unlinked = menu.filter(m => !m.stockId).length;
+  const mk = isAdmin && unlinked ? `<button class="ghost" data-stock-from-menu>📋 สร้างสต็อกจากเมนู (${unlinked} เมนูที่ยังไม่มี)</button>` : '';
+  if (!stockList.length) return $('stock').innerHTML = `<p class="empty">ยังไม่มีสต็อก${isAdmin ? ' กดปุ่มด้านล่าง ระบบจะสร้างสต็อกให้ทุกเมนูโดยใช้ชื่อเดียวกับเมนู นับเป็นไม้ และผูกให้ตัดตามออเดอร์เอง' : ' ให้ Admin สร้างรายการก่อน'}</p><div class="stools">${mk}</div>`;
   const low = stockList.filter(k => k.qty <= k.min).length, value = stockList.reduce((a, k) => a + Math.max(0, k.qty) * k.cost, 0);
-  const links = {}; menu.forEach(m => { if (m.stockId) links[m.stockId] = (links[m.stockId] || 0) + 1; });
-  $('stock').innerHTML = `<div class="tiles"><div class="tile"><span>📦 มูลค่าสต็อก (ตามต้นทุนเฉลี่ย)</span><b class="num">${baht(value)}</b></div>
-      <div class="tile ${low ? 'neg' : ''}"><span>⚠️ หมดหรือใกล้หมด</span><b class="num">${low} รายการ</b></div></div>` +
-    stockList.slice().sort((a, b) => (a.qty <= a.min ? 0 : 1) - (b.qty <= b.min ? 0 : 1) || a.name.localeCompare(b.name, 'th')).map(k => {
-      const st = k.qty <= 0 ? 'out' : k.qty <= k.min ? 'low' : '';
-      return `<div class="srow ${st}"><div class="st"><div class="nm">${isAdmin ? `<button data-stock-edit="${esc(k.id)}">${esc(k.name)} ✎</button>` : `<b>${esc(k.name)}</b>`}
-          <small class="num">ต้นทุนเฉลี่ย ${baht(k.cost)}/${esc(k.unit || 'หน่วย')} · เตือนเมื่อเหลือ ${num(k.min)}${links[k.id] ? ` · ผูก ${links[k.id]} เมนู` : ' · ยังไม่ผูกเมนู'}</small></div>
+  const links = {}, pos = {}, code = {}; menu.forEach((m, i) => { if (m.stockId) { links[m.stockId] = (links[m.stockId] || 0) + 1; if (pos[m.stockId] === undefined) { pos[m.stockId] = i; code[m.stockId] = m.code; } } });
+  const ord = k => pos[k.id] === undefined ? 9999 : pos[k.id];
+  $('stock').innerHTML = `<div class="stools"><button class="primary" style="margin:0" data-stock-bulk>🍢 กรอกจำนวนที่เสียบ${isAdmin ? ' / นับของ' : ''}</button>${mk}</div>
+    <div class="tiles"><div class="tile ${low ? 'neg' : ''}"><span>⚠️ หมดหรือใกล้หมด</span><b class="num">${low} รายการ</b></div>
+      <div class="tile"><span>📦 มูลค่าสต็อก (ตามต้นทุน)</span><b class="num">${baht(value)}</b></div></div>` +
+    stockList.slice().sort((a, b) => ord(a) - ord(b) || a.name.localeCompare(b.name, 'th')).map(k => {
+      const st = k.qty <= 0 ? 'out' : k.qty <= k.min ? 'low' : '', nm = (code[k.id] ? esc(code[k.id]) + ' ' : '') + esc(k.name);
+      return `<div class="srow ${st}"><div class="st"><div class="nm">${isAdmin ? `<button data-stock-edit="${esc(k.id)}">${nm} ✎</button>` : `<b>${nm}</b>`}
+          <small class="num">${k.cost ? `ต้นทุน ${baht(k.cost)}/${esc(k.unit || 'หน่วย')} · ` : ''}เตือนเมื่อเหลือ ${num(k.min)}${links[k.id] ? '' : ' · ไม่ได้ผูกกับเมนู'}</small></div>
         <div class="q">${st ? `<span class="pill ${st === 'out' ? 'late' : ''}">${st === 'out' ? 'หมด' : 'ใกล้หมด'}</span>` : ''}<b class="num">${num(k.qty)}</b><small>${esc(k.unit || '')}</small></div></div>
-        <div class="acts"><button class="ghost" data-stock-move="${esc(k.id)}" data-type="in">+ รับเข้า</button><button class="ghost" data-stock-move="${esc(k.id)}" data-type="out">− เบิก / เสีย</button><button class="ghost" data-stock-move="${esc(k.id)}" data-type="set">นับใหม่</button></div></div>`; }).join('') +
+        <div class="acts"><button class="ghost" data-stock-move="${esc(k.id)}" data-type="in">+ เพิ่ม</button><button class="ghost" data-stock-move="${esc(k.id)}" data-type="out">− เบิก / เสีย</button>${isAdmin ? `<button class="ghost" data-stock-move="${esc(k.id)}" data-type="set">นับใหม่</button>` : ''}</div></div>`; }).join('') +
     (stockLog.length ? `<div class="panel"><h2>ความเคลื่อนไหวล่าสุด</h2><div class="slog">${stockLog.map(l =>
       `<span class="t num">${new Date(l.createdAt).getDate()}/${new Date(l.createdAt).getMonth() + 1} ${time(l.createdAt)}</span><span>${esc(l.name)} <span class="t">${MOVE[l.type] || esc(l.type)}${l.note ? ' · ' + esc(l.note) : ''}${l.by ? ' · ' + esc(l.by) : ''}</span></span><span class="r num ${l.change >= 0 ? 'pos' : 'neg'}">${l.change > 0 ? '+' : ''}${num(l.change)}</span><span class="r num t">เหลือ ${num(l.balance)}</span>`).join('')}</div></div>` : '');
 }
+// กรอกทีเดียวทุกเมนู: วันนี้เสียบเพิ่มกี่ไม้ หรือ นับของจริงที่มี
+const bulkState = { mode:'in', vals:{} };
+function bulkKeep(){ document.querySelectorAll('.brow input').forEach(i => { if (i.value !== '') bulkState.vals[i.dataset.bid] = i.value; else delete bulkState.vals[i.dataset.bid]; }); }
+function sheetStockBulk(){
+  const pos = {}, cat = {}, code = {}; menu.forEach((m, i) => { if (m.stockId && pos[m.stockId] === undefined) { pos[m.stockId] = i; cat[m.stockId] = m.category; code[m.stockId] = m.code; } });
+  const list = stockList.slice().sort((a, b) => (pos[a.id] === undefined ? 9999 : pos[a.id]) - (pos[b.id] === undefined ? 9999 : pos[b.id]));
+  let last = null, rows = '';
+  list.forEach(k => { const c = cat[k.id] || 'อื่นๆ'; if (c !== last) { rows += `<div class="bcat">${catIcon(c)} ${esc(c)}</div>`; last = c; }
+    rows += `<label class="brow"><span>${code[k.id] ? esc(code[k.id]) + ' ' : ''}${esc(k.name)}<small class="num">เหลือ ${num(k.qty)} ${esc(k.unit || '')}</small></span>
+      <input type="number" inputmode="decimal" min="0" step="any" data-bid="${esc(k.id)}" value="${esc(bulkState.vals[k.id] || '')}" placeholder="${bulkState.mode === 'in' ? '+0' : num(k.qty)}"></label>`; });
+  openSheet(head('กรอกจำนวนทีเดียว') + `<div class="opts"><button data-bmode="in" aria-pressed="${bulkState.mode === 'in'}">เสียบเพิ่มวันนี้</button>${isAdmin ? `<button data-bmode="set" aria-pressed="${bulkState.mode === 'set'}">นับของจริงที่มี</button>` : ''}</div>
+    <p class="note">${bulkState.mode === 'in' ? 'ใส่จำนวนที่เสียบเพิ่ม ระบบจะบวกเข้ากับที่เหลืออยู่ ช่องที่เว้นว่างจะไม่เปลี่ยน' : 'ใส่จำนวนที่นับได้จริง ระบบจะตั้งยอดคงเหลือเป็นเลขนี้ ช่องที่เว้นว่างจะไม่เปลี่ยน'}</p>
+    ${rows}<div class="err" id="mf-err" style="margin-top:8px"></div>
+    <button class="primary" data-bulk-save>บันทึกทั้งหมด</button>`);
+}
 function sheetStockForm(id, armed){
   const k = id ? stockList.find(x => x.id === id) : null; if (id && !k) return closeSheet();
-  openSheet(head(k ? 'แก้ไขวัตถุดิบ' : 'เพิ่มวัตถุดิบ') + `<div class="form">
-    <label>ชื่อวัตถุดิบ<input type="text" id="sf-name" maxlength="60" value="${k ? esc(k.name) : ''}" placeholder="เช่น หมูสามชั้นเสียบไม้"></label>
+  openSheet(head(k ? 'แก้ไขสต็อก' : 'เพิ่มสต็อกเอง') + `<div class="form">
+    <label>ชื่อ (ถ้าเป็นของในเมนู ใช้ชื่อเดียวกับเมนู)<input type="text" id="sf-name" maxlength="60" value="${k ? esc(k.name) : ''}" placeholder="เช่น สามชั้น หรือ ถ่าน"></label>
     <div class="two"><label>หน่วยนับ<input type="text" id="sf-unit" maxlength="20" value="${k ? esc(k.unit) : ''}" placeholder="ไม้ / กก. / ขวด"></label>
       <label>เตือนเมื่อเหลือ<input type="number" id="sf-min" inputmode="decimal" min="0" step="any" value="${k ? k.min : ''}" placeholder="0"></label></div>
+    <label>ต้นทุนต่อ 1 หน่วย (บาท) ไม่บังคับ ใช้คำนวณต้นทุนที่ขายไป<input type="number" id="sf-cost" inputmode="decimal" min="0" step="any" value="${k && k.cost ? k.cost : ''}" placeholder="เช่น 8"></label>
     <div class="err" id="mf-err"></div></div>
-    <button class="primary" style="margin-top:0" data-stock-save="${esc(id || '')}">${k ? 'บันทึกการแก้ไข' : 'เพิ่มวัตถุดิบ'}</button>
+    <button class="primary" style="margin-top:0" data-stock-save="${esc(id || '')}">${k ? 'บันทึกการแก้ไข' : 'เพิ่ม'}</button>
     ${k ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-stock-del="${esc(k.id)}" data-armed="${armed ? 1 : ''}">${armed ? 'กดอีกครั้งเพื่อยืนยันลบ ' + esc(k.name) : 'ลบวัตถุดิบนี้'}</button>` : `<p class="note">เพิ่มแล้วกด "รับเข้า" เพื่อใส่จำนวนและราคาที่ซื้อ จากนั้นไปผูกกับเมนูในแท็บเมนู</p>`}`);
 }
 const moveState = { id:'', type:'in', qty:'', cost:'', note:'' };
@@ -3102,10 +3135,10 @@ function sheetStockMove(){
   const k = stockList.find(x => x.id === moveState.id); if (!k) return closeSheet();
   const t = moveState.type, u = esc(k.unit || 'หน่วย');
   openSheet(head(esc(k.name)) + `<p class="note num" style="margin-top:0">คงเหลือตอนนี้ ${num(k.qty)} ${u}</p>
-    <div class="opts" style="grid-template-columns:repeat(4,1fr)">${['in','out','waste','set'].map(x => `<button data-smtype="${x}" aria-pressed="${t === x}">${MOVE[x]}</button>`).join('')}</div>
+    <div class="opts" style="grid-template-columns:repeat(${isAdmin ? 4 : 3},1fr)">${['in','out','waste'].concat(isAdmin ? ['set'] : []).map(x => `<button data-smtype="${x}" aria-pressed="${t === x}">${MOVE[x]}</button>`).join('')}</div>
     <div class="form" style="margin-top:12px">
     <label>${t === 'set' ? 'นับได้จริงเหลือ (' + u + ')' : 'จำนวน (' + u + ')'}<input type="number" id="sm-qty" inputmode="decimal" min="0" step="any" value="${esc(moveState.qty)}" placeholder="0"></label>
-    ${t === 'in' ? `<label>ราคาที่ซื้อรวม (บาท) ระบบจะลงเป็นรายจ่ายให้<input type="number" id="sm-cost" inputmode="decimal" min="0" step="any" value="${esc(moveState.cost)}" placeholder="0 = ไม่ลงรายจ่าย"></label>` : ''}
+    ${t === 'in' && canBuy() ? `<label>ราคาที่ซื้อรวม (บาท) ระบบจะลงเป็นรายจ่ายให้<input type="number" id="sm-cost" inputmode="decimal" min="0" step="any" value="${esc(moveState.cost)}" placeholder="0 = ไม่ลงรายจ่าย"></label>` : ''}
     <label>หมายเหตุ (ไม่บังคับ)<input type="text" id="sm-note" maxlength="120" value="${esc(moveState.note)}" placeholder="${t === 'in' ? 'เช่น ซื้อจากแม็คโคร' : t === 'waste' ? 'เช่น ไหม้ / หมดอายุ' : ''}"></label>
     <div class="err" id="mf-err"></div></div>
     <button class="primary" style="margin-top:0" data-stock-go>บันทึก${MOVE[t]}</button>`);
@@ -3146,10 +3179,25 @@ function expensePanel(D, total){
   if (!D.expenses) return `<div class="panel"><h2>รายจ่ายและกำไร</h2><p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 15 ก่อนจึงจะใช้ส่วนนี้ได้</p></div>`;
   const by = {}; D.expenses.forEach(x => by[x.category] = (by[x.category] || 0) + x.amount);
   return `<div class="panel"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">รายจ่าย</h2><button class="ghost noprint" data-exp-new>+ บันทึกรายจ่าย</button></div>
+    ${D.expenses.some(x => !x.checked) ? `<p class="note" style="color:var(--wait);font-weight:600">มี ${D.expenses.filter(x => !x.checked).length} รายการที่คนอื่นลงไว้ ยังไม่ได้ตรวจ ดูของจริงหรือใบเสร็จแล้วกด "ตรวจแล้ว"</p>` : ''}
     ${D.expenses.length ? `<p class="note num">${Object.keys(by).sort((a, b) => by[b] - by[a]).map(c => `${esc(c)} ${baht(by[c])}`).join(' · ')}</p>` : `<p class="note">ยังไม่มีรายจ่ายในช่วงนี้</p>`}
     ${D.cogs || D.waste ? `<p class="note num">ต้นทุนวัตถุดิบที่ใช้ไปตามออเดอร์ ${baht(D.cogs || 0)}${D.waste ? ` · ของเสีย ${baht(D.waste)}` : ''}</p>` : ''}
-    ${D.expenses.map(x => `<div class="xrow"><span>${esc(x.note || x.category)}<small class="num">${x.date.split('-').reverse().join('/')} · ${esc(x.category)}${x.by ? ' · ' + esc(x.by) : ''}${x.slip ? ` · <a href="${esc(x.slip)}" target="_blank" rel="noopener">ดูรูป</a>` : ''}</small></span>
-      <b class="num">${baht(x.amount)}</b><button class="ghost danger noprint" data-exp-del="${esc(x.id)}" data-armed="${rep.arm === x.id ? 1 : ''}">${rep.arm === x.id ? 'ยืนยันลบ' : 'ลบ'}</button></div>`).join('')}</div>`;
+    ${D.expenses.map(x => `<div class="xrow"><span>${esc(x.note || x.category)}<small class="num">${x.date.split('-').reverse().join('/')} · ${esc(x.category)}${x.by ? ' · ลงโดย ' + esc(x.by) : ''}${x.checked ? '' : ' · <b style="color:var(--wait)">รอตรวจ</b>'}${x.slip ? ` · <a href="${esc(x.slip)}" target="_blank" rel="noopener">ดูรูป</a>` : ''}</small></span>
+      <b class="num">${baht(x.amount)}</b><span class="noprint" style="display:flex;gap:6px">${x.checked ? '' : `<button class="ghost" data-exp-check="${esc(x.id)}">✓ ตรวจแล้ว</button>`}<button class="ghost danger" data-exp-del="${esc(x.id)}" data-armed="${rep.arm === x.id ? 1 : ''}">${rep.arm === x.id ? 'ยืนยันลบ' : 'ลบ'}</button></span></div>`).join('')}</div>`;
+}
+
+// เตรียมกับขายจริงรายเมนู (จากประวัติสต็อก) ใช้วางแผนการเสียบไม้
+function prepRows(D){
+  const n = Math.max(1, D.prepDays || 0), r1 = v => Math.round(v * 10) / 10;
+  return (D.prep || []).filter(p => p.made || p.sold || p.waste).sort((a, b) => b.sold - a.sold || b.made - a.made).map(p => ({...p, avg: r1(p.sold / n), left: r1(p.made - p.sold - p.waste - p.used)}));
+}
+function prepPanel(D){
+  if (!D.prep) return '';
+  const rows = prepRows(D); if (!rows.length) return `<div class="panel"><h2>เตรียมกับขายจริง</h2><p class="note">ยังไม่มีข้อมูล จะเริ่มมีเมื่อกรอกจำนวนที่เสียบในแท็บสต็อกและมีออเดอร์เข้า</p></div>`;
+  return `<div class="panel"><h2>เตรียมกับขายจริง</h2>
+    <p class="note num">${D.prepDays} วันที่มีการขายในช่วงนี้ · "ขายเฉลี่ย/วัน" กับ "ขายสูงสุด/วัน" ใช้กะจำนวนที่ควรเสียบต่อวัน</p>
+    <div class="trow" style="grid-template-columns:minmax(0,1fr) 3.2em 3.2em 2.6em 3.4em 3.4em"><span class="hd">เมนู</span><span class="hd">เตรียม</span><span class="hd">ขาย</span><span class="hd">เสีย</span><span class="hd">ขายเฉลี่ย/วัน</span><span class="hd">ขายสูงสุด/วัน</span>
+    ${rows.map(p => `<span style="min-width:0;overflow-wrap:anywhere">${esc(p.name)}</span><span class="r num">${num(p.made)}</span><span class="r num">${num(p.sold)}</span><span class="r num">${num(p.waste)}</span><span class="r num pk">${num(p.avg)}</span><span class="r num">${num(p.maxDay)}</span>`).join('')}</div></div>`;
 }
 
 // ตั้งค่าตรวจสลิปอัตโนมัติ (admin) : key เก็บฝั่ง Apps Script เท่านั้น หน้าเว็บรู้แค่ว่ามีหรือไม่มี
@@ -3250,6 +3298,7 @@ function renderReport(){
       <div class="bars">${ser.map((x, i) => `<button data-bar="${i}" class="${x.total ? '' : 'zero'}" aria-pressed="${rep.sel === i}" title="${x.full}: ${baht(x.total)}" aria-label="${x.full} ${baht(x.total)}"><i style="--h:${x.total / max * 100}%"></i></button>`).join('')}</div>
       <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
     ${expensePanel(D, total)}
+    ${prepPanel(D)}
     ${timePanel(D.time)}
     <div class="panel"><h2>ลูกค้าสั่งอะไร</h2>
       <div class="opts" style="margin:8px 0 0"><button data-rank="top" aria-pressed="${top}">สั่งเยอะสุด 10 อันดับ</button><button data-rank="low" aria-pressed="${!top}">สั่งน้อยสุด 10 อันดับ</button></div>
@@ -3389,7 +3438,7 @@ function sheetMenuForm(id, armed){
     <datalist id="mf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <div class="chips" style="padding:0">${cats.map(c => `<button type="button" data-mf-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('')}</div>
     <label class="check"><input type="checkbox" id="mf-spicy" ${it && it.spicy ? 'checked' : ''}><span style="color:var(--fg)">ให้ลูกค้าเลือกระดับความเผ็ด</span></label>
-    ${db.stock ? `<div class="two"><label>ตัดสต็อกจาก<select id="mf-stock"><option value="">ไม่ตัดสต็อก</option>${stockList.map(k => `<option value="${esc(k.id)}" ${it && it.stockId === k.id ? 'selected' : ''}>${esc(k.name)}${k.unit ? ' (' + esc(k.unit) + ')' : ''}</option>`).join('')}</select></label>
+    ${db.stock ? `<div class="two"><label>ตัดสต็อกจาก<select id="mf-stock"><option value="">ไม่ตัดสต็อก</option>${!it || !it.stockId ? `<option value="auto" ${!it && stockList.length ? 'selected' : ''}>สร้างสต็อกชื่อเดียวกับเมนู</option>` : ''}${stockList.map(k => `<option value="${esc(k.id)}" ${it && it.stockId === k.id ? 'selected' : ''}>${esc(k.name)}${k.unit ? ' (' + esc(k.unit) + ')' : ''}</option>`).join('')}</select></label>
       <label>ใช้ต่อ 1 ชิ้นที่ขาย<input type="number" id="mf-use" inputmode="decimal" min="0" step="any" value="${it && it.stockUse ? it.stockUse : 1}"></label></div>` : ''}
     <div class="err" id="mf-err"></div></div>
     <button class="primary" style="margin-top:0" data-menu-save="${esc(id || '')}">${it ? 'บันทึกการแก้ไข' : 'เพิ่มเมนู'}</button>
@@ -3803,8 +3852,16 @@ document.addEventListener('click', async e => {
   else if (d.slipPick) { slipFor = d.slipPick; $('slip-pick').click(); }
   else if (d.recheck) runSlipCheck(d.recheck);
   else if ('stockNew' in d) sheetStockForm('');
+  else if ('stockFromMenu' in d) { b.disabled = true; b.textContent = 'กำลังสร้าง…';
+    try { const n = await db.stockFromMenu(); toast(`สร้างสต็อกแล้ว ${n} รายการ`); menu = await fetchMenu(); await loadStock(true); } catch(e){ console.error(e); toast(e.message === 'forbidden' ? 'เฉพาะ Admin ทำได้' : 'สร้างไม่สำเร็จ ลองอีกครั้ง'); }
+    renderStock(); }
+  else if ('stockBulk' in d) { bulkState.vals = {}; bulkState.mode = 'in'; sheetStockBulk(); }
+  else if (d.bmode) { bulkKeep(); bulkState.mode = d.bmode; sheetStockBulk(); }
+  else if ('bulkSave' in d) { bulkKeep(); const items = Object.keys(bulkState.vals).map(id => ({ id, qty: Number(bulkState.vals[id]) })).filter(x => x.qty >= 0 && (bulkState.mode === 'set' || x.qty > 0));
+    if (!items.length) return $('mf-err').textContent = 'ยังไม่ได้กรอกจำนวนในช่องไหนเลย';
+    b.disabled = true; if (!await stockAction(() => db.stockBulk({ mode: bulkState.mode, items }), `บันทึกแล้ว ${items.length} รายการ`)) b.disabled = false; }
   else if (d.stockEdit) sheetStockForm(d.stockEdit);
-  else if ('stockSave' in d) { const it = { id: d.stockSave, name: $('sf-name').value.trim(), unit: $('sf-unit').value.trim(), min: Number($('sf-min').value) || 0 };
+  else if ('stockSave' in d) { const it = { id: d.stockSave, name: $('sf-name').value.trim(), unit: $('sf-unit').value.trim(), min: Number($('sf-min').value) || 0, cost: Number($('sf-cost').value) || 0 };
     if (!it.name) return $('mf-err').textContent = 'กรอกชื่อวัตถุดิบ';
     b.disabled = true; if (!await stockAction(() => db.saveStock(it), it.id ? 'บันทึกแล้ว' : `เพิ่ม ${it.name} แล้ว`)) b.disabled = false; }
   else if (d.stockDel) { if (!d.armed) return sheetStockForm(d.stockDel, true); b.disabled = true; if (!await stockAction(() => db.deleteStock(d.stockDel), 'ลบแล้ว')) b.disabled = false; }
@@ -3822,6 +3879,7 @@ document.addEventListener('click', async e => {
     b.disabled = true;
     try { await db.addExpense({ date: expState.date, category: expState.category, note: expState.note.trim(), amount: amt, slip: expState.slip }); toast('บันทึกรายจ่ายแล้ว'); closeSheet(); loadReport(); }
     catch(e){ console.error(e); $('mf-err').textContent = e.message === 'forbidden' ? 'เฉพาะ Admin บันทึกรายจ่ายได้' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; b.disabled = false; } }
+  else if (d.expCheck) { b.disabled = true; try { await db.checkExpense(d.expCheck); } catch(e){ toast('บันทึกไม่สำเร็จ ลองอีกครั้ง'); } loadReport(); }
   else if (d.expDel) { if (!d.armed) { rep.arm = d.expDel; return renderReport(); }
     rep.arm = ''; b.disabled = true; try { await db.deleteExpense(d.expDel); toast('ลบรายจ่ายแล้ว'); } catch(e){ toast('ลบไม่สำเร็จ ลองอีกครั้ง'); } loadReport(); }
   else if ('saveKey' in d) { const k = $('thunder-key').value.trim(); if (!k) return toast('วาง API key ก่อนกดบันทึก'); saveSlipKey(k); }
