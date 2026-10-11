@@ -141,6 +141,10 @@ img.tag{object-fit:cover;background:var(--sunk)}
 .steps div.now{border-top-color:var(--wait);color:var(--fg);font-weight:600}
 .sheet .prog{margin:14px 0 2px}
 .ticket .wait{font-size:13px;color:var(--muted)} .ticket .wait.late{color:var(--accent);font-weight:600}
+.search{position:relative;margin-top:14px}
+.search input{width:100%;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 44px 12px 14px}
+.search input::-webkit-search-cancel-button{display:none}
+.search button{position:absolute;right:4px;top:4px;width:38px;height:38px;border:0;background:none;color:var(--muted);font-size:16px}
 .banner{background:var(--wait-soft);color:var(--wait);padding:8px 16px;font-size:14px;text-align:center}
 .qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-top:14px}
 .qrs .slip{margin:0;max-width:none;border:1px solid var(--line);break-inside:avoid}
@@ -180,6 +184,10 @@ img.tag{object-fit:cover;background:var(--sunk)}
 
 <main id="v-customer" class="wrap" hidden>
   <div class="track" id="track"></div>
+  <div class="search" id="search-box">
+    <input id="search" type="search" placeholder="ค้นหาเมนู หรือรหัสไม้ เช่น O1" autocomplete="off" aria-label="ค้นหาเมนู">
+    <button id="search-clear" hidden aria-label="ล้างคำค้น">✕</button>
+  </div>
   <div class="chips" id="chips"></div>
   <div id="menu"></div>
 </main>
@@ -2629,7 +2637,7 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 /* ---------- สถานะ ---------- */
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
-let sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
@@ -2695,7 +2703,7 @@ $('img-file').addEventListener('change', async e => {
 const cartQty = it => cart.filter(c => c.id === it.id).reduce((s,c) => s + c.qty, 0);
 function renderMenu(){
   if (!valid) {
-    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('bar').hidden = true; $('open-bill').hidden = true;
+    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('search-box').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
     $('menu').innerHTML = `<p class="empty">ไม่พบโต๊ะนี้ กรุณาแจ้งพนักงาน</p>`;
     return closeSheet();
   }
@@ -2703,15 +2711,19 @@ function renderMenu(){
   $('track').innerHTML = orders.filter(o => o.status !== 'served').map(o => `<button class="prog" data-bill>${progress(o)}</button>`).join('');
   const cats = [...new Set(menu.map(i => i.category))];
   $('chips').innerHTML = ['ทั้งหมด', ...cats].map(c => `<button aria-pressed="${c===cat}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
-  $('menu').innerHTML = cats.filter(c => cat==='ทั้งหมด' || c===cat).map(c =>
-    `<h2>${esc(c)}</h2>` + menu.filter(i => i.category === c).map(it => {
+  // ค้นหา = หาทุกหมวด จากชื่อหรือรหัสไม้ ไม่สนตัวพิมพ์เล็กใหญ่และช่องว่าง
+  const norm = v => String(v || '').toLowerCase().replace(/\s+/g, '');
+  const k = norm(find), hit = i => !k || norm(i.name).includes(k) || norm(i.code).includes(k);
+  $('chips').hidden = !!k; $('search-clear').hidden = !k;
+  $('menu').innerHTML = cats.filter(c => (k || cat==='ทั้งหมด' || c===cat) && menu.some(i => i.category === c && hit(i))).map(c =>
+    `<h2>${esc(c)}</h2>` + menu.filter(i => i.category === c && hit(i)).map(it => {
       const q = cartQty(it);
       return `<div class="item">
         ${thumb(it)}
         <div class="info"><div class="name">${esc(it.name)}</div><div class="price num">${baht(it.price)}</div></div>
         ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
             : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}
-      </div>`; }).join('')).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
+      </div>`; }).join('')).join('') || `<p class="empty">${k ? 'ไม่พบเมนูที่ค้นหา ลองคำอื่น' : 'ยังไม่มีเมนู'}</p>`;
   const n = count(cart);
   $('bar').hidden = !n;
   $('bar-l').textContent = `ดูตะกร้า · ${n} ชิ้น`;
@@ -2878,6 +2890,8 @@ document.addEventListener('click', async e => {
 });
 $('open-bill').onclick = sheetBill;
 $('open-cart').onclick = sheetCart;
+$('search').addEventListener('input', e => { find = e.target.value; renderMenu(); });
+$('search-clear').onclick = () => { find = ''; $('search').value = ''; renderMenu(); $('search').focus(); };
 
 /* ---------- เริ่มต้น ---------- */
 async function start(){
