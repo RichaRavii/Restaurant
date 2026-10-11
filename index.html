@@ -192,7 +192,8 @@ img.tag{object-fit:cover;background:var(--sunk)}
 .qrs .slip{margin:0;max-width:none;border:1px solid var(--line);break-inside:avoid}
 @media print{
   body>*{display:none!important} body{background:#fff}
-  body:not(.pq)>#veil{display:block!important;position:static;background:none}
+  body:not(.pq):not(.pr)>#veil{display:block!important;position:static;background:none}
+  body.pr>#print-area{display:block!important}
   .sheet{max-height:none;overflow:visible;background:#fff;padding:0}
   .sheet>*{display:none!important} .sheet>.slip{display:block!important}
   body.pq>#v-qr{display:block!important;max-width:none;padding:0}
@@ -266,6 +267,19 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 .steps div{border-top-width:5px;border-radius:2px 2px 0 0}
 .steps div.on,.steps div.now{border-radius:3px}
 .toast{border-radius:14px}
+/* ใบเสร็จ: ขาวดำ ตัวเลขชิดขวา ออกแบบให้พอดีกระดาษความร้อน (ใช้ทั้งตอนพิมพ์และตัวอย่างบนจอ) */
+.rc{background:#fff;color:#000;font-family:var(--body);font-size:13px;line-height:1.35;padding:10px 0}
+.rc h4{font-family:var(--display);font-size:20px;font-weight:600;text-align:center;margin:0}
+.rc .c{text-align:center} .rc .b{font-weight:600}
+.rc hr{border:0;border-top:1px dashed #000;margin:6px 0}
+.rc table{width:100%;border-collapse:collapse} .rc td{padding:1px 0;vertical-align:top}
+.rc td.rq{width:2.2em;font-weight:600} .rc td.a{text-align:right;white-space:nowrap;padding-left:6px;font-variant-numeric:tabular-nums}
+.rc .o{font-size:11px}
+.rc .tot td{font-size:16px;font-weight:600;padding-top:3px}
+.rc svg{display:block;width:60%;height:auto;margin:4px auto}
+.rc-preview{border:1.5px solid var(--line);border-radius:14px;padding:6px 16px;margin:10px auto;max-width:300px}
+#print-area .rc{width:var(--rcw);margin:0 auto;padding:0}
+@page{margin:4mm}
 /* ฟอร์มเพิ่ม / แก้ไขเมนู */
 .form{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .form label{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted)}
@@ -388,6 +402,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 <div class="bar" id="bar" hidden><button id="open-cart"><span id="bar-l"></span><span id="bar-r" class="num"></span></button></div>
 <div class="veil" id="veil" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <input type="file" id="slip-file" accept="image/*" capture="environment" hidden>
+<div id="print-area" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>/* qrcode-generator 1.4.4 (MIT, Kazuhiko Arase) */
@@ -2698,6 +2713,8 @@ const SHOP_NAME = "Ravii";
 const TABLE_WORD = "Table";            // คำนำหน้าชื่อโต๊ะ เช่น Table 1 (เปลี่ยนเป็น "โต๊ะ" ได้)
 const TABLES = ['1','2','3','4','5','6','7','8','9','10','11','12'];   // ชื่อโต๊ะในโหมดทดลอง (ของจริงอยู่ในชีท Tables ตั้งเป็น A1, B18 ก็ได้)
 const SPICE = ['ไม่เผ็ด','เผ็ดน้อย','เผ็ดกลาง','เผ็ดมาก'];
+const RECEIPT_WIDTH_MM = 72;        // ความกว้างเนื้อหาใบเสร็จ: กระดาษ 80 มม. ใช้ 72, กระดาษ 58 มม. ใช้ 48
+const RECEIPT_FOOTER = "ขอบคุณที่มาอุดหนุน";
 const SERVICE_PCT = 0;             // ค่าบริการ % (0 = ไม่คิด)
 const VAT_PCT = 0;                 // VAT % (0 = ไม่คิด หรือราคารวม VAT แล้ว)
 
@@ -3167,6 +3184,31 @@ function payStep(t, mine){
     `<button class="primary" data-pay="${esc(t)}" ${ready ? '' : 'disabled'}>${mine.length ? 'ยืนยันรับเงิน ปิดบิล' : 'ปิดโต๊ะ'}</button>
      <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`;
 }
+/* ---------- ใบแจ้งยอด / ใบเสร็จ ---------- */
+// รวมรายการที่เหมือนกันจากทุกรอบเป็นบรรทัดเดียว (ชื่อ + ระดับเผ็ด + ราคา)
+function receiptHtml(t, mine, info){   // info = null คือใบแจ้งยอดก่อนจ่าย, มีค่า = ใบเสร็จหลังปิดบิล
+  const lines = {}; mine.flatMap(o => o.items).forEach(c => { const k = c.name + '|' + (c.opt || '') + '|' + c.price, l = lines[k] || (lines[k] = {...c, qty: 0}); l.qty += c.qty; });
+  const list = Object.values(lines), sub = sum(list), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, total = grand(list);
+  const row = (l, v) => `<tr><td colspan="2">${l}</td><td class="a">${baht(v)}</td></tr>`;
+  let qr = '';
+  if (!info && ppTarget() && total) { const q = qrcode(0, 'M'); q.addData(ppPayload(total)); q.make(); qr = `<hr><div class="c b">สแกนจ่ายพร้อมเพย์ ${baht(total)}</div>${q.createSvgTag({cellSize:4, margin:2, scalable:true})}<div class="c">${esc(settings.promptpayName || '')}</div>`; }
+  const now = new Date();
+  return `<div class="rc"><h4>${esc(SHOP_NAME)}</h4><div class="c b">${info ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งยอด'}</div>
+    <div class="c">${TABLE_WORD} ${esc(t)} · ${date(now)} ${time(now)}</div><hr>
+    <table>${list.map(c => `<tr><td class="rq">${c.qty}</td><td>${esc(c.name)}${c.code ? ' (' + esc(c.code) + ')' : ''}${c.opt ? `<div class="o">${esc(c.opt)}</div>` : ''}</td><td class="a">${baht(c.price * c.qty)}</td></tr>`).join('')}</table><hr>
+    <table>${svc || vat ? row('ค่าอาหาร', sub) : ''}${svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : ''}${vat ? row(`VAT ${VAT_PCT}%`, vat) : ''}
+      <tr class="tot"><td colspan="2">รวม ${count(list)} ชิ้น</td><td class="a">${baht(total)}</td></tr></table>
+    ${info ? `<hr><div>ชำระโดย: ${info.method === 'transfer' ? 'โอน / สแกน QR' : 'เงินสด'}</div><div>พนักงาน: ${esc(info.by || '-')}</div>` : ''}${qr}
+    <hr><div class="c">${esc(RECEIPT_FOOTER)}</div></div>`;
+}
+function printHtml(html){
+  const a = $('print-area'); a.innerHTML = html; a.style.setProperty('--rcw', RECEIPT_WIDTH_MM + 'mm');
+  document.body.classList.add('pr');
+  const done = () => { document.body.classList.remove('pr'); a.innerHTML = ''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+let lastReceipt = '';
 function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
   const s = sessOf(t), mine = s ? orders.filter(o => o.sessionId === s.id) : [];
   const pending = mine.filter(o => o.status !== 'served').length;
@@ -3178,7 +3220,8 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>`
       : mode === 'pay' ? payStep(t, mine)
       : billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
-        (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:14px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
+        (mine.length ? `<button class="ghost" style="width:100%;margin-top:14px" data-print-bill="${esc(t)}">🖨️ พิมพ์ใบแจ้งยอด</button>` : '') +
+        (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:8px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-tmode="pay" data-t="${esc(t)}">${mine.length ? 'คิดเงิน' : 'ปิดโต๊ะ (ไม่มีออเดอร์)'}</button>`),
     () => sheetTable(t, mode));
 }
@@ -3313,11 +3356,20 @@ document.addEventListener('click', async e => {
   else if ('print' in d) window.print();
   else if (d.slip) { slipFor = d.slip; $('slip-file').click(); }
   else if (d.method) { payState.method = d.method; payState.seen = false; sheetTable(d.t, 'pay'); }
+  else if (d.printBill) { const s = sessOf(d.printBill); if (s) printHtml(receiptHtml(d.printBill, orders.filter(o => o.sessionId === s.id), null)); }
+  else if ('printReceipt' in d) printHtml(lastReceipt);
   else if (d.pay) {
     const s = sessOf(d.pay); if (!s) return closeSheet();
-    const mine = orders.filter(o => o.sessionId === s.id);
+    const mine = orders.filter(o => o.sessionId === s.id), method = mine.length ? payState.method : 'none';
+    let by = ''; try { by = localStorage.getItem('mala_name') || ''; } catch(e){}
+    const receipt = mine.length ? receiptHtml(d.pay, mine, { method, by }) : '';   // เก็บไว้ก่อน เพราะปิดบิลแล้วรายการจะหายจากหน้าจอ
     b.disabled = true;
-    if (await act(() => db.paySession(s.id, { method: mine.length ? payState.method : 'none', seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: grand(mine.flatMap(o => o.items)) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) closeSheet();
+    if (await act(() => db.paySession(s.id, { method, seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: grand(mine.flatMap(o => o.items)) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) {
+      if (!receipt) return closeSheet();
+      lastReceipt = receipt;
+      openSheet(head(`ปิดบิล ${TABLE_WORD} ${esc(d.pay)} แล้ว`) + `<div class="rc-preview">${receipt}</div>
+        <button class="primary" data-print-receipt>🖨️ พิมพ์ใบเสร็จ</button><button class="ghost" style="width:100%;margin-top:8px" data-close>ไม่พิมพ์ ปิดหน้านี้</button>`);
+    }
     else b.disabled = false;
   }
   else if (d.ready) act(() => db.updateOrder(d.ready, {status:'ready'}));
