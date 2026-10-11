@@ -145,6 +145,27 @@ img.tag{object-fit:cover;background:var(--sunk)}
 .search input{width:100%;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 44px 12px 14px}
 .search input::-webkit-search-cancel-button{display:none}
 .search button{position:absolute;right:4px;top:4px;width:38px;height:38px;border:0;background:none;color:var(--muted);font-size:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.tile span{display:block;color:var(--muted);font-size:13px}
+.tile b{font-family:var(--display);font-size:24px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
+.panel h2{margin:0 0 2px;font-size:17px}
+.readout{color:var(--muted);font-size:14px;min-height:22px}
+.readout b{color:var(--fg)}
+.bars{display:flex;align-items:flex-end;gap:2px;height:170px;margin-top:10px;border-bottom:1px solid var(--line)}
+.bars button{flex:1;min-width:0;height:100%;padding:0;border:0;background:none;display:flex;align-items:flex-end}
+.bars button i{display:block;width:100%;height:var(--h);min-height:1px;background:var(--accent);border-radius:4px 4px 0 0;opacity:.78}
+.bars button:hover i,.bars button[aria-pressed="true"] i{opacity:1}
+.bars button.zero i{background:var(--line)}
+.xlab{display:flex;gap:2px;font-size:11px;color:var(--muted);margin-top:4px}
+.xlab span{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:visible}
+.rank{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto;gap:8px 12px;align-items:center;margin-top:10px;font-size:15px}
+.rank .nm{min-width:0;overflow-wrap:anywhere}
+.rank .meter{height:10px;background:var(--sunk);border-radius:5px;overflow:hidden}
+.rank .meter i{display:block;height:100%;width:var(--w);background:var(--accent);border-radius:5px}
+.rank .n{text-align:right;font-weight:600} .rank .m{text-align:right;color:var(--muted)}
+.rank .hd{font-size:12px;color:var(--muted)}
 .banner{background:var(--wait-soft);color:var(--wait);padding:8px 16px;font-size:14px;text-align:center}
 .qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-top:14px}
 .qrs .slip{margin:0;max-width:none;border:1px solid var(--line);break-inside:avoid}
@@ -171,6 +192,7 @@ img.tag{object-fit:cover;background:var(--sunk)}
     <button data-view="kitchen">ครัว<i id="n-kitchen" hidden></i></button>
     <button data-view="serve">เสิร์ฟ<i id="n-serve" hidden></i></button>
     <button data-view="menu">เมนู</button>
+    <button data-view="sales">ยอดขาย</button>
   </div>
 </div></header>
 
@@ -220,6 +242,11 @@ img.tag{object-fit:cover;background:var(--sunk)}
   <p class="note">เลือกรูปจากเครื่องหรือถ่ายจากมือถือได้เลย ระบบย่อรูปให้อัตโนมัติ</p>
   <input type="file" id="img-file" accept="image/*" hidden>
   <div id="menu-admin"></div>
+</main>
+
+<main id="v-sales" class="wrap wide" hidden>
+  <div class="chips" id="rep-presets" style="padding-top:0"></div>
+  <div id="rep"></div>
 </main>
 
 <div class="bar" id="bar" hidden><button id="open-cart"><span id="bar-l"></span><span id="bar-r" class="num"></span></button></div>
@@ -2541,6 +2568,9 @@ const VAT_PCT = 0;                 // VAT % (0 = ไม่คิด หรือ
    ใส่แล้ว = ข้อมูลอยู่ใน Google Sheet พนักงานล็อกอินด้วยชื่อ + PIN จากชีท Employees */
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwuXfDIUfyO0dusjHj2KlOR5L93XufdFxyBYU3Foe-3CjKT64oHj9r-V-W6X8796n-4Uw/exec";
 
+/* พร้อมเพย์สำหรับ QR รับเงิน ใช้เฉพาะโหมดทดลอง — ของจริงตั้งในชีท Settings (promptpay_id, promptpay_name) */
+const DEMO_PROMPTPAY = { id: "0812345678", name: "ร้านตัวอย่าง (โหมดทดลอง)" };
+
 /* รหัสผ่านหน้าพนักงาน ใช้เฉพาะโหมดทดลอง */
 const STAFF_PASSCODE = "mala2026";
 
@@ -2550,7 +2580,7 @@ const SAMPLE_MENU = [{"id": "m001", "category": "เนื้อสัตว์"
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const baht = n => '฿' + Number(n).toFixed(2);
+const baht = n => '฿' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 const time = t => new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
 const date = t => new Date(t).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'});
 const sum = list => list.reduce((s,c) => s + c.price * c.qty, 0);
@@ -2585,6 +2615,8 @@ function makeLocalDb(){
       localStorage.setItem('mala-img-v1', JSON.stringify(m)); },
     async loadSessions(){ return read().sessions.filter(s => !s.paid); },
     async loadTables(){ return TABLES; },
+    async loadSettings(){ return { promptpayId: DEMO_PROMPTPAY.id, promptpayName: DEMO_PROMPTPAY.name }; },
+    async report(from, to){ return aggregate(read().orders, from, to); },
     async custLoad(t){ const d = read(), s = d.sessions.find(s => !s.paid && s.tableNo === t) || null;
       const q = d.orders.filter(o => !o.paid && o.status === 'new').map(o => o.id);
       return { valid: TABLES.includes(t), session: s, orders: s ? d.orders.filter(o => o.sessionId === s.id).map(o => ({...o, queue: q.indexOf(o.id) + 1})) : [] }; },
@@ -2620,12 +2652,14 @@ function makeGasDb(url){
     logout(){ try { localStorage.removeItem(TKEY); } catch(e){} location.reload(); },
     async loadMenu(){ this._boot = await (await fetch(url + '?action=menu')).json(); return this._boot.menu || []; },
     async loadTables(){ return (this._boot && this._boot.tables) || []; },
+    async loadSettings(){ return (this._boot && this._boot.settings) || {}; },
     async custLoad(t){ return await call('custSync', {table: t}); },   // ลูกค้า: 1 คำขอได้ทั้งสถานะโต๊ะและบิลปัจจุบัน
     async loadOrders(){ return this._sync.orders; },
     async loadSessions(){ this._sync = await call('sync'); return this._sync.sessions; },
     async addOrder(o){ await call('custOrder', {table: o.tableNo, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined}); },
     async paySession(id){ await call('pay', {sessionId: id}); },
+    async report(from, to){ return await call('report', {from, to}); },
     async setMenuImage(id, dataUrl){   // dataUrl = 'data:image/jpeg;base64,....' หรือ '' เพื่อลบรูป
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       await call('setMenuImage', {id, mime: m ? m[1] : '', data: m ? m[2] : ''}); },
@@ -2637,7 +2671,7 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 /* ---------- สถานะ ---------- */
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
-let find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
@@ -2651,6 +2685,85 @@ async function refresh(){
 async function act(fn, okMsg){
   try { await fn(); if (okMsg) toast(okMsg); await refresh(); return true; }
   catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ ลองอีกครั้ง'); return false; }
+}
+
+/* ---------- ยอดขาย (เฉพาะ admin) ---------- */
+const ymd = d => { const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
+const TH_MONTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+// ใช้ในโหมดทดลองเท่านั้น ของจริงคำนวณที่ Code.gs (report_) ด้วยกติกาเดียวกัน: นับเฉพาะบิลที่ปิดแล้ว
+function aggregate(all, from, to){
+  const days = {}, items = {}; let open = 0;
+  all.forEach(o => {
+    const d = ymd(new Date(o.createdAt)); if (d < from || d > to) return;
+    const amt = sum(o.items);
+    if (!o.paid) { open += amt; return; }
+    const day = days[d] || (days[d] = {date:d, total:0, qty:0, bills:{}});
+    day.total += amt; day.qty += count(o.items); day.bills[o.sessionId] = 1;
+    o.items.forEach(c => { const k = c.id || c.name, it = items[k] || (items[k] = {id:c.id||'', name:c.name, code:c.code||'', qty:0, total:0}); it.qty += c.qty; it.total += c.price * c.qty; });
+  });
+  return { days: Object.values(days).map(d => ({date:d.date, total:d.total, qty:d.qty, bills:Object.keys(d.bills).length})), items: Object.values(items), open };
+}
+const PRESETS = [['today','วันนี้'],['7d','7 วัน'],['month','เดือนนี้'],['last','เดือนที่แล้ว'],['year','12 เดือน']];
+const rep = { preset:'today', data:null, mode:'top', sel:null, err:'' };
+function repRange(){
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  if (rep.preset === '7d') return [ymd(new Date(y, m, now.getDate() - 6)), ymd(now)];
+  if (rep.preset === 'month') return [ymd(new Date(y, m, 1)), ymd(now)];
+  if (rep.preset === 'last') return [ymd(new Date(y, m - 1, 1)), ymd(new Date(y, m, 0))];
+  if (rep.preset === 'year') return [ymd(new Date(y, m - 11, 1)), ymd(now)];
+  return [ymd(now), ymd(now)];
+}
+async function loadReport(){
+  rep.data = null; rep.sel = null; rep.err = ''; renderReport();
+  const [from, to] = repRange();
+  try { rep.data = await db.report(from, to); }
+  catch(e){ console.error(e); rep.err = e.message === 'forbidden' ? 'ดูยอดขายได้เฉพาะพนักงานที่ role = admin' : 'โหลดยอดขายไม่ได้ ลองอีกครั้ง'; }
+  renderReport();
+}
+// แท่งกราฟ: รายวัน (เติมวันที่ไม่มียอดให้เป็น 0) หรือรายเดือนเมื่อดู 12 เดือน
+function repSeries(){
+  const [from, to] = repRange(), by = {}, out = [];
+  const monthly = rep.preset === 'year';
+  rep.data.days.forEach(d => { const k = monthly ? d.date.slice(0, 7) : d.date, b = by[k] || (by[k] = {total:0, bills:0}); b.total += d.total; b.bills += d.bills; });
+  const a = new Date(from + 'T00:00:00'), z = new Date(to + 'T00:00:00');
+  for (let d = new Date(a); d <= z; monthly ? d.setMonth(d.getMonth() + 1) : d.setDate(d.getDate() + 1)) {
+    const k = monthly ? ymd(d).slice(0, 7) : ymd(d), b = by[k] || {total:0, bills:0};
+    out.push({ short: monthly ? TH_MONTH[d.getMonth()] : String(d.getDate()), full: monthly ? TH_MONTH[d.getMonth()] + ' ' + (d.getFullYear() + 543) : d.getDate() + ' ' + TH_MONTH[d.getMonth()], total: b.total, bills: b.bills });
+  }
+  return out;
+}
+function renderReport(){
+  $('rep-presets').innerHTML = PRESETS.map(([k, t]) => `<button data-preset="${k}" aria-pressed="${k === rep.preset}">${t}</button>`).join('');
+  if (rep.err) return $('rep').innerHTML = `<p class="empty">${rep.err}</p>`;
+  if (!rep.data) return $('rep').innerHTML = `<p class="empty">กำลังโหลด…</p>`;
+  const D = rep.data, total = D.days.reduce((s, d) => s + d.total, 0), bills = D.days.reduce((s, d) => s + d.bills, 0), qty = D.days.reduce((s, d) => s + d.qty, 0);
+  const ser = repSeries(), max = Math.max(1, ...ser.map(x => x.total));
+  const best = ser.reduce((a, x) => x.total > a.total ? x : a, ser[0]);
+  const pick = rep.sel === null ? null : ser[rep.sel];
+  const every = Math.ceil(ser.length / 8);
+  // จัดอันดับ: รวมเมนูที่ไม่มีคนสั่งเลย (0) จากรายการเมนูปัจจุบันด้วย
+  const map = {}; menu.forEach(m => map[m.id] = {id:m.id, name:m.name, code:m.code, qty:0, total:0});
+  D.items.forEach(i => { const k = i.id && map[i.id] ? i.id : 'x' + i.name; map[k] = {...(map[k] || {}), ...i, name: (map[k] && map[k].name) || i.name}; });
+  const all = Object.values(map), top = rep.mode === 'top';
+  const list = all.sort((a, b) => top ? b.qty - a.qty || b.total - a.total : a.qty - b.qty || a.total - b.total).slice(0, 10);
+  const qmax = Math.max(1, ...all.map(i => i.qty));
+  $('rep').innerHTML = `
+    <div class="tiles">
+      <div class="tile"><span>ยอดขาย (บิลที่ปิดแล้ว)</span><b class="num">${baht(total)}</b></div>
+      <div class="tile"><span>จำนวนบิล</span><b class="num">${bills}</b></div>
+      <div class="tile"><span>เฉลี่ยต่อบิล</span><b class="num">${baht(bills ? total / bills : 0)}</b></div>
+      <div class="tile"><span>จำนวนชิ้นที่ขาย</span><b class="num">${qty}</b></div>
+    </div>
+    ${D.open ? `<p class="note">ยังมีบิลที่ไม่ได้ปิดอีก <span class="num">${baht(D.open)}</span> ไม่นับรวมในยอดขาย</p>` : ''}
+    ${ser.length > 1 ? `<div class="panel"><h2>${rep.preset === 'year' ? 'ยอดขายรายเดือน' : 'ยอดขายรายวัน'}</h2>
+      <div class="readout num">${pick ? `<b>${pick.full}</b> ${baht(pick.total)} · ${pick.bills} บิล` : total ? `สูงสุด <b>${best.full}</b> ${baht(best.total)} · แตะแท่งเพื่อดูแต่ละ${rep.preset === 'year' ? 'เดือน' : 'วัน'}` : 'ยังไม่มียอดขายในช่วงนี้'}</div>
+      <div class="bars">${ser.map((x, i) => `<button data-bar="${i}" class="${x.total ? '' : 'zero'}" aria-pressed="${rep.sel === i}" title="${x.full}: ${baht(x.total)}" aria-label="${x.full} ${baht(x.total)}"><i style="--h:${x.total / max * 100}%"></i></button>`).join('')}</div>
+      <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
+    <div class="panel"><h2>ลูกค้าสั่งอะไร</h2>
+      <div class="opts" style="margin:8px 0 0"><button data-rank="top" aria-pressed="${top}">สั่งเยอะสุด 10 อันดับ</button><button data-rank="low" aria-pressed="${!top}">สั่งน้อยสุด 10 อันดับ</button></div>
+      <div class="rank"><span class="hd">เมนู</span><span class="hd"></span><span class="hd n">ชิ้น</span><span class="hd m">ยอดขาย</span>
+      ${list.map(i => `<span class="nm">${label(i)}</span><span class="meter"><i style="--w:${i.qty / qmax * 100}%"></i></span><span class="n num">${i.qty}</span><span class="m num">${baht(i.total)}</span>`).join('')}</div>
+    </div>`;
 }
 
 /* ---------- รูปอาหาร ---------- */
@@ -2757,6 +2870,41 @@ function sheetCart(){
     `<div class="total"><span>รวมรอบนี้</span><span class="num">${baht(sum(cart))}</span></div>
      <button class="primary" data-send>ส่งออเดอร์เข้าครัว</button>`);
 }
+const grand = all => { const sub = sum(all), svc = sub * SERVICE_PCT / 100; return Math.round((sub + svc + (sub + svc) * VAT_PCT / 100) * 100) / 100; };
+
+/* ---------- QR รับเงินพร้อมเพย์ (มาตรฐาน EMVCo ของธนาคารไทย) ---------- */
+// รับเบอร์มือถือ 10 หลัก, เลขบัตรประชาชน/เลขผู้เสียภาษี 13 หลัก หรือ e-Wallet 15 หลัก
+function ppTarget(){
+  let d = String(settings.promptpayId || '').replace(/\D/g, '');
+  if (d.length === 9) d = '0' + d;                      // ชีทตัดเลข 0 ตัวหน้าออก
+  if (d.length === 10 && d[0] === '0') return ['01', '0066' + d.slice(1)];
+  if (d.length === 13) return ['02', d];
+  if (d.length === 15) return ['03', d];
+  return null;
+}
+function ppPayload(amount){
+  const t = ppTarget(); if (!t) return '';
+  const f = (id, v) => id + String(v.length).padStart(2, '0') + v;
+  let p = f('00', '01') + f('01', '12') + f('29', f('00', 'A000000677010111') + f(t[0], t[1])) + f('58', 'TH') + f('53', '764') + f('54', amount.toFixed(2)) + '6304';
+  let crc = 0xFFFF;                                     // CRC-16/CCITT-FALSE
+  for (let i = 0; i < p.length; i++) { crc ^= p.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+  return p + crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function payCard(amount){
+  const q = qrcode(0, 'M'); q.addData(ppPayload(amount)); q.make();
+  const d = String(settings.promptpayId || '').replace(/\D/g, '');
+  return `<div class="slip"><small>สแกนจ่ายด้วยแอปธนาคาร</small><b class="num">${baht(amount)}</b>
+    ${q.createSvgTag({cellSize:4, margin:2, scalable:true})}
+    <small>พร้อมเพย์ <strong>${esc(settings.promptpayName || '')}</strong></small>
+    <small class="num">ลงท้าย ${esc(d.slice(-4))}</small>
+    <small><strong>โอนเข้าบัญชีนี้เท่านั้น</strong> ตรวจชื่อผู้รับก่อนกดยืนยัน</small></div>`;
+}
+function sheetPay(){
+  const amt = grand(orders.flatMap(o => o.items));
+  if (!amt || !ppTarget()) return sheetBill();
+  openSheet(head(`จ่ายเงิน โต๊ะ ${esc(tbl)}`) + payCard(amt) +
+    `<p class="note" style="text-align:center">โอนแล้วแสดงสลิปให้พนักงานเพื่อปิดบิล</p><button class="ghost" style="width:100%" data-bill>กลับไปดูบิล</button>`, sheetPay);
+}
 function totals(all){
   const sub = sum(all), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100;
   const row = (l,v) => `<div class="line"><div class="info">${l}</div><span class="num">${baht(v)}</span></div>`;
@@ -2775,7 +2923,7 @@ function billRows(mine){
 }
 function sheetBill(){
   openSheet(head(`สรุปบิล โต๊ะ ${esc(tbl)}`) + `<button class="ghost" style="width:100%" data-close>สั่งเพิ่ม</button>` +
-    billRows(orders) + `<p class="note">เรียกพนักงานเพื่อคิดเงิน</p>`, sheetBill);
+    billRows(orders) + (orders.length && ppTarget() ? `<button class="primary" data-payqr>จ่ายด้วย QR พร้อมเพย์</button>` : '') + `<p class="note">เรียกพนักงานเพื่อคิดเงิน</p>`, sheetBill);
 }
 
 /* ---------- หน้าพนักงาน: โต๊ะ (รับลูกค้า + คิดเงิน) ---------- */
@@ -2801,8 +2949,10 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'pay'
     `<div class="opts"><button data-tmode="bill" data-t="${esc(t)}" aria-pressed="${mode!=='qr'}">บิล / คิดเงิน</button>
        <button data-tmode="qr" data-t="${esc(t)}" aria-pressed="${mode==='qr'}">QR โต๊ะนี้</button></div>` +
     (mode === 'qr' ? slip(t) + `<button class="primary" data-print>พิมพ์ QR</button>`
+      : mode === 'payqr' && s ? payCard(grand(mine.flatMap(o => o.items))) + `<button class="ghost" style="width:100%" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>`
       : billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
+        (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:14px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-pay="${esc(t)}" data-armed="${mode==='pay'?1:''}">${mode==='pay' ? 'กดอีกครั้งเพื่อยืนยัน' : 'รับเงินแล้ว ปิดบิล'}</button>`),
     () => sheetTable(t, mode));
 }
@@ -2834,11 +2984,11 @@ function badge(id, n){ $(id).hidden = !n; $(id).textContent = n; }
 function render(){
   if (tbl) return renderMenu();
   document.body.classList.toggle('pq', view === 'qr');
-  for (const v of ['tables','kitchen','serve','menu','qr']) $('v-'+v).hidden = v !== view;
+  for (const v of ['tables','kitchen','serve','menu','qr','sales']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
   badge('n-kitchen', orders.filter(o => o.status === 'new').length);
   badge('n-serve', orders.filter(o => o.status === 'ready').length);
-  ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, qr:renderQr})[view]();
+  ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, qr:renderQr, sales:() => {}})[view]();
 }
 
 /* ---------- เหตุการณ์ ---------- */
@@ -2846,7 +2996,10 @@ document.addEventListener('click', async e => {
   if (e.target === $('veil')) return closeSheet();
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
-  if (d.view) { view = d.view; render(); if (view === 'menu') renderMenuAdmin(); }
+  if (d.view) { view = d.view; render(); if (view === 'menu') renderMenuAdmin(); if (view === 'sales') loadReport(); }
+  else if (d.preset) { rep.preset = d.preset; loadReport(); }
+  else if (d.bar) { rep.sel = rep.sel === +d.bar ? null : +d.bar; renderReport(); }
+  else if (d.rank) { rep.mode = d.rank; renderReport(); }
   else if (d.img) { imgFor = d.img; $('img-file').click(); }
   else if (d.imgDel) saveImage(d.imgDel, '', 'ลบรูปแล้ว');
   else if (d.cat) { cat = d.cat; renderMenu(); }
@@ -2857,6 +3010,7 @@ document.addEventListener('click', async e => {
     renderMenu();
   }
   else if ('bill' in d) sheetBill();
+  else if ('payqr' in d) sheetPay();
   else if ('close' in d) closeSheet();
   else if (d.spice) { pick.opt = d.spice; drawOption(); }
   else if (d.pq) { pick.qty = Math.max(1, pick.qty + +d.pq); drawOption(); }
@@ -2898,7 +3052,7 @@ async function start(){
   $('shop').textContent = SHOP_NAME;
   $('banner').hidden = !db.demo;
   try { menu = await db.loadMenu(); } catch(e){ console.error(e); toast('โหลดเมนูไม่ได้'); }
-  try { tables = await db.loadTables(); } catch(e){ console.error(e); }
+  try { tables = await db.loadTables(); settings = await db.loadSettings(); } catch(e){ console.error(e); }
   if (tbl) {
     $('v-customer').hidden = false;
   } else {
