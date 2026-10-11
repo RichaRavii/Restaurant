@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ravii</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Ravii">
+<meta name="theme-color" content="#f6f0e8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2292%22 fill=%22%238f1a2a%22/%3E%3Ccircle cx=%22150%22 cy=%2246%22 r=%2230%22 fill=%22%23f6e4c3%22/%3E%3Cpath d=%22M58 150c3 9 14 13 14 25a13 13 0 0 1-26 0c0-8 6-11 8-17 2 3 3 4 4 4 1-4-1-8 0-12z%22 fill=%22%23f0625a%22/%3E%3Cg transform=%22rotate%28-42 100 104%29%22 fill=%22%23fffdfa%22%3E%3Crect x=%2296.5%22 y=%2222%22 width=%227%22 height=%22164%22 rx=%223.5%22/%3E%3Ccircle cx=%22100%22 cy=%2258%22 r=%2219%22/%3E%3Crect x=%2280%22 y=%2284%22 width=%2240%22 height=%2234%22 rx=%229%22 fill=%22%23f0625a%22/%3E%3Ccircle cx=%22100%22 cy=%22142%22 r=%2217%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@500;600&display=swap">
 <style>
@@ -263,6 +266,27 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 .steps div{border-top-width:5px;border-radius:2px 2px 0 0}
 .steps div.on,.steps div.now{border-radius:3px}
 .toast{border-radius:14px}
+/* ลูกค้า: ปุ่มเรียกพนักงาน / เช็คบิล */
+.callrow{display:flex;gap:10px;margin-top:12px}
+.callrow .ghost{flex:1 1 0;padding:12px 8px;font-weight:500}
+.callrow .ghost.sent{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+/* พนักงาน: แถบแจ้งเตือนโต๊ะเรียก อยู่บนสุดทุกแท็บ */
+.alerts{max-width:1100px;margin:0 auto;padding:4px 16px 0;display:flex;flex-direction:column;gap:8px}
+.alert{display:flex;align-items:center;gap:12px;background:var(--wait-soft);border:1.5px solid var(--wait);border-radius:16px;padding:10px 12px 10px 16px}
+.alert.bill{background:var(--accent-soft);border-color:var(--accent)}
+.alert .info{flex:1;min-width:0}
+.alert .info b{display:block;font-family:var(--display);font-size:18px;font-weight:600}
+.alert .info span{font-size:13px;color:var(--muted)}
+.alert .ghost{flex:none;padding:8px 14px}
+@media (prefers-reduced-motion:no-preference){ .alert.fresh{animation:ring 1s ease-in-out 3} }
+@keyframes ring{ 0%,100%{transform:none} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+.tbl .bell{font-size:13px;font-weight:600}
+/* จัดการเมนู: จอแคบให้ปุ่มลงไปอยู่บรรทัดล่าง ชื่อเมนูได้ความกว้างเต็ม */
+.mrow{flex-wrap:wrap}
+.mrow .info{flex:1 1 0;min-width:0}
+.mrow .info>div:first-child{font-weight:500}
+.mrow .acts{display:flex;gap:8px;flex:1 1 100%}
+.mrow .acts .ghost{flex:1 1 0;white-space:nowrap;padding:9px 8px}
 .logo{flex:none;display:block;width:46px;height:46px}
 .logo svg{width:100%;height:100%;display:block}
 .hero-top{display:flex;align-items:center;gap:10px}
@@ -289,6 +313,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   </div>
 </div></header>
 
+<div class="alerts" id="alerts" hidden></div>
+
 <div class="gate" id="gate" hidden>
   <strong>สำหรับพนักงาน</strong>
   <select id="who" hidden aria-label="ชื่อพนักงาน"></select>
@@ -302,6 +328,10 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
     <div class="hero-top"><span class="logo" data-logo></span><span class="hero-pill">🌶️ สั่งอาหารที่โต๊ะได้เลย</span></div>
     <h2 id="hero-name"></h2>
     <p id="hero-sub"></p>
+  </div>
+  <div class="callrow" id="callrow">
+    <button class="ghost" data-call="staff" id="call-staff"></button>
+    <button class="ghost" data-call="bill" id="call-bill"></button>
   </div>
   <div class="track" id="track"></div>
   <div class="search" id="search-box">
@@ -2708,7 +2738,7 @@ function toast(msg){ $('toast').textContent = msg; $('toast').hidden = false; cl
 const outIds = () => { try { return JSON.parse(localStorage.getItem('mala-out-v1')) || []; } catch(e){ return []; } };
 function makeLocalDb(){
   const KEY = 'mala-db-v2';
-  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {sessions:[],orders:[]} } catch(e){ return {sessions:[],orders:[]} } };
+  const read = () => { try { return ({calls:[], ...(JSON.parse(localStorage.getItem(KEY)) || {sessions:[],orders:[]})}) } catch(e){ return {sessions:[],orders:[],calls:[]} } };
   const write = d => { try { localStorage.setItem(KEY, JSON.stringify(d)) } catch(e){} };
   return {
     demo: true,
@@ -2720,11 +2750,14 @@ function makeLocalDb(){
       localStorage.setItem('mala-img-v1', JSON.stringify(m)); },
     async loadSessions(){ return read().sessions.filter(s => !s.paid); },
     async loadTables(){ return TABLES; },
+    async loadCalls(){ return read().calls.filter(c => !c.doneAt); },
+    async addCall(t, type){ const d = read(); if (!d.calls.some(c => !c.doneAt && c.tableNo === t && c.type === type)) d.calls.push({id:newId('c'), tableNo:t, type, createdAt:new Date().toISOString(), doneAt:''}); write(d); },
+    async ackCall(id){ const d = read(); d.calls = d.calls.map(c => c.id === id ? {...c, doneAt:new Date().toISOString()} : c); write(d); },
     async loadSettings(){ return { promptpayId: DEMO_PROMPTPAY.id, promptpayName: DEMO_PROMPTPAY.name }; },
     async report(from, to){ const d = read(); return aggregate(d.orders, from, to, d.sessions); },
     async custLoad(t){ const d = read(), s = d.sessions.find(s => !s.paid && s.tableNo === t) || null;
       const q = d.orders.filter(o => !o.paid && o.status === 'new').map(o => o.id);
-      return { valid: TABLES.includes(t), session: s, soldOut: outIds(), orders: s ? d.orders.filter(o => o.sessionId === s.id).map(o => ({...o, queue: q.indexOf(o.id) + 1})) : [] }; },
+      return { valid: TABLES.includes(t), session: s, soldOut: outIds(), calls: d.calls.filter(c => !c.doneAt && c.tableNo === t).map(c => c.type), orders: s ? d.orders.filter(o => o.sessionId === s.id).map(o => ({...o, queue: q.indexOf(o.id) + 1})) : [] }; },
     async loadOrders(){ return read().orders.filter(o => !o.paid); },
     async addOrder(o){ const d = read();   // โต๊ะว่าง = เปิดบิลใหม่ให้อัตโนมัติ
       const gone = o.items.filter(c => outIds().includes(c.id));
@@ -2733,7 +2766,8 @@ function makeLocalDb(){
       if (!s) { s = { id: newId('s'), tableNo: o.tableNo, paid:false, openedAt: new Date().toISOString() }; d.sessions.push(s); }
       d.orders.push({...o, sessionId: s.id}); write(d); },
     async updateOrder(id, patch){ const d = read(); d.orders = d.orders.map(o => o.id === id ? {...o, ...patch} : o); write(d); },
-    async paySession(id, info){ const d = read();
+    async paySession(id, info){ const d = read(); const ps = d.sessions.find(s => s.id === id);
+      if (ps) d.calls = d.calls.map(c => c.tableNo === ps.tableNo && !c.doneAt ? {...c, doneAt:new Date().toISOString()} : c);
       d.sessions = d.sessions.map(s => s.id === id ? {...s, paid:true, closedAt:new Date().toISOString(), payMethod: info.method, total: info.total, slip: info.slip ? '(มีรูปสลิป ไม่เก็บในโหมดทดลอง)' : ''} : s);
       d.orders = d.orders.map(o => o.sessionId === id ? {...o, paid:true} : o); write(d); },
     subscribe(cb){ window.addEventListener('storage', e => { if (e.key === KEY) cb(); }); }
@@ -2762,6 +2796,9 @@ function makeGasDb(url){
     async loadSettings(){ return (this._boot && this._boot.settings) || {}; },
     async custLoad(t){ return await call('custSync', {table: t}); },   // ลูกค้า: 1 คำขอได้ทั้งสถานะโต๊ะและบิลปัจจุบัน
     async loadOrders(){ return this._sync.orders; },
+    async loadCalls(){ return this._sync.calls || []; },
+    async addCall(t, type){ await call('custCall', {table: t, type}); },
+    async ackCall(id){ await call('ackCall', {id}); },
     async loadSessions(){ this._sync = await call('sync'); return this._sync.sessions; },
     async addOrder(o){ await call('custOrder', {table: o.tableNo, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined}); },
@@ -2773,7 +2810,7 @@ function makeGasDb(url){
     async setMenuImage(id, dataUrl){   // dataUrl = 'data:image/jpeg;base64,....' หรือ '' เพื่อลบรูป
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       await call('setMenuImage', {id, mime: m ? m[1] : '', data: m ? m[2] : ''}); },
-    subscribe(cb){ setInterval(() => { if (!document.hidden) cb(); }, tbl ? 15000 : 5000); }   // Apps Script ไม่มี realtime จึงถามซ้ำเป็นช่วง
+    subscribe(cb){ setInterval(() => { if (!tbl || !document.hidden) cb(); }, tbl ? 15000 : 5000); }   // หน้าพนักงานถามต่อแม้แท็บอยู่ข้างหลัง เพื่อให้เสียงเตือนยังดัง   // Apps Script ไม่มี realtime จึงถามซ้ำเป็นช่วง
   };
 }
 const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
@@ -2781,13 +2818,13 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 /* ---------- สถานะ ---------- */
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
-let settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
   try {
-    if (tbl) { const r = await db.custLoad(tbl); valid = r.valid; sess = r.session; orders = r.orders || []; applySoldOut(r.soldOut); }
-    else { sessions = await db.loadSessions(); orders = await db.loadOrders(); }
+    if (tbl) { const r = await db.custLoad(tbl); valid = r.valid; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut); }
+    else { sessions = await db.loadSessions(); orders = await db.loadOrders(); calls = await db.loadCalls(); }
   } catch(e){ console.error(e); toast('โหลดข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต'); return; }
   render();
   if (!$('veil').hidden && sheetFn) sheetFn();
@@ -2922,9 +2959,9 @@ let imgFor = null;
 function renderMenuAdmin(){
   $('menu-admin').innerHTML = menu.map(it => `<div class="mrow ${it.available === false ? 'out' : ''}">${thumb(it)}
     <div class="info"><div>${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
-    <button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
+    <div class="acts"><button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
     <button class="ghost" data-img="${esc(it.id)}">${okImg(it.image) ? 'เปลี่ยนรูป' : 'ใส่รูป'}</button>
-    ${okImg(it.image) ? `<button class="ghost" data-img-del="${esc(it.id)}" aria-label="ลบรูป ${esc(it.name)}">ลบ</button>` : ''}</div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
+    ${okImg(it.image) ? `<button class="ghost" data-img-del="${esc(it.id)}" aria-label="ลบรูป ${esc(it.name)}">ลบรูป</button>` : ''}</div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
 }
 async function saveImage(id, dataUrl, okMsg){
   try { await db.setMenuImage(id, dataUrl); menu = await db.loadMenu(); toast(okMsg); }
@@ -2943,12 +2980,16 @@ $('img-file').addEventListener('change', async e => {
 const cartQty = it => cart.filter(c => c.id === it.id).reduce((s,c) => s + c.qty, 0);
 function renderMenu(){
   if (!valid) {
-    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('search-box').hidden = true; $('hero').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
+    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('search-box').hidden = true; $('hero').hidden = true; $('callrow').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
     $('menu').innerHTML = `<p class="empty">ไม่พบโต๊ะนี้ กรุณาแจ้งพนักงาน</p>`;
     return closeSheet();
   }
   $('sub').textContent = TABLE_WORD + ' ' + tbl; $('open-bill').hidden = false;
   $('hero').hidden = false; $('hero-name').textContent = SHOP_NAME; $('hero-sub').textContent = TABLE_WORD + ' ' + tbl + ' · เลือกเมนู กดส่ง แล้วรออาหารที่โต๊ะ';
+  const cs = calls.includes('staff'), cb = calls.includes('bill');
+  $('call-staff').textContent = cs ? '✓ เรียกแล้ว รอสักครู่' : '🙋 เรียกพนักงาน'; $('call-staff').classList.toggle('sent', cs); $('call-staff').disabled = cs;
+  $('call-bill').textContent = cb ? '✓ ขอเช็คบิลแล้ว' : '🧾 เช็คบิล'; $('call-bill').classList.toggle('sent', cb); $('call-bill').disabled = cb;
+  $('call-bill').hidden = !orders.length && !cb;
   $('track').innerHTML = orders.filter(o => o.status !== 'served').map(o => `<button class="prog" data-bill>${progress(o)}</button>`).join('');
   const cats = [...new Set(menu.map(i => i.category))];
   $('chips').innerHTML = ['ทั้งหมด', ...cats].map(c => `<button aria-pressed="${c===cat}" data-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('');
@@ -3061,7 +3102,7 @@ const sessOf = t => sessions.find(s => s.tableNo === t);
 function renderTables(){
   $('tables').innerHTML = tables.map(t => {
     const s = sessOf(t), all = s ? orders.filter(o => o.sessionId === s.id).flatMap(o => o.items) : [];
-    return `<button class="tbl ${s?'busy':''}" data-table="${esc(t)}"><b>${s ? '🍲' : '🪑'} ${TABLE_WORD} ${esc(t)}</b>
+    return `<button class="tbl ${s?'busy':''}" data-table="${esc(t)}"><b>${s ? '🍲' : '🪑'} ${TABLE_WORD} ${esc(t)}</b>${calls.some(c => c.tableNo === t) ? `<span class="bell">🔔 ${calls.filter(c => c.tableNo === t).map(c => c.type === 'bill' ? 'ขอเช็คบิล' : 'เรียกพนักงาน').join(' · ')}</span>` : ''}
       <span class="num">${s ? `เริ่ม ${time(s.openedAt)}<br>${baht(sum(all))}` : 'ว่าง'}</span></button>`; }).join('');
 }
 function slip(t){
@@ -3128,8 +3169,36 @@ function renderServe(){
      </div>`).join('') : `<p class="empty">ไม่มีรายการรอเสิร์ฟ</p>`;
 }
 function badge(id, n){ $(id).hidden = !n; $(id).textContent = n; }
+// เสียงเตือนสั้น ๆ 2 จังหวะ (เบราว์เซอร์ยอมให้เล่นเสียงหลังพนักงานแตะหน้าจอแล้วอย่างน้อยหนึ่งครั้ง)
+let audio = null;
+function beep(){
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    [0, 0.28].forEach(t => { const o = audio.createOscillator(), g = audio.createGain(); o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(0.35, audio.currentTime + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.22);
+      o.connect(g); g.connect(audio.destination); o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.24); });
+  } catch(e){}
+}
+document.addEventListener('pointerdown', () => { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch(e){} }, { once:true });
+function renderAlerts(){
+  const fresh = seenCalls ? calls.filter(c => !seenCalls.has(c.id)) : [];
+  if (fresh.length) {
+    beep();
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch(e){}
+    try { if (document.hidden && window.Notification && Notification.permission === 'granted') new Notification(SHOP_NAME, { body: fresh.map(c => `${TABLE_WORD} ${c.tableNo} ${c.type === 'bill' ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}`).join(', ') }); } catch(e){}
+  }
+  seenCalls = new Set(calls.map(c => c.id));
+  document.title = (calls.length ? `(${calls.length}) ` : '') + SHOP_NAME;
+  $('alerts').hidden = !calls.length;
+  $('alerts').innerHTML = calls.map(c => `<div class="alert ${c.type === 'bill' ? 'bill' : ''} ${fresh.includes(c) ? 'fresh' : ''}" role="alert">
+    <div class="info"><b>${c.type === 'bill' ? '🧾' : '🔔'} ${TABLE_WORD} ${esc(c.tableNo)} ${c.type === 'bill' ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</b><span class="num">${time(c.createdAt)} · ${mins(c.createdAt)} นาทีแล้ว</span></div>
+    ${c.type === 'bill' ? `<button class="ghost" data-ack="${esc(c.id)}" data-open="${esc(c.tableNo)}">เปิดบิล</button>` : ''}
+    <button class="ghost" data-ack="${esc(c.id)}">รับทราบ</button></div>`).join('');
+}
 function render(){
   if (tbl) return renderMenu();
+  renderAlerts();
   document.body.classList.toggle('pq', view === 'qr');
   for (const v of ['tables','kitchen','serve','menu','qr','sales']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
@@ -3162,6 +3231,15 @@ document.addEventListener('click', async e => {
     const i = cart.map(c => c.id).lastIndexOf(d.dec);
     if (i >= 0) { cart[i].qty--; if (cart[i].qty < 1) cart.splice(i, 1); }
     renderMenu();
+  }
+  else if (d.call) {
+    b.disabled = true;
+    if (await act(() => db.addCall(tbl, d.call), d.call === 'bill' ? 'แจ้งพนักงานแล้ว กำลังเตรียมบิลให้' : 'แจ้งพนักงานแล้ว รอสักครู่')) renderMenu(); else b.disabled = false;
+  }
+  else if (d.ack) {
+    b.disabled = true;
+    await act(() => db.ackCall(d.ack));
+    if (d.open) { view = 'tables'; render(); payState.method = ''; payState.seen = false; payState.slip = ''; sheetTable(d.open, 'bill'); }
   }
   else if ('bill' in d) sheetBill();
   else if ('payqr' in d) sheetPay();
@@ -3226,6 +3304,7 @@ async function start(){
     let who = ''; try { who = localStorage.getItem('mala_name') || ''; } catch(e){}
     $('sub').textContent = who ? 'พนักงาน · ' + who : 'พนักงาน';
     $('staff-tabs').hidden = false; $('logout').hidden = false;
+    try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e){}
   }
   await refresh();
   db.subscribe(refresh);
