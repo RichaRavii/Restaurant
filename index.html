@@ -2726,6 +2726,11 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbwuXfDIUfyO0dusjHj2KlOR
 /* พร้อมเพย์สำหรับ QR รับเงิน ใช้เฉพาะโหมดทดลอง — ของจริงตั้งในชีท Settings (promptpay_id, promptpay_name) */
 const DEMO_PROMPTPAY = { id: "0812345678", name: "ร้านตัวอย่าง (โหมดทดลอง)" };
 
+/* บัญชีรับเงินของร้าน (อ่านจาก QR ของ K PLUS ที่เจ้าของร้านส่งมา)
+   ใช้เมื่อชีท Settings ยังไม่ได้กรอก promptpay_id — ถ้ากรอกในชีท ค่าในชีทจะถูกใช้แทน
+   id = เลขอ้างอิง 15 หลักใต้ QR ของธนาคาร, note = ข้อความบอกบัญชีที่ลูกค้าจะเห็น */
+const SHOP_PROMPTPAY = { id: "004999052131389", name: "นาย ชานุพงค์ หมุดคำ", note: "กสิกรไทย xxx-x-x7663-x" };
+
 /* รหัสผ่านหน้าพนักงาน ใช้เฉพาะโหมดทดลอง */
 const STAFF_PASSCODE = "mala2026";
 
@@ -3122,7 +3127,7 @@ function payCard(amount){
   return `<div class="slip"><small>สแกนจ่ายด้วยแอปธนาคาร</small><b class="num">${baht(amount)}</b>
     ${q.createSvgTag({cellSize:4, margin:2, scalable:true})}
     <small>พร้อมเพย์ <strong>${esc(settings.promptpayName || '')}</strong></small>
-    <small class="num">ลงท้าย ${esc(d.slice(-4))}</small>
+    <small class="num">${settings.promptpayNote ? esc(settings.promptpayNote) : d.length === 15 ? '' : 'ลงท้าย ' + esc(d.slice(-4))}</small>
     <small><strong>โอนเข้าบัญชีนี้เท่านั้น</strong> ตรวจชื่อผู้รับก่อนกดยืนยัน</small></div>`;
 }
 function sheetPay(){
@@ -3191,7 +3196,7 @@ function receiptHtml(t, mine, info){   // info = null คือใบแจ้�
   const list = Object.values(lines), sub = sum(list), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, total = grand(list);
   const row = (l, v) => `<tr><td colspan="2">${l}</td><td class="a">${baht(v)}</td></tr>`;
   let qr = '';
-  if (!info && ppTarget() && total) { const q = qrcode(0, 'M'); q.addData(ppPayload(total)); q.make(); qr = `<hr><div class="c b">สแกนจ่ายพร้อมเพย์ ${baht(total)}</div>${q.createSvgTag({cellSize:4, margin:2, scalable:true})}<div class="c">${esc(settings.promptpayName || '')}</div>`; }
+  if (!info && ppTarget() && total) { const q = qrcode(0, 'M'); q.addData(ppPayload(total)); q.make(); qr = `<hr><div class="c b">สแกนจ่ายพร้อมเพย์ ${baht(total)}</div>${q.createSvgTag({cellSize:4, margin:2, scalable:true})}<div class="c">${esc(settings.promptpayName || '')}</div>${settings.promptpayNote ? `<div class="c">${esc(settings.promptpayNote)}</div>` : ''}`; }
   const now = new Date();
   return `<div class="rc"><h4>${esc(SHOP_NAME)}</h4><div class="c b">${info ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งยอด'}</div>
     <div class="c">${TABLE_WORD} ${esc(t)} · ${date(now)} ${time(now)}</div><hr>
@@ -3405,6 +3410,7 @@ async function start(){
   $('banner').hidden = !db.demo;
   try { menu = await db.loadMenu(); } catch(e){ console.error(e); toast('โหลดเมนูไม่ได้'); }
   try { tables = await db.loadTables(); settings = await db.loadSettings(); } catch(e){ console.error(e); }
+  if (!db.demo && !String(settings.promptpayId || '').replace(/\D/g, '')) settings = { ...settings, promptpayId: SHOP_PROMPTPAY.id, promptpayName: SHOP_PROMPTPAY.name, promptpayNote: SHOP_PROMPTPAY.note };
   if (tbl) {
     $('v-customer').hidden = false;
   } else {
