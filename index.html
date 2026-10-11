@@ -2861,7 +2861,8 @@ window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
   try {
-    if (tbl) { const r = await db.custLoad(tbl); valid = r.valid; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut); }
+    if (tbl) { const had = orders.length; const r = await db.custLoad(tbl); valid = r.valid; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut);
+      if (had && !orders.length) { closeSheet(); toast('ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
     else { sessions = await db.loadSessions(); orders = await db.loadOrders(); calls = await db.loadCalls(); }
   } catch(e){ console.error(e); toast('โหลดข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต'); return; }
   render();
@@ -3221,7 +3222,9 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
     `<div class="opts"><button data-tmode="bill" data-t="${esc(t)}" aria-pressed="${mode!=='qr'}">บิล / คิดเงิน</button>
        <button data-tmode="qr" data-t="${esc(t)}" aria-pressed="${mode==='qr'}">QR โต๊ะนี้</button></div>` +
     (mode === 'qr' ? slip(t) + `<button class="primary" data-print>พิมพ์ QR</button>`
-      : mode === 'payqr' && s ? payCard(grand(mine.flatMap(o => o.items))) + `<button class="ghost" style="width:100%" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
+      : mode === 'payqr' && s ? payCard(grand(mine.flatMap(o => o.items))) + `<p class="note" style="text-align:center">ระบบไม่ได้เชื่อมกับธนาคาร จึงไม่รู้เองว่าเงินเข้า พอเห็นแจ้งเตือนเงินเข้าแล้วกดปุ่มด้านล่าง</p>
+        <button class="primary" data-method="transfer" data-t="${esc(t)}">เงินเข้าแล้ว ไปปิดบิล</button>
+        <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>`
       : mode === 'pay' ? payStep(t, mine)
       : billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
