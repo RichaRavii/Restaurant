@@ -108,6 +108,23 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
+
+/* หน้าครัว v2: รอทำ > กำลังย่าง > พร้อมเสิร์ฟ > เสิร์ฟแล้ว */
+.ksub{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--sunk);border-radius:14px;padding:4px;margin:12px 0 4px}
+.ksub button{border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:9px 4px;border-radius:11px;white-space:nowrap}
+.ksub button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.ksub button i{font-style:normal;font-size:12px;margin-left:5px;background:var(--accent);color:var(--accent-fg);border-radius:999px;padding:0 6px}
+.khead{display:flex;align-items:center;gap:10px}.khead strong{flex:1;min-width:0}
+.pill{font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;background:var(--wait-soft);color:var(--wait)}
+.pill.cook{background:var(--cook-soft);color:var(--cook)} .pill.late{background:var(--accent-soft);color:var(--accent)} .pill.ok{background:var(--ok-soft);color:var(--ok)}
+.ticket h3{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ticket h3 .ono{font-size:14px;font-weight:500;color:var(--muted)} .ticket h3 .sp{flex:1}
+.ticket.cook{border-top-color:var(--cook)} .ticket.done{border-top-color:var(--line);opacity:.8}
+.ticket ul.kl li{display:flex;gap:10px;align-items:baseline;font-size:18px;padding:3px 0}
+.ticket ul.kl li span{flex:1;min-width:0} .ticket ul.kl li small{font-size:13px;color:var(--muted);margin-right:4px}
+.ticket ul.kl li b{flex:none;font-weight:600;white-space:nowrap}
+.ticket .kbtn{width:100%;margin-top:8px;border-radius:999px;padding:12px;font:inherit;font-weight:600}
+.ticket .kbtn.go{background:var(--ink);color:var(--ink-fg);border:1.5px solid var(--ink)}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:20;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;max-width:90%}
 .gate{max-width:340px;margin:12vh auto 0;padding-inline:16px;display:flex;flex-direction:column;gap:12px}
 .gate input{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
@@ -206,7 +223,7 @@ img.tag{object-fit:cover;background:var(--sunk)}
   --bg:#f6f0e8; --surface:#fffdfa; --sunk:#efe6da; --line:#e7dccd; --fg:#2b1a17; --muted:#8a7269;
   --accent:#a31d2d; --accent-fg:#ffffff; --accent-soft:#fbe3df;
   --hero:#f0625a; --hero-fg:#ffffff; --blob:#f6e4c3; --ink:#2b1f1b; --ink-fg:#ffffff;
-  --ok:#2f7d57; --ok-soft:#e1efe6; --wait:#a8690a; --wait-soft:#fbecc9;
+  --cook:#1f5fa8; --cook-soft:#dfeaf8; --ok:#2f7d57; --ok-soft:#e1efe6; --wait:#a8690a; --wait-soft:#fbecc9;
   --t1:#fbe3df; --t1f:#a31d2d; --t2:#fdecc8; --t2f:#8a5a00; --t3:#dff0e2; --t3f:#236b45; --t4:#dfeaf8; --t4f:#2a5a94; --t5:#ece2f6; --t5f:#6a3fa0;
   --display:"Mitr","Anuphan",system-ui,sans-serif;
 }
@@ -214,14 +231,14 @@ img.tag{object-fit:cover;background:var(--sunk)}
   --bg:#1c1412; --surface:#271b18; --sunk:#33241f; --line:#4a352e; --fg:#f7ebe5; --muted:#bfa39a;
   --accent:#ff8375; --accent-fg:#2a0d0a; --accent-soft:#4a211c;
   --hero:#b23a36; --hero-fg:#ffffff; --blob:#6b5330; --ink:#f7ebe5; --ink-fg:#1c1412;
-  --ok:#7fd3a6; --ok-soft:#1c3a2a; --wait:#f0bd62; --wait-soft:#43330f;
+  --cook:#8dbdf2; --cook-soft:#1d3350; --ok:#7fd3a6; --ok-soft:#1c3a2a; --wait:#f0bd62; --wait-soft:#43330f;
   --t1:#4a211c; --t1f:#ffb0a6; --t2:#4a3810; --t2f:#f5cf7a; --t3:#1c3a2a; --t3f:#8fd9ae; --t4:#1d3048; --t4f:#9cc4f2; --t5:#33244a; --t5f:#cdb0f0;
 } }
 :root[data-theme="dark"]{
   --bg:#1c1412; --surface:#271b18; --sunk:#33241f; --line:#4a352e; --fg:#f7ebe5; --muted:#bfa39a;
   --accent:#ff8375; --accent-fg:#2a0d0a; --accent-soft:#4a211c;
   --hero:#b23a36; --hero-fg:#ffffff; --blob:#6b5330; --ink:#f7ebe5; --ink-fg:#1c1412;
-  --ok:#7fd3a6; --ok-soft:#1c3a2a; --wait:#f0bd62; --wait-soft:#43330f;
+  --cook:#8dbdf2; --cook-soft:#1d3350; --ok:#7fd3a6; --ok-soft:#1c3a2a; --wait:#f0bd62; --wait-soft:#43330f;
   --t1:#4a211c; --t1f:#ffb0a6; --t2:#4a3810; --t2f:#f5cf7a; --t3:#1c3a2a; --t3f:#8fd9ae; --t4:#1d3048; --t4f:#9cc4f2; --t5:#33244a; --t5f:#cdb0f0;
 }
 h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font-weight:600}
@@ -386,7 +403,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 </main>
 
 <main id="v-kitchen" class="wrap wide" hidden>
-  <strong id="kit-count"></strong>
+  <div class="khead"><strong id="kit-count"></strong><span class="pill" id="kit-pill"></span></div>
+  <div class="ksub" id="ksub"></div>
   <div class="tickets" id="tickets"></div>
 </main>
 
@@ -2759,13 +2777,13 @@ const sum = list => list.reduce((s,c) => s + c.price * c.qty, 0);
 const count = list => list.reduce((s,c) => s + c.qty, 0);
 const label = c => esc(c.name) + (c.code ? ' (' + esc(c.code) + ')' : '');
 const newId = p => p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-const STATUS = {new:['กำลังทำ',''], ready:['รอเสิร์ฟ',''], served:['เสิร์ฟแล้ว','ok']};
+const STATUS = {new:['รอทำ',''], cooking:['กำลังย่าง',''], ready:['รอเสิร์ฟ',''], served:['เสิร์ฟแล้ว','ok']};
 const mins = t => Math.max(0, Math.floor((Date.now() - new Date(t)) / 60000));
 // แถบสถานะของออเดอร์ 1 รอบ: สั่งแล้ว > ครัวกำลังทำ (คิวที่ N) > ทำเสร็จ รอเสิร์ฟ > เสิร์ฟแล้ว
 function progress(o){
-  const i = {new:1, ready:2, served:3}[o.status] || 1;
+  const i = {new:1, cooking:1, ready:2, served:3}[o.status] || 1;
   const now = o.status === 'new' ? (o.queue > 1 ? `รอครัว คิวที่ ${o.queue}` : 'ครัวกำลังทำ')
-            : o.status === 'ready' ? 'ทำเสร็จแล้ว กำลังนำมาเสิร์ฟ' : 'เสิร์ฟแล้ว';
+            : o.status === 'cooking' ? 'ครัวกำลังย่างอยู่' : o.status === 'ready' ? 'ทำเสร็จแล้ว กำลังนำมาเสิร์ฟ' : 'เสิร์ฟแล้ว';
   const step = (n, t) => `<div class="${i > n || i === 3 ? 'on' : i === n ? 'now' : ''}">${t}</div>`;
   return `<div class="prog-top"><b>${now}</b><span class="num">สั่ง ${time(o.createdAt)}${o.status === 'served' ? '' : ` · ${mins(o.createdAt)} นาทีแล้ว`}</span></div>
     <div class="steps"><div class="on">สั่งแล้ว</div>${step(1, o.status === 'new' && o.queue > 1 ? `คิวที่ ${o.queue}` : 'ครัวทำ')}${step(2, 'รอเสิร์ฟ')}${step(3, 'เสิร์ฟแล้ว')}</div>`;
@@ -2809,7 +2827,7 @@ function makeLocalDb(){
       if (gone.length) { const e = new Error('sold_out'); e.data = { ids: gone.map(c => c.id) }; throw e; }
       let s = d.sessions.find(s => !s.paid && s.tableNo === o.tableNo);
       if (!s) { s = { id: newId('s'), tableNo: o.tableNo, paid:false, openedAt: new Date().toISOString() }; d.sessions.push(s); }
-      d.orders.push({...o, sessionId: s.id}); write(d); },
+      d.seq = (d.seq || 100) + 1; d.orders.push({...o, sessionId: s.id, no: d.seq}); write(d); },
     async updateOrder(id, patch){ const d = read(); d.orders = d.orders.map(o => o.id === id ? {...o, ...patch} : o); write(d); },
     async paySession(id, info){ const d = read(); const ps = d.sessions.find(s => s.id === id);
       if (ps) d.calls = d.calls.map(c => c.tableNo === ps.tableNo && !c.doneAt ? {...c, doneAt:new Date().toISOString()} : c);
@@ -2833,7 +2851,7 @@ function makeGasDb(url){
   return {
     demo: false,
     hasToken: () => !!token(),
-    async names(){ return (await (await fetch(url + '?action=names')).json()).names || []; },
+    async names(){ const r = await (await fetch(url + '?action=names')).json(); serverVer = +r.version || 0; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} return r.names || []; },
     async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); } catch(e){} },
     logout(){ try { localStorage.removeItem(TKEY); localStorage.removeItem('mala_name'); } catch(e){} location.reload(); },
     async loadMenu(){ this._boot = await (await fetch(url + '?action=menu')).json(); return this._boot.menu || []; },
@@ -2865,6 +2883,8 @@ const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
 /* ---------- สถานะ ---------- */
 // ลิงก์ใน QR ประจำโต๊ะ = หน้าเว็บ#t-5 (โต๊ะ 5) / ไม่มี # = หน้าพนักงาน
 let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURIComponent(location.hash.slice(3)); } catch(e){}
+let serverVer = 0, ksub = 'kit'; try { serverVer = +localStorage.getItem('ravii-sv') || 0; } catch(e){}
+const canCook = () => !GAS_URL || serverVer >= 12;   // ขั้น "กำลังย่าง" ต้องใช้ Code.gs v12 ขึ้นไป
 let loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
@@ -3325,27 +3345,44 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
 }
 
 /* ---------- หน้าพนักงาน: ครัว + เสิร์ฟ ---------- */
-function renderKitchen(){
-  const list = orders.filter(o => o.status === 'new');
-  $('kit-count').textContent = `รอทำ ${list.length} ออเดอร์`;
-  $('tickets').innerHTML = list.length ? list.map((o, i) =>
-    `<div class="ticket">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)}<span class="num">คิว ${i + 1} · ${time(o.createdAt)}</span></h3>
-       <div class="wait num ${mins(o.createdAt) >= 15 ? 'late' : ''}">รอมาแล้ว ${mins(o.createdAt)} นาที</div>
-       <ul>${o.items.map(c => `<li><b class="num">${c.qty}×</b><span>${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span></li>`).join('')}</ul>
-       <button class="ghost" data-ready="${esc(o.id)}">ทำเสร็จ ส่งเสิร์ฟ</button>
-     </div>`).join('') : `<p class="empty">ไม่มีออเดอร์ค้างในครัว</p>`;
-}
-function renderServe(){
-  const list = orders.filter(o => o.status === 'ready');
-  $('serve-count').textContent = `รอเสิร์ฟ ${list.length} ออเดอร์ · แตะรายการเมื่อวางที่โต๊ะแล้ว`;
-  $('serves').innerHTML = list.length ? list.map(o =>
+const LATE_MIN = 15;   // รอเกินกี่นาทีถึงขึ้นป้าย "รอนาน"
+const unitOf = c => !c.code || /^(DR|SP)/i.test(c.code) ? 'ที่' : 'ไม้';
+const kLine = c => `<li><span>${c.code?`<small>${esc(c.code)}</small>`:''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span><b class="num">${c.qty} ${unitOf(c)}</b></li>`;
+const oNo = o => o.no ? `<span class="ono num">#${esc(o.no)}</span>` : '';
+function serveTickets(list){
+  return list.length ? list.map(o =>
     `<div class="ticket ready">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)}<span class="num">${time(o.createdAt)}</span></h3>
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span><span class="num ono">${time(o.createdAt)}</span></h3>
        <ul>${o.items.map((c,i) => `<li><button class="serve ${c.served?'on':''}" data-serve="${esc(o.id)}" data-i="${i}">
          <span class="box">${c.served?'✓':''}</span><span><b class="num">${c.qty}×</b> ${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span></button></li>`).join('')}</ul>
        <button class="ghost" data-served="${esc(o.id)}">เสิร์ฟครบแล้ว</button>
      </div>`).join('') : `<p class="empty">ไม่มีรายการรอเสิร์ฟ</p>`;
+}
+function renderKitchen(){
+  const kit = orders.filter(o => o.status === 'new' || o.status === 'cooking'), rdy = orders.filter(o => o.status === 'ready'),
+        done = orders.filter(o => o.status === 'served').slice().reverse();
+  $('kit-count').textContent = `${SHOP_NAME} Kitchen`;
+  $('kit-pill').textContent = `${kit.length} ออเดอร์`; $('kit-pill').hidden = !kit.length;
+  $('ksub').innerHTML = [['kit','ครัว',kit.length],['rdy','พร้อมเสิร์ฟ',rdy.length],['done','เสิร์ฟแล้ว',0]].map(([k,t,n]) =>
+    `<button data-ksub="${k}" aria-pressed="${ksub === k}">${t}${n ? `<i class="num">${n}</i>` : ''}</button>`).join('');
+  if (ksub === 'rdy') return $('tickets').innerHTML = serveTickets(rdy);
+  if (ksub === 'done') return $('tickets').innerHTML = done.length ? done.map(o =>
+    `<div class="ticket done"><h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span><span class="pill ok">เสิร์ฟแล้ว</span></h3>
+       <div class="wait num">สั่ง ${time(o.createdAt)}</div><ul class="kl">${o.items.map(kLine).join('')}</ul></div>`).join('')
+    : `<p class="empty">ยังไม่มีออเดอร์ที่เสิร์ฟแล้วของโต๊ะที่ยังไม่ปิดบิล</p>`;
+  $('tickets').innerHTML = kit.length ? kit.map(o => { const m = mins(o.createdAt), ck = o.status === 'cooking';
+    return `<div class="ticket ${ck ? 'cook' : ''}">
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${m >= LATE_MIN ? '<span class="pill late">รอนาน</span>' : ''}<span class="pill ${ck ? 'cook' : ''}">${ck ? 'กำลังย่าง' : 'รอทำ'}</span></h3>
+       <div class="wait num ${m >= LATE_MIN ? 'late' : ''}">รอมาแล้ว ${m} นาที · สั่ง ${time(o.createdAt)}</div>
+       <ul class="kl">${o.items.map(kLine).join('')}</ul>
+       ${ck || !canCook() ? `<button class="kbtn ghost" data-ready="${esc(o.id)}">ย่างเสร็จ ส่งไปแท็บเสิร์ฟ →</button>`
+                          : `<button class="kbtn go" data-cook="${esc(o.id)}">เริ่มย่าง →</button>`}
+     </div>`; }).join('') : `<p class="empty">ไม่มีออเดอร์ค้างในครัว</p>`;
+}
+function renderServe(){
+  const list = orders.filter(o => o.status === 'ready');
+  $('serve-count').textContent = `รอเสิร์ฟ ${list.length} ออเดอร์ · แตะรายการเมื่อวางที่โต๊ะแล้ว`;
+  $('serves').innerHTML = serveTickets(list);
 }
 function badge(id, n){ $(id).hidden = !n; $(id).textContent = n; }
 // เสียงเตือนสั้น ๆ 2 จังหวะ (เบราว์เซอร์ยอมให้เล่นเสียงหลังพนักงานแตะหน้าจอแล้วอย่างน้อยหนึ่งครั้ง)
@@ -3381,7 +3418,7 @@ function render(){
   document.body.classList.toggle('pq', view === 'qr');
   for (const v of ['tables','kitchen','serve','menu','qr','sales']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
-  badge('n-kitchen', orders.filter(o => o.status === 'new').length);
+  badge('n-kitchen', orders.filter(o => o.status === 'new' || o.status === 'cooking').length);
   badge('n-serve', orders.filter(o => o.status === 'ready').length);
   ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, qr:renderQr, sales:() => {}})[view]();
 }
@@ -3473,6 +3510,8 @@ document.addEventListener('click', async e => {
     }
     else b.disabled = false;
   }
+  else if (d.ksub) { ksub = d.ksub; render(); }
+  else if (d.cook) act(() => db.updateOrder(d.cook, {status:'cooking'}));
   else if (d.ready) act(() => db.updateOrder(d.ready, {status:'ready'}));
   else if (d.serve) {
     const o = orders.find(o => o.id === d.serve);
