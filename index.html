@@ -108,6 +108,23 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
+/* สรุปวันนี้ + เป้าหมาย */
+.goal{margin-top:12px} .goal .gl{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.goal .gl b{font-size:22px} .goal .gl span{color:var(--muted);font-size:14px}
+.goal .gb{height:14px;background:var(--sunk);border-radius:7px;overflow:hidden;margin-top:6px}
+.goal .gb i{display:block;height:100%;width:var(--w);background:var(--accent);border-radius:7px} .goal.hit .gb i{background:var(--ok)}
+.goal small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.dlist{margin:6px 0 0;padding:0;list-style:none} .dlist li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:15px}
+.dlist li span{min-width:0;overflow-wrap:anywhere} .dlist li small{color:var(--muted)} .dlist li b{white-space:nowrap}
+.dh{font-size:15px;font-weight:600;margin:16px 0 0}
+.stab{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.stab th,.stab td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.stab th{font-size:12px;color:var(--muted);font-weight:500;white-space:normal;line-height:1.2;vertical-align:bottom}
+.stab th:first-child,.stab td:first-child{text-align:left;white-space:normal;overflow-wrap:anywhere}
+.stab td.left{font-weight:600;font-size:16px} .stab tr.out td.left{color:var(--accent)} .stab tr.low td.left{color:var(--wait)}
+.stab th:first-child{width:44%}
+.stab tr.cat td{font-weight:600;color:var(--muted);border-bottom:0;padding-top:12px} .stab tr.sum td{font-weight:600;border-top:2px solid var(--fg);border-bottom:0}
+#print-area .rp .stab th,#print-area .rp .stab td{color:#000}
 /* iPhone ซูมหน้าจอเองเมื่อช่องกรอกตัวเล็กกว่า 16px แล้วหน้าจะล้นจอ */
 .form input,.form select,.rtools input,.keybox input,.search input,.brow input{font-size:16px}
 .stools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .stools button{flex:1 1 150px}
@@ -483,7 +500,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 </main>
 
 <main id="v-sales" class="wrap wide" hidden>
-  <div class="chips" id="rep-presets" style="padding-top:0"></div>
+  <div id="daily"></div>
+  <div class="chips" id="rep-presets"></div>
   <div class="rtools noprint"><input type="date" id="rep-from" aria-label="ตั้งแต่วันที่"><span>ถึง</span><input type="date" id="rep-to" aria-label="ถึงวันที่">
     <button class="ghost" data-range>ดูช่วงนี้</button><button class="ghost" data-print-report>🖨️ พิมพ์ / PDF</button></div>
   <div id="rep"></div>
@@ -2938,6 +2956,8 @@ function makeGasDb(url){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
       await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async report(from, to){ return await call('report', {from, to}); },
+    async daily(){ return await call('daily', {}); },
+    async setGoals(day, month){ await call('setGoals', {day, month}); },
     async checkSlip(id, dataUrl, total){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       return (await call('checkSlip', {sessionId: id, total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''})).result; },
     async stock(){ return await call('stock', {}); },
@@ -2965,7 +2985,7 @@ let tbl = null; try { if (location.hash.startsWith('#t-')) tbl = decodeURICompon
 let isAdmin = false; try { isAdmin = localStorage.getItem('mala_admin') === '1'; } catch(e){}
 let myRole = ''; try { myRole = localStorage.getItem('mala_role') || ''; } catch(e){}
 const canBuy = () => isAdmin || myRole === 'stock';
-let stockList = [], stockLog = [], stockState = '';
+let stockList = [], stockLog = [], stockState = '', stockToday = null, stockDate = '', stockView = 'table';
 let serverVer = 0, ksub = 'kit'; try { serverVer = +localStorage.getItem('ravii-sv') || 0; } catch(e){}
 const canCook = () => !GAS_URL || serverVer >= 12;   // ขั้น "กำลังย่าง" ต้องใช้ Code.gs v12 ขึ้นไป
 let loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
@@ -3076,7 +3096,7 @@ const MOVE = { in:'เพิ่ม', out:'เบิกใช้', waste:'ขอ�
 async function loadStock(quiet){
   if (!db.stock) return renderStock();
   if (!quiet) { stockState = stockList.length ? '' : 'loading'; renderStock(); }
-  try { const r = await db.stock(); stockList = r.stock || []; stockLog = r.log || []; stockState = ''; }
+  try { const r = await db.stock(); stockList = r.stock || []; stockLog = r.log || []; stockToday = r.today || null; stockDate = r.date || ''; stockState = ''; }
   catch(e){ console.error(e); stockState = e.message === 'unknown_action' ? 'old' : 'err'; }
   if (view === 'stock') renderStock();
 }
@@ -3095,14 +3115,44 @@ function renderStock(){
   $('stock').innerHTML = `<div class="stools"><button class="primary" style="margin:0" data-stock-bulk>🍢 กรอกจำนวนที่เสียบ${isAdmin ? ' / นับของ' : ''}</button>${mk}</div>
     <div class="tiles"><div class="tile ${low ? 'neg' : ''}"><span>⚠️ หมดหรือใกล้หมด</span><b class="num">${low} รายการ</b></div>
       <div class="tile"><span>📦 มูลค่าสต็อก (ตามต้นทุน)</span><b class="num">${baht(value)}</b></div></div>` +
-    stockList.slice().sort((a, b) => ord(a) - ord(b) || a.name.localeCompare(b.name, 'th')).map(k => {
+    `<div class="opts" style="margin-top:12px"><button data-sview="table" aria-pressed="${stockView === 'table'}">ตารางสรุปวันนี้</button><button data-sview="cards" aria-pressed="${stockView === 'cards'}">แก้ทีละรายการ</button></div>` +
+    (stockView === 'table' ? `<div class="panel"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">คงเหลือ ${stockDate ? stockDate.split('-').reverse().join('/') : 'วันนี้'}</h2><button class="ghost" data-stock-print>🖨️ พิมพ์ / PDF</button></div><button class="ghost" style="width:100%;margin-top:10px" data-stock-copy>📋 คัดลอกรายงานส่งให้ทีม (ไลน์)</button>${stockTable()}</div>`
+     :     stockList.slice().sort((a, b) => ord(a) - ord(b) || a.name.localeCompare(b.name, 'th')).map(k => {
       const st = k.qty <= 0 ? 'out' : k.qty <= k.min ? 'low' : '', nm = (code[k.id] ? esc(code[k.id]) + ' ' : '') + esc(k.name);
       return `<div class="srow ${st}"><div class="st"><div class="nm">${isAdmin ? `<button data-stock-edit="${esc(k.id)}">${nm} ✎</button>` : `<b>${nm}</b>`}
           <small class="num">${k.cost ? `ต้นทุน ${baht(k.cost)}/${esc(k.unit || 'หน่วย')} · ` : ''}เตือนเมื่อเหลือ ${num(k.min)}${links[k.id] ? '' : ' · ไม่ได้ผูกกับเมนู'}</small></div>
         <div class="q">${st ? `<span class="pill ${st === 'out' ? 'late' : ''}">${st === 'out' ? 'หมด' : 'ใกล้หมด'}</span>` : ''}<b class="num">${num(k.qty)}</b><small>${esc(k.unit || '')}</small></div></div>
-        <div class="acts"><button class="ghost" data-stock-move="${esc(k.id)}" data-type="in">+ เพิ่ม</button><button class="ghost" data-stock-move="${esc(k.id)}" data-type="out">− เบิก / เสีย</button>${isAdmin ? `<button class="ghost" data-stock-move="${esc(k.id)}" data-type="set">นับใหม่</button>` : ''}</div></div>`; }).join('') +
+        <div class="acts"><button class="ghost" data-stock-move="${esc(k.id)}" data-type="in">+ เพิ่ม</button><button class="ghost" data-stock-move="${esc(k.id)}" data-type="out">− เบิก / เสีย</button>${isAdmin ? `<button class="ghost" data-stock-move="${esc(k.id)}" data-type="set">นับใหม่</button>` : ''}</div></div>`; }).join('')) +
     (stockLog.length ? `<div class="panel"><h2>ความเคลื่อนไหวล่าสุด</h2><div class="slog">${stockLog.map(l =>
       `<span class="t num">${new Date(l.createdAt).getDate()}/${new Date(l.createdAt).getMonth() + 1} ${time(l.createdAt)}</span><span>${esc(l.name)} <span class="t">${MOVE[l.type] || esc(l.type)}${l.note ? ' · ' + esc(l.note) : ''}${l.by ? ' · ' + esc(l.by) : ''}</span></span><span class="r num ${l.change >= 0 ? 'pos' : 'neg'}">${l.change > 0 ? '+' : ''}${num(l.change)}</span><span class="r num t">เหลือ ${num(l.balance)}</span>`).join('')}</div></div>` : '');
+}
+// ตารางสรุปสต็อกวันนี้: เตรียม / ขาย / เสีย / คงเหลือ รายเมนู เรียงตามหมวดในเมนู
+function stockTable(){
+  const pos = {}, cat = {}, code = {}; menu.forEach((m, i) => { if (m.stockId && pos[m.stockId] === undefined) { pos[m.stockId] = i; cat[m.stockId] = m.category; code[m.stockId] = m.code; } });
+  const list = stockList.slice().sort((a, b) => (pos[a.id] === undefined ? 9999 : pos[a.id]) - (pos[b.id] === undefined ? 9999 : pos[b.id]) || a.name.localeCompare(b.name, 'th'));
+  const T = stockToday, z = v => v ? num(v) : '–', sum = {made:0, sold:0, waste:0, left:0};
+  let last = null, rows = '';
+  list.forEach(k => { const c = cat[k.id] || 'อื่นๆ', d = (T && T[k.id]) || {made:0, sold:0, waste:0, used:0};
+    if (c !== last) { rows += `<tr class="cat"><td colspan="${T ? 5 : 2}">${esc(c)}</td></tr>`; last = c; }
+    sum.made += d.made; sum.sold += d.sold; sum.waste += d.waste + d.used; sum.left += Math.max(0, k.qty);
+    rows += `<tr class="${k.qty <= 0 ? 'out' : k.qty <= k.min ? 'low' : ''}"><td>${code[k.id] ? esc(code[k.id]) + ' ' : ''}${esc(k.name)}</td>${T ? `<td class="num">${z(d.made)}</td><td class="num">${z(d.sold)}</td><td class="num">${z(d.waste + d.used)}</td>` : ''}<td class="num left">${num(k.qty)}${k.qty <= 0 ? ' หมด' : ''}</td></tr>`; });
+  return `<table class="stab"><tr><th>เมนู</th>${T ? '<th>เตรียมวันนี้</th><th>ขายวันนี้</th><th>เสีย / เบิก</th>' : ''}<th>คงเหลือ</th></tr>${rows}
+    <tr class="sum"><td>รวม ${list.length} รายการ</td>${T ? `<td class="num">${num(sum.made)}</td><td class="num">${num(sum.sold)}</td><td class="num">${num(sum.waste)}</td>` : ''}<td class="num">${num(sum.left)}</td></tr></table>`;
+}
+// ข้อความรายงานสต็อกสำหรับส่งให้ทีมในไลน์
+function stockText(){
+  const pos = {}, cat = {}, code = {}; menu.forEach((m, i) => { if (m.stockId && pos[m.stockId] === undefined) { pos[m.stockId] = i; cat[m.stockId] = m.category; code[m.stockId] = m.code; } });
+  const list = stockList.slice().sort((a, b) => (pos[a.id] === undefined ? 9999 : pos[a.id]) - (pos[b.id] === undefined ? 9999 : pos[b.id]));
+  const nm = k => (code[k.id] ? code[k.id] + ' ' : '') + k.name, T = stockToday || {}, out = list.filter(k => k.qty <= 0), low = list.filter(k => k.qty > 0 && k.qty <= k.min);
+  const L = [`${SHOP_NAME} · รายงานสต็อก ${(stockDate || ymd(new Date())).split('-').reverse().join('/')} เวลา ${time(new Date().toISOString())}`];
+  if (out.length) L.push('', `🔴 หมด (${out.length}): ` + out.map(nm).join(', '));
+  if (low.length) L.push('', `🟡 ใกล้หมด (${low.length}): ` + low.map(k => `${nm(k)} ${num(k.qty)}`).join(', '));
+  let last = null; L.push('', 'คงเหลือ (ขายวันนี้)');
+  list.filter(k => k.qty > 0).forEach(k => { const c = cat[k.id] || 'อื่นๆ'; if (c !== last) { L.push('', `▪️ ${c}`); last = c; }
+    const d = T[k.id]; L.push(`${nm(k)}  ${num(k.qty)} ${k.unit || ''}${d && d.sold ? ` (ขาย ${num(d.sold)})` : ''}`); });
+  const tot = Object.values(T).reduce((a, d) => ({made: a.made + d.made, sold: a.sold + d.sold, waste: a.waste + d.waste + d.used}), {made:0, sold:0, waste:0});
+  if (stockToday) L.push('', `รวมวันนี้: เตรียม ${num(tot.made)} · ขาย ${num(tot.sold)} · เสีย/เบิก ${num(tot.waste)}`);
+  return L.join('\n');
 }
 // กรอกทีเดียวทุกเมนู: วันนี้เสียบเพิ่มกี่ไม้ หรือ นับของจริงที่มี
 const bulkState = { mode:'in', vals:{} };
@@ -3184,6 +3234,64 @@ function expensePanel(D, total){
     ${D.cogs || D.waste ? `<p class="note num">ต้นทุนวัตถุดิบที่ใช้ไปตามออเดอร์ ${baht(D.cogs || 0)}${D.waste ? ` · ของเสีย ${baht(D.waste)}` : ''}</p>` : ''}
     ${D.expenses.map(x => `<div class="xrow"><span>${esc(x.note || x.category)}<small class="num">${x.date.split('-').reverse().join('/')} · ${esc(x.category)}${x.by ? ' · ลงโดย ' + esc(x.by) : ''}${x.checked ? '' : ' · <b style="color:var(--wait)">รอตรวจ</b>'}${x.slip ? ` · <a href="${esc(x.slip)}" target="_blank" rel="noopener">ดูรูป</a>` : ''}</small></span>
       <b class="num">${baht(x.amount)}</b><span class="noprint" style="display:flex;gap:6px">${x.checked ? '' : `<button class="ghost" data-exp-check="${esc(x.id)}">✓ ตรวจแล้ว</button>`}<button class="ghost danger" data-exp-del="${esc(x.id)}" data-armed="${rep.arm === x.id ? 1 : ''}">${rep.arm === x.id ? 'ยืนยันลบ' : 'ลบ'}</button></span></div>`).join('')}</div>`;
+}
+
+/* ---------- สรุปวันนี้ + เป้าหมาย ---------- */
+let daily = null, dailyState = '';
+async function loadDaily(){
+  if (!db.daily) return;
+  if (!daily) { dailyState = 'loading'; renderDaily(); }
+  try { daily = await db.daily(); dailyState = ''; } catch(e){ console.error(e); dailyState = e.message === 'unknown_action' ? 'old' : e.message === 'forbidden' ? 'no' : 'err'; }
+  renderDaily();
+}
+// ควรเตรียมเพิ่ม = ของในเมนูที่เหลือน้อยกว่ายอดขายเฉลี่ยต่อวัน (ไม่มีประวัติขายใช้จำนวนเตือนขั้นต่ำ) / ควรซื้อเพิ่ม = ของที่ไม่ได้อยู่ในเมนูและถึงจุดเตือน
+function dailyPlan(D){
+  const nm = k => (k.code ? k.code + ' ' : '') + k.name, prep = [], buy = [];
+  D.stock.forEach(k => { const have = Math.max(0, k.qty);
+    if (k.menu) { const want = Math.max(Math.ceil(k.avg), k.min), need = Math.ceil(want - have); if (need > 0) prep.push({ name: nm(k), have, avg: k.avg, need, unit: k.unit }); }
+    else if (k.qty <= k.min) buy.push({ name: k.name, have, min: k.min, unit: k.unit }); });
+  prep.sort((a, b) => b.need - a.need);
+  return { prep, buy, out: D.stock.filter(k => k.menu && k.qty <= 0 && (k.avg > 0 || k.soldToday > 0 || k.madeToday > 0)).map(nm) };
+}
+function goalBar(label, got, goal, extra){
+  const pct = goal ? Math.round(got / goal * 100) : 0;
+  return `<div class="goal ${goal && got >= goal ? 'hit' : ''}"><div class="gl"><span>${label}</span><b class="num">${baht(got)}</b></div>
+    ${goal ? `<div class="gb"><i style="--w:${Math.min(100, pct)}%"></i></div><small class="num">${pct}% ของเป้า ${baht(goal)}${got >= goal ? ' · ถึงเป้าแล้ว 🎉' : ` · ขาดอีก ${baht(goal - got)}`}${extra || ''}</small>` : `<small>ยังไม่ได้ตั้งเป้า</small>`}</div>`;
+}
+function dailyLeft(D){ const now = new Date(), last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), left = last - now.getDate();
+  return D.goals.month && D.month.total < D.goals.month && left > 0 ? ` · อีก ${left} วัน ต้องได้วันละ ${baht((D.goals.month - D.month.total) / left)}` : ''; }
+function dailyHtml(D, forPrint){
+  const P = dailyPlan(D), t = D.today, li = (a, b) => `<li><span>${a}</span><b class="num">${b}</b></li>`;
+  return `${goalBar('ยอดขายวันนี้', t.total, D.goals.day)}${goalBar('ยอดขายเดือนนี้', D.month.total, D.goals.month, dailyLeft(D))}
+    <p class="note num">${t.bills} บิล · เฉลี่ย ${baht(t.bills ? t.total / t.bills : 0)} · เงินสด ${baht(t.cash)} · โอน ${baht(t.transfer)}${t.open ? ` · บิลค้าง ${baht(t.open)}` : ''}<br>รายจ่ายวันนี้ ${baht(t.spent)} · เหลือ ${t.total - t.spent < 0 ? '−' : ''}${baht(Math.abs(t.total - t.spent))}</p>
+    ${D.top.length ? `<div class="dh">ขายดีวันนี้</div><ul class="dlist">${D.top.map(i => li(esc((i.code ? i.code + ' ' : '') + i.name), `${i.qty} ชิ้น`)).join('')}</ul>` : ''}
+    <div class="dh">ควรเตรียมเพิ่ม ${P.prep.length ? `(${P.prep.length})` : ''}</div>
+    ${P.prep.length ? `<ul class="dlist">${P.prep.slice(0, forPrint ? 999 : 12).map(p => li(`${esc(p.name)} <small class="num">เหลือ ${num(p.have)}${p.avg ? ` · ขายเฉลี่ย ${num(p.avg)}/วัน` : ''}</small>`, `+${num(p.need)} ${esc(p.unit || '')}`)).join('')}</ul>${!forPrint && P.prep.length > 12 ? `<p class="note">และอีก ${P.prep.length - 12} รายการ ดูครบในฉบับพิมพ์หรือข้อความที่คัดลอก</p>` : ''}` : `<p class="note">ของในเมนูมีพอสำหรับยอดขายปกติ</p>`}
+    <p class="note">${D.planDays ? `เทียบกับยอดขายเฉลี่ย ${D.planDays} วันล่าสุดที่ร้านเปิด` : 'ยังไม่มีประวัติขายย้อนหลัง จึงใช้จำนวน "เตือนเมื่อเหลือ" ของแต่ละรายการแทน'}</p>
+    <div class="dh">ควรซื้อเพิ่ม ${P.buy.length ? `(${P.buy.length})` : ''}</div>
+    ${P.buy.length ? `<ul class="dlist">${P.buy.map(p => li(esc(p.name), `เหลือ ${num(p.have)} ${esc(p.unit || '')}`)).join('')}</ul>` : `<p class="note">ไม่มีของนอกเมนูที่ถึงจุดเตือน (เพิ่มของใช้ เช่น ถ่าน ไม้เสียบ ได้ในแท็บสต็อก ปุ่ม "+ เพิ่มเอง")</p>`}`;
+}
+function renderDaily(){
+  const el = $('daily'); if (!db.daily || dailyState === 'no') return el.innerHTML = '';
+  if (dailyState === 'old') return el.innerHTML = `<div class="panel"><h2>สรุปวันนี้</h2><p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 18 ก่อนจึงจะใช้ส่วนนี้ได้</p></div>`;
+  if (!daily) return el.innerHTML = `<div class="panel"><h2>สรุปวันนี้</h2><p class="note">${dailyState === 'err' ? 'โหลดไม่ได้ ลองเข้าแท็บนี้ใหม่' : 'กำลังโหลด…'}</p></div>`;
+  el.innerHTML = `<div class="panel" style="margin-top:0"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">สรุปวันนี้ ${daily.date.split('-').reverse().join('/')}</h2><button class="ghost" data-goal-edit>🎯 ตั้งเป้า</button></div>
+    ${dailyHtml(daily)}
+    <div class="stools"><button class="ghost" data-daily-copy>📋 คัดลอกส่งให้ทีม</button><button class="ghost" data-daily-print>🖨️ พิมพ์ / PDF</button></div></div>`;
+}
+function dailyText(D){
+  const P = dailyPlan(D), t = D.today, pc = (a, g) => g ? ` (${Math.round(a / g * 100)}% ของเป้า ${baht(g)})` : '';
+  const L = [`${SHOP_NAME} · สรุปวันที่ ${D.date.split('-').reverse().join('/')}`, '', `💰 ยอดขายวันนี้ ${baht(t.total)}${pc(t.total, D.goals.day)}`, `📅 ยอดเดือนนี้ ${baht(D.month.total)}${pc(D.month.total, D.goals.month)}`,
+    `🧾 ${t.bills} บิล · เงินสด ${baht(t.cash)} · โอน ${baht(t.transfer)}`];
+  if (D.top.length) L.push('', '🔥 ขายดีวันนี้', ...D.top.map((i, n) => `${n + 1}. ${i.name} ${i.qty} ชิ้น`));
+  if (P.out.length) L.push('', `🔴 หมดแล้ว: ${P.out.join(', ')}`);
+  if (P.prep.length) L.push('', '🍢 ควรเตรียมเพิ่ม', ...P.prep.map(p => `- ${p.name} +${num(p.need)} ${p.unit || ''} (เหลือ ${num(p.have)})`));
+  if (P.buy.length) L.push('', '🛒 ควรซื้อเพิ่ม', ...P.buy.map(p => `- ${p.name} (เหลือ ${num(p.have)} ${p.unit || ''})`));
+  return L.join('\n');
+}
+async function copyText(txt, title){
+  try { await navigator.clipboard.writeText(txt); toast('คัดลอกแล้ว เปิดไลน์แล้ววางได้เลย'); }
+  catch(e){ openSheet(head(title) + `<p class="note" style="margin-top:0">กดค้างที่ข้อความแล้วเลือก คัดลอก</p><textarea readonly style="width:100%;height:50vh;font:inherit;font-size:16px;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px">${esc(txt)}</textarea>`); }
 }
 
 // เตรียมกับขายจริงรายเมนู (จากประวัติสต็อก) ใช้วางแผนการเสียบไม้
@@ -3781,7 +3889,7 @@ document.addEventListener('click', async e => {
   if (e.target === $('veil')) return closeSheet();
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
-  if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') loadReport(); if (view === 'stock') loadStock(); }
+  if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'stock') loadStock(); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
   else if ('range' in d) { let f = $('rep-from').value, t = $('rep-to').value; if (!f || !t) return toast('เลือกวันที่ให้ครบทั้งสองช่อง'); if (f > t) [f, t] = [t, f];
     rep.from = f; rep.to = t; rep.preset = 'custom'; loadReport(); }
@@ -3852,6 +3960,18 @@ document.addEventListener('click', async e => {
   else if (d.slipPick) { slipFor = d.slipPick; $('slip-pick').click(); }
   else if (d.recheck) runSlipCheck(d.recheck);
   else if ('stockNew' in d) sheetStockForm('');
+  else if (d.sview) { stockView = d.sview; renderStock(); }
+  else if ('goalEdit' in d) openSheet(head('ตั้งเป้ายอดขาย') + `<div class="form">
+      <label>เป้าต่อวัน (บาท)<input type="number" id="gl-day" inputmode="decimal" min="0" step="any" value="${daily && daily.goals.day ? daily.goals.day : ''}" placeholder="เช่น 8000"></label>
+      <label>เป้าต่อเดือน (บาท)<input type="number" id="gl-month" inputmode="decimal" min="0" step="any" value="${daily && daily.goals.month ? daily.goals.month : ''}" placeholder="เช่น 200000"></label>
+      <div class="err" id="mf-err"></div></div><button class="primary" style="margin-top:0" data-goal-save>บันทึกเป้า</button><p class="note">ใส่ 0 หรือเว้นว่างเพื่อไม่ตั้งเป้า</p>`);
+  else if ('goalSave' in d) { b.disabled = true; try { await db.setGoals(Number($('gl-day').value) || 0, Number($('gl-month').value) || 0); toast('บันทึกเป้าแล้ว'); closeSheet(); loadDaily(); } catch(e){ $('mf-err').textContent = 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; b.disabled = false; } }
+  else if ('dailyCopy' in d) { if (daily) copyText(dailyText(daily), 'สรุปวันนี้'); }
+  else if ('dailyPrint' in d) { if (daily) printHtml(`<div class="rp"><h1>${esc(SHOP_NAME)} · สรุปประจำวัน ${daily.date.split('-').reverse().join('/')}</h1>${dailyHtml(daily, true)}</div>`); }
+  else if ('stockCopy' in d) { const txt = stockText();
+    try { await navigator.clipboard.writeText(txt); toast('คัดลอกแล้ว เปิดไลน์แล้ววางได้เลย'); }
+    catch(e){ openSheet(head('รายงานสต็อก') + `<p class="note" style="margin-top:0">กดค้างที่ข้อความแล้วเลือก คัดลอก</p><textarea readonly style="width:100%;height:50vh;font:inherit;font-size:16px;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px">${esc(txt)}</textarea>`); } }
+  else if ('stockPrint' in d) printHtml(`<div class="rp"><h1>${esc(SHOP_NAME)} · สต็อกคงเหลือ</h1><div>วันที่ ${(stockDate || ymd(new Date())).split('-').reverse().join('/')} · พิมพ์เมื่อ ${time(new Date().toISOString())}</div>${stockTable()}</div>`);
   else if ('stockFromMenu' in d) { b.disabled = true; b.textContent = 'กำลังสร้าง…';
     try { const n = await db.stockFromMenu(); toast(`สร้างสต็อกแล้ว ${n} รายการ`); menu = await fetchMenu(); await loadStock(true); } catch(e){ console.error(e); toast(e.message === 'forbidden' ? 'เฉพาะ Admin ทำได้' : 'สร้างไม่สำเร็จ ลองอีกครั้ง'); }
     renderStock(); }
@@ -3926,7 +4046,7 @@ const onSlip = async e => {
   payState.check = null; sheetTable(slipFor, 'pay'); runSlipCheck(slipFor);
 };
 $('slip-file').addEventListener('change', onSlip); $('slip-pick').addEventListener('change', onSlip);
-$('home').onclick = () => { closeSheet(); view = 'tables'; render(); window.scrollTo(0, 0); };
+$('home').onclick = () => { if (tbl) { location.href = location.href.split('#')[0]; setTimeout(() => location.reload(), 150); return; } closeSheet(); view = 'tables'; render(); window.scrollTo(0, 0); };
 $('logout').onclick = () => { if (db.logout) return db.logout(); try { localStorage.removeItem('mala_pass_ok'); } catch(e){} location.reload(); };
 document.addEventListener('change', e => { if (e.target.id === 'seen') { payState.seen = e.target.checked; sheetTable(e.target.dataset.t, 'pay'); } });
 $('search').addEventListener('input', e => { find = e.target.value; renderMenu(); });
@@ -3941,6 +4061,9 @@ async function start(){
   if (!db.demo && !String(settings.promptpayId || '').replace(/\D/g, '')) settings = { ...settings, promptpayId: SHOP_PROMPTPAY.id, promptpayName: SHOP_PROMPTPAY.name, promptpayNote: SHOP_PROMPTPAY.note };
   if (tbl) {
     $('v-customer').hidden = false;
+    // พนักงานที่ล็อกอินอยู่ในเครื่องนี้แล้วเปิดหน้าลูกค้า (เช่นลองสแกน QR) มีปุ่มกลับหน้าพนักงาน ลูกค้าทั่วไปไม่เห็น
+    let staff = false; try { staff = db.login ? db.hasToken() : localStorage.getItem('mala_pass_ok') === '1'; } catch(e){}
+    if (staff) { $('home').hidden = false; $('home').textContent = '← หน้าพนักงาน'; }
   } else {
     let who = ''; try { who = localStorage.getItem('mala_name') || ''; } catch(e){}
     $('sub').textContent = who ? 'พนักงาน · ' + who : 'พนักงาน';
