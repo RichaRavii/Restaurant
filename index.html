@@ -108,6 +108,7 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
+.pill.bar{background:#dff1f8;color:#1d6f8f} .ticket.bar{border-top-color:#3aa0c8}
 /* หน้าแรกลูกค้า: ร้านแนะนำ + ขายดี */
 .picks h2{margin-top:18px}
 .hcards{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
@@ -224,6 +225,11 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .serve{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .serve .box{flex:none;width:22px;height:22px;border:2px solid var(--muted);border-radius:5px;display:grid;place-items:center;font-size:14px}
 .serve.on{background:var(--ok-soft);border-color:var(--ok)} .serve.on .box{border-color:var(--ok);color:var(--ok)}
+.rlist{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.rrow small{color:var(--muted)} .rc .en{letter-spacing:.2em;font-size:11px;margin-top:-4px}
+.fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
+ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
 img.tag{object-fit:cover;background:var(--sunk)}
 .item .tag{width:68px;height:68px}
@@ -2834,6 +2840,7 @@ var qrcode = function() {
    ตั้งค่าร้าน — แก้ตรงนี้
    ===================================================== */
 const SHOP_NAME = "ไม้ละ";
+const SHOP_EN = "MAI LA";
 const TABLE_WORD = "Table";            // คำนำหน้าชื่อโต๊ะ เช่น Table 1 (เปลี่ยนเป็น "โต๊ะ" ได้)
 const TABLES = ['1','2','3','4','5','6','7','8','9','10','11','12'];   // ชื่อโต๊ะในโหมดทดลอง (ของจริงอยู่ในชีท Tables ตั้งเป็น A1, B18 ก็ได้)
 const SPICE = ['ไม่เผ็ด','เผ็ดน้อย','เผ็ดกลาง','เผ็ดมาก'];
@@ -2916,6 +2923,10 @@ function makeLocalDb(){
     async ackCall(id){ const d = read(); d.calls = d.calls.map(c => c.id === id ? {...c, doneAt:new Date().toISOString()} : c); write(d); },
     async loadSettings(){ return { promptpayId: DEMO_PROMPTPAY.id, promptpayName: DEMO_PROMPTPAY.name }; },
     async report(from, to){ const d = read(); return aggregate(d.orders, from, to, d.sessions); },
+    async receipts(from, to){ const d = read(), bills = d.sessions.filter(s => s.paid && s.closedAt && ymd(new Date(s.closedAt)) >= from && ymd(new Date(s.closedAt)) <= to)
+        .map(s => ({ id: s.id, tableNo: s.tableNo, closedAt: s.closedAt, method: s.payMethod || s.method || '', by: s.closedBy || '', total: s.total || 0, items: d.orders.filter(o => o.sessionId === s.id).flatMap(o => o.items) }))
+        .sort((a, b) => a.closedAt < b.closedAt ? 1 : -1);
+      return { count: bills.length, bills: bills.slice(0, 400) }; },
     async custLoad(t){ const d = read(), s = d.sessions.find(s => !s.paid && s.tableNo === t) || null;
       const q = d.orders.filter(o => !o.paid && o.status === 'new').map(o => o.id);
       return { valid: TABLES.includes(t), session: s, soldOut: outIds(), calls: d.calls.filter(c => !c.doneAt && c.tableNo === t).map(c => c.type), orders: s ? d.orders.filter(o => o.sessionId === s.id).map(o => ({...o, queue: q.indexOf(o.id) + 1})) : [] }; },
@@ -2925,9 +2936,12 @@ function makeLocalDb(){
       if (gone.length) { const e = new Error('sold_out'); e.data = { ids: gone.map(c => c.id) }; throw e; }
       let s = d.sessions.find(s => !s.paid && s.tableNo === o.tableNo);
       if (!s) { s = { id: newId('s'), tableNo: o.tableNo, paid:false, openedAt: new Date().toISOString() }; d.sessions.push(s); }
-      d.seq = (d.seq || 100) + 1; d.orders.push({...o, sessionId: s.id, no: d.seq}); write(d); },
+      const bar = o.items.filter(isBarItem), food = o.items.filter(c => !isBarItem(c));
+      if (food.length) { d.seq = (d.seq || 100) + 1; d.orders.push({...o, items: food, sessionId: s.id, no: d.seq}); }
+      if (bar.length) { d.seq = (d.seq || 100) + 1; d.orders.push({...o, id: o.id + 'd', items: bar, status: 'ready', sessionId: s.id, no: d.seq}); }
+      write(d); },
     async updateOrder(id, patch){ const d = read(), k = {cooking:'cookAt', ready:'readyAt', served:'servedAt'}[patch.status];
-      d.orders = d.orders.map(o => o.id === id ? {...o, ...patch, ...(k && !o[k] ? {[k]: new Date().toISOString()} : {})} : o); write(d); },
+      if (!patch.status) delete patch.status; d.orders = d.orders.map(o => o.id === id ? {...o, ...patch, ...(k && !o[k] ? {[k]: new Date().toISOString()} : {})} : o); write(d); },
     async paySession(id, info){ const d = read(); const ps = d.sessions.find(s => s.id === id);
       if (ps) d.calls = d.calls.map(c => c.tableNo === ps.tableNo && !c.doneAt ? {...c, doneAt:new Date().toISOString()} : c);
       d.sessions = d.sessions.map(s => s.id === id ? {...s, paid:true, closedAt:new Date().toISOString(), payMethod: info.method, total: info.total, slip: info.slip ? '(มีรูปสลิป ไม่เก็บในโหมดทดลอง)' : ''} : s);
@@ -2966,7 +2980,7 @@ function makeGasDb(url){
     async ackCall(id){ await call('ackCall', {id}); },
     async loadSessions(){ this._sync = await call('sync'); if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
     async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
-    async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined}); },
+    async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined, done: patch.items ? patch.items.map(c => !!c.done) : undefined}); },
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
     async saveMenu(it){ await call('saveMenu', it); },
     async deleteMenu(id){ await call('deleteMenu', {id}); },
@@ -2974,6 +2988,7 @@ function makeGasDb(url){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
       await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async report(from, to){ return await call('report', {from, to}); },
+    async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
     async setGoals(day, month){ await call('setGoals', {day, month}); },
     async checkSlip(id, dataUrl, total){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
@@ -3471,6 +3486,8 @@ function renderReport(){
       <div class="readout num">${pick ? `<b>${pick.full}</b> ${baht(pick.total)} · ${pick.bills} บิล` : total ? `สูงสุด <b>${best.full}</b> ${baht(best.total)} · แตะแท่งเพื่อดูแต่ละ${rep.preset === 'year' ? 'เดือน' : 'วัน'}` : 'ยังไม่มียอดขายในช่วงนี้'}</div>
       <div class="bars">${ser.map((x, i) => `<button data-bar="${i}" class="${x.total ? '' : 'zero'}" aria-pressed="${rep.sel === i}" title="${x.full}: ${baht(x.total)}" aria-label="${x.full} ${baht(x.total)}"><i style="--h:${x.total / max * 100}%"></i></button>`).join('')}</div>
       <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
+    <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🧾 ใบเสร็จย้อนหลัง</h2><button class="ghost" style="width:auto;margin:0" data-receipts>ดูใบเสร็จช่วงนี้ (${bills} ใบ)</button></div>
+      <p class="note" style="margin:6px 0 0">เปิดดู ค้นหาโต๊ะ และพิมพ์สำเนาใบเสร็จของบิลที่ปิดแล้วในช่วงวันที่ด้านบน</p></div>
     ${expensePanel(D, total)}
     ${prepPanel(D)}
     ${timePanel(D.time)}
@@ -3849,15 +3866,16 @@ function payStep(t, mine){
 }
 /* ---------- ใบแจ้งยอด / ใบเสร็จ ---------- */
 // รวมรายการที่เหมือนกันจากทุกรอบเป็นบรรทัดเดียว (ชื่อ + ระดับเผ็ด + ราคา)
+const billNo = id => String(id).replace(/^s-/, '').slice(0, 8).toUpperCase();
 function receiptHtml(t, mine, info){   // info = null คือใบแจ้งยอดก่อนจ่าย, มีค่า = ใบเสร็จหลังปิดบิล
   const lines = {}; mine.flatMap(o => o.items).forEach(c => { const k = c.name + '|' + (c.opt || '') + '|' + c.price, l = lines[k] || (lines[k] = {...c, qty: 0}); l.qty += c.qty; });
   const list = Object.values(lines), sub = sum(list), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, total = grand(list);
   const row = (l, v) => `<tr><td colspan="2">${l}</td><td class="a">${baht(v)}</td></tr>`;
   let qr = '';
   if (!info && ppTarget() && total) { const q = qrcode(0, 'M'); q.addData(ppPayload(total)); q.make(); qr = `<hr><div class="c b">สแกนจ่ายพร้อมเพย์ ${baht(total)}</div>${q.createSvgTag({cellSize:4, margin:2, scalable:true})}<div class="c">${esc(settings.promptpayName || '')}</div>${settings.promptpayNote ? `<div class="c">${esc(settings.promptpayNote)}</div>` : ''}`; }
-  const now = new Date();
-  return `<div class="rc"><h4>${esc(SHOP_NAME)}</h4><div class="c b">${info ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งยอด'}</div>
-    <div class="c">${TABLE_WORD} ${esc(t)} · ${date(now)} ${time(now)}</div><hr>
+  const now = info && info.at ? new Date(info.at) : new Date();
+  return `<div class="rc"><h4>${esc(SHOP_NAME)}</h4><div class="c en">${esc(SHOP_EN)}</div><div class="c b">${info ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งยอด'}${info && info.copy ? ' (สำเนา)' : ''}</div>
+    ${info && info.no ? `<div class="c num">เลขที่ ${esc(billNo(info.no))}</div>` : ''}<div class="c">${TABLE_WORD} ${esc(t)} · ${date(now)} ${time(now)}</div><hr>
     <table>${list.map(c => `<tr><td class="rq">${c.qty}</td><td>${esc(c.name)}${c.code ? ' (' + esc(c.code) + ')' : ''}${c.opt ? `<div class="o">${esc(c.opt)}</div>` : ''}</td><td class="a">${baht(c.price * c.qty)}</td></tr>`).join('')}</table><hr>
     <table>${svc || vat ? row('ค่าอาหาร', sub) : ''}${svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : ''}${vat ? row(`VAT ${VAT_PCT}%`, vat) : ''}
       <tr class="tot"><td colspan="2">รวม ${count(list)} ชิ้น</td><td class="a">${baht(total)}</td></tr></table>
@@ -3872,6 +3890,35 @@ function printHtml(html){
   window.print();
 }
 let lastReceipt = '';
+// v24: ใบเสร็จย้อนหลัง
+const rcp = { list: null, q: '', err: '' };
+const payWord = m => m === 'transfer' ? 'โอน' : m === 'cash' ? 'เงินสด' : '-';
+function rcpRows(){
+  if (rcp.err) return `<p class="empty">${rcp.err}</p>`;
+  if (!rcp.list) return `<p class="empty">กำลังโหลด…</p>`;
+  const q = rcp.q.trim().toLowerCase();
+  const list = rcp.list.bills.filter(b => !q || String(b.tableNo).toLowerCase() === q || billNo(b.id).toLowerCase().includes(q));
+  return `${rcp.list.count > rcp.list.bills.length ? `<p class="note">แสดง ${rcp.list.bills.length} ใบล่าสุดจาก ${rcp.list.count} ใบ เลือกช่วงวันให้แคบลงเพื่อดูใบเก่ากว่านี้</p>` : ''}
+    ${list.length ? `<div class="rlist">${list.map(b => { const d = new Date(b.closedAt);
+      return `<button class="rrow" data-rcp="${esc(b.id)}"><span><b>${TABLE_WORD} ${esc(b.tableNo)}</b> <small class="num">#${esc(billNo(b.id))}</small><br><small class="num">${date(d)} ${time(d)} · ${payWord(b.method)}${b.by ? ' · ' + esc(b.by) : ''}</small></span><b class="num">${baht(grand(b.items))}</b></button>`; }).join('')}</div>`
+      : `<p class="empty">${q ? 'ไม่พบบิลที่ค้นหา' : 'ไม่มีบิลที่ปิดแล้วในช่วงนี้'}</p>`}`;
+}
+async function sheetReceipts(keep){
+  const [from, to] = repRange(); if (!keep) { rcp.list = null; rcp.err = ''; } rcp.q = '';
+  openSheet(head('🧾 ใบเสร็จย้อนหลัง') + `<p class="note num">${from === to ? from : from + ' ถึง ' + to}</p>
+    <input id="rcp-q" type="search" placeholder="ค้นหาเลขโต๊ะ หรือเลขที่บิล" style="width:100%;margin:6px 0 10px">
+    <div id="rcp-list">${rcpRows()}</div>`);
+  $('rcp-q').oninput = e => { rcp.q = e.target.value; $('rcp-list').innerHTML = rcpRows(); };
+  if (keep && rcp.list) return;
+  try { rcp.list = await db.receipts(from, to); } catch(e){ console.error(e); rcp.err = e.message === 'forbidden' ? 'ดูใบเสร็จย้อนหลังได้เฉพาะแอดมิน' : 'โหลดไม่ได้ ถ้าเพิ่งอัปเดตเว็บ ให้อัปเดต Code.gs เป็น v24 แล้ว Deploy เวอร์ชันใหม่ด้วย'; }
+  if ($('rcp-list')) $('rcp-list').innerHTML = rcpRows();
+}
+function sheetReceiptOne(id){
+  const b = rcp.list && rcp.list.bills.find(x => x.id === id); if (!b) return;
+  lastReceipt = receiptHtml(b.tableNo, [{ items: b.items }], { method: b.method, by: b.by, at: b.closedAt, no: b.id, copy: true });
+  openSheet(head(`ใบเสร็จ ${TABLE_WORD} ${esc(b.tableNo)}`) + `<div class="rc-preview">${lastReceipt}</div>
+    <button class="primary" data-print-receipt>🖨️ พิมพ์สำเนา / PDF</button><button class="ghost" style="width:100%;margin-top:8px" data-receipts-back>← กลับไปรายการ</button>`);
+}
 function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
   const s = sessOf(t), mine = s ? orders.filter(o => o.sessionId === s.id) : [];
   const pending = mine.filter(o => o.status !== 'served').length;
@@ -3892,21 +3939,37 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
 }
 
 /* ---------- หน้าพนักงาน: ครัว + เสิร์ฟ ---------- */
+const BAR_RE = /ดื่ม|เบียร์|เหล้า|โซจู|drink/i;
+const isBarItem = c => /^DR/i.test(c.code || '') || BAR_RE.test((menu.find(m => m.id === c.id) || {}).category || '');
+const isBarOrder = o => o.items.length > 0 && o.items.every(isBarItem);
 const LATE_MIN = 15;   // รอเกินกี่นาทีถึงขึ้นป้าย "รอนาน"
 const unitOf = c => !c.code || /^(DR|SP)/i.test(c.code) ? 'ที่' : 'ไม้';
 const kLine = c => `<li><span>${c.code?`<small>${esc(c.code)}</small>`:''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span><b class="num">${c.qty} ${unitOf(c)}</b></li>`;
 const oNo = o => o.no ? `<span class="ono num">#${esc(o.no)}</span>` : '';
-function serveTickets(list){
-  return list.length ? list.map(o =>
-    `<div class="ticket ready">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span><span class="num ono">${time(o.createdAt)}</span></h3>
-       <ul>${o.items.map((c,i) => `<li><button class="serve ${c.served?'on':''}" data-serve="${esc(o.id)}" data-i="${i}">
-         <span class="box">${c.served?'✓':''}</span><span><b class="num">${c.qty}×</b> ${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span></button></li>`).join('')}</ul>
-       <button class="ghost" data-served="${esc(o.id)}">เสิร์ฟครบแล้ว</button>
-     </div>`).join('') : `<p class="empty">ไม่มีรายการรอเสิร์ฟ</p>`;
+const itemTxt = c => `<b class="num">${c.qty}×</b> ${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}`;
+const tickBtn = (attr, id, i, c, on) => `<li><button class="serve ${on?'on':''}" data-${attr}="${esc(id)}" data-i="${i}"><span class="box">${on?'✓':''}</span><span>${itemTxt(c)}</span></button></li>`;
+const openDone = new Set();   // ตั๋วที่กางดูรายการที่ติ๊กแล้ว
+// รายการที่ติ๊กแล้วยุบลงไปเป็นแถวเดียวด้านล่าง แตะเพื่อกางดู/ยกเลิกติ๊ก
+function doneFold(key, label, lis){
+  if (!lis.length) return '';
+  const open = openDone.has(key);
+  return `<button class="fold" data-fold="${esc(key)}">✓ ${label} ${lis.length} รายการ <span>${open ? 'ซ่อน ▲' : 'ดู ▼'}</span></button>${open ? `<ul class="folded">${lis.join('')}</ul>` : ''}`;
 }
+const partial = o => (o.status === 'new' || o.status === 'cooking') && o.items.some(c => c.done && !c.served);
+function serveTickets(list){
+  return list.length ? list.map(o => { const part = o.status !== 'ready', idx = o.items.map((c,i) => i).filter(i => !part || o.items[i].done);
+    const todo = idx.filter(i => !o.items[i].served), got = idx.filter(i => o.items[i].served);
+    return `<div class="ticket ready ${isBarOrder(o) ? 'bar' : ''}">
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${isBarOrder(o) ? '<span class="pill bar">🥤 เครื่องดื่ม</span>' : ''}${part ? '<span class="pill cook">ทยอยเสิร์ฟ</span>' : ''}<span class="num ono">${time(o.createdAt)}</span></h3>
+       ${part ? `<div class="wait">ย่างเสร็จแล้วบางส่วน ที่เหลือยังอยู่บนเตา ${o.items.filter(c => !c.done).length} รายการ</div>` : ''}
+       <ul>${todo.map(i => tickBtn('serve', o.id, i, o.items[i], false)).join('')}</ul>
+       ${doneFold('s' + o.id, 'เสิร์ฟแล้ว', got.map(i => tickBtn('serve', o.id, i, o.items[i], true)))}
+       ${part ? '' : `<button class="ghost" data-served="${esc(o.id)}">เสิร์ฟครบแล้ว</button>`}
+     </div>`; }).join('') : `<p class="empty">ไม่มีรายการรอเสิร์ฟ</p>`;
+}
+const serveList = () => orders.filter(o => o.status === 'ready' || partial(o));
 function renderKitchen(){
-  const kit = orders.filter(o => o.status === 'new' || o.status === 'cooking'), rdy = orders.filter(o => o.status === 'ready'),
+  const kit = orders.filter(o => o.status === 'new' || o.status === 'cooking'), rdy = serveList(),
         done = orders.filter(o => o.status === 'served').slice().reverse();
   $('kit-count').textContent = `${SHOP_NAME} Kitchen`;
   $('kit-pill').textContent = `${kit.length} ออเดอร์`; $('kit-pill').hidden = !kit.length;
@@ -3921,13 +3984,16 @@ function renderKitchen(){
     return `<div class="ticket ${ck ? 'cook' : ''}">
        <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${m >= LATE_MIN ? '<span class="pill late">รอนาน</span>' : ''}<span class="pill ${ck ? 'cook' : ''}">${ck ? 'กำลังย่าง' : 'รอทำ'}</span></h3>
        <div class="wait num ${m >= LATE_MIN ? 'late' : ''}">รอมาแล้ว ${m} นาที · สั่ง ${time(o.createdAt)}</div>
-       <ul class="kl">${o.items.map(kLine).join('')}</ul>
-       ${myRole === 'floor' ? '' : ck || !canCook() ? `<button class="kbtn ghost" data-ready="${esc(o.id)}">ย่างเสร็จ ส่งไปแท็บเสิร์ฟ →</button>`
+       ${myRole === 'floor' ? `<ul class="kl">${o.items.filter(c => !c.done).map(kLine).join('')}</ul>${doneFold('k' + o.id, 'ย่างเสร็จแล้ว', o.items.filter(c => c.done).map(kLine))}`
+         : `<ul>${o.items.map((c,i) => c.done ? '' : tickBtn('grill', o.id, i, c, false)).join('')}</ul>
+            ${doneFold('k' + o.id, 'ย่างเสร็จแล้ว', o.items.map((c,i) => c.done ? tickBtn('grill', o.id, i, c, true) : '').filter(Boolean))}
+            <div class="khint">ติ๊กทีละรายการเมื่อย่างเสร็จ ของที่ติ๊กจะไปโผล่แท็บเสิร์ฟทันที</div>`}
+       ${myRole === 'floor' ? '' : ck || !canCook() ? `<button class="kbtn ghost" data-ready="${esc(o.id)}">ย่างเสร็จทั้งหมด ส่งไปแท็บเสิร์ฟ →</button>`
                           : `<button class="kbtn go" data-cook="${esc(o.id)}">เริ่มย่าง →</button>`}
      </div>`; }).join('') : `<p class="empty">ไม่มีออเดอร์ค้างในครัว</p>`;
 }
 function renderServe(){
-  const list = orders.filter(o => o.status === 'ready');
+  const list = serveList();
   $('serve-count').textContent = `รอเสิร์ฟ ${list.length} ออเดอร์ · แตะรายการเมื่อวางที่โต๊ะแล้ว`;
   $('serves').innerHTML = serveTickets(list);
 }
@@ -3967,7 +4033,7 @@ function render(){
   for (const v of ['tables','kitchen','serve','menu','stock','qr','sales']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
   badge('n-kitchen', orders.filter(o => o.status === 'new' || o.status === 'cooking').length);
-  badge('n-serve', orders.filter(o => o.status === 'ready').length);
+  badge('n-serve', serveList().length);
   ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, stock:() => {}, qr:renderQr, sales:() => {}})[view]();
 }
 
@@ -3978,6 +4044,9 @@ document.addEventListener('click', async e => {
   const d = b.dataset;
   if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'stock') loadStock(); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
+  else if ('receipts' in d) sheetReceipts();
+  else if (d.rcp) sheetReceiptOne(d.rcp);
+  else if ('receiptsBack' in d) sheetReceipts(true);
   else if ('range' in d) { let f = $('rep-from').value, t = $('rep-to').value; if (!f || !t) return toast('เลือกวันที่ให้ครบทั้งสองช่อง'); if (f > t) [f, t] = [t, f];
     rep.from = f; rep.to = t; rep.preset = 'custom'; loadReport(); }
   else if ('printReport' in d) { if (!rep.data) return toast('รอโหลดข้อมูลก่อน'); printHtml(reportPrintHtml()); }
@@ -4103,7 +4172,7 @@ document.addEventListener('click', async e => {
     const s = sessOf(d.pay); if (!s) return closeSheet();
     const mine = orders.filter(o => o.sessionId === s.id), method = mine.length ? payState.method : 'none';
     let by = ''; try { by = localStorage.getItem('mala_name') || ''; } catch(e){}
-    const receipt = mine.length ? receiptHtml(d.pay, mine, { method, by }) : '';   // เก็บไว้ก่อน เพราะปิดบิลแล้วรายการจะหายจากหน้าจอ
+    const receipt = mine.length ? receiptHtml(d.pay, mine, { method, by, no: s.id }) : '';   // เก็บไว้ก่อน เพราะปิดบิลแล้วรายการจะหายจากหน้าจอ
     b.disabled = true;
     if (await act(() => db.paySession(s.id, { method, seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: grand(mine.flatMap(o => o.items)) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) {
       if (!receipt) return closeSheet();
@@ -4114,13 +4183,21 @@ document.addEventListener('click', async e => {
     else b.disabled = false;
   }
   else if (d.ksub) { ksub = d.ksub; render(); }
+  else if (d.fold) { openDone.has(d.fold) ? openDone.delete(d.fold) : openDone.add(d.fold); render(); }
   else if (d.cook) act(() => db.updateOrder(d.cook, {status:'cooking'}));
-  else if (d.ready) act(() => db.updateOrder(d.ready, {status:'ready'}));
+  else if (d.ready) { const o = orders.find(o => o.id === d.ready);
+    act(() => db.updateOrder(d.ready, {status:'ready', items: o.items.map(c => ({...c, done:true}))})); }
+  else if (d.grill) {
+    const o = orders.find(o => o.id === d.grill);
+    const items = o.items.map((c,i) => i === +d.i ? {...c, done: !c.done, served: c.done ? false : c.served} : c);
+    const all = items.every(c => c.done);
+    act(() => db.updateOrder(o.id, {items, status: all ? 'ready' : 'cooking'}), all ? `${TABLE_WORD} ${o.tableNo} ย่างครบแล้ว ส่งไปเสิร์ฟ` : '');
+  }
   else if (d.serve) {
     const o = orders.find(o => o.id === d.serve);
     const items = o.items.map((c,i) => i === +d.i ? {...c, served: !c.served} : c);
     const all = items.every(c => c.served);
-    act(() => db.updateOrder(o.id, {items, status: all ? 'served' : 'ready'}), all ? `${TABLE_WORD} ${o.tableNo} เสิร์ฟครบแล้ว` : '');
+    act(() => db.updateOrder(o.id, {items, status: all ? 'served' : o.status === 'served' ? 'ready' : undefined}), all ? `${TABLE_WORD} ${o.tableNo} เสิร์ฟครบแล้ว` : '');
   }
   else if (d.served) {
     const o = orders.find(o => o.id === d.served);
