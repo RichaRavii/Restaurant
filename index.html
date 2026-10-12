@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ravii</title>
+<title>ไม้ละ</title>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="Ravii">
+<meta name="apple-mobile-web-app-title" content="ไม้ละ">
 <meta name="theme-color" content="#f6f0e8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2292%22 fill=%22%238f1a2a%22/%3E%3Ccircle cx=%22150%22 cy=%2246%22 r=%2230%22 fill=%22%23f6e4c3%22/%3E%3Cpath d=%22M58 150c3 9 14 13 14 25a13 13 0 0 1-26 0c0-8 6-11 8-17 2 3 3 4 4 4 1-4-1-8 0-12z%22 fill=%22%23f0625a%22/%3E%3Cg transform=%22rotate%28-42 100 104%29%22 fill=%22%23fffdfa%22%3E%3Crect x=%2296.5%22 y=%2222%22 width=%227%22 height=%22164%22 rx=%223.5%22/%3E%3Ccircle cx=%22100%22 cy=%2258%22 r=%2219%22/%3E%3Crect x=%2280%22 y=%2284%22 width=%2240%22 height=%2234%22 rx=%229%22 fill=%22%23f0625a%22/%3E%3Ccircle cx=%22100%22 cy=%22142%22 r=%2217%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@500;600&display=swap">
@@ -2833,7 +2833,7 @@ var qrcode = function() {
 /* =====================================================
    ตั้งค่าร้าน — แก้ตรงนี้
    ===================================================== */
-const SHOP_NAME = "Ravii";
+const SHOP_NAME = "ไม้ละ";
 const TABLE_WORD = "Table";            // คำนำหน้าชื่อโต๊ะ เช่น Table 1 (เปลี่ยนเป็น "โต๊ะ" ได้)
 const TABLES = ['1','2','3','4','5','6','7','8','9','10','11','12'];   // ชื่อโต๊ะในโหมดทดลอง (ของจริงอยู่ในชีท Tables ตั้งเป็น A1, B18 ก็ได้)
 const SPICE = ['ไม่เผ็ด','เผ็ดน้อย','เผ็ดกลาง','เผ็ดมาก'];
@@ -3519,7 +3519,7 @@ const NO_SPICE = /ดื่ม|น้ำ|เบียร์|เหล้า|โ�
 function renderMenuAdmin(){
   const sp = menu.filter(m => !m.spicy && !NO_SPICE.test(m.category) && !/^(DR)/i.test(m.code || ''));
   if ($('spicy-btn')) { $('spicy-btn').hidden = !(isAdmin && sp.length && db.setSpicy); $('spicy-btn').textContent = `🌶️ ให้เลือกความเผ็ดทุกเมนูปิ้ง (${sp.length} เมนู)`; }
-  const ip = importPlan(), n = ip.upd.length + ip.add.length; $('import-btn').hidden = !n; $('import-btn').textContent = `📥 นำเข้าเมนูชุด Ravii (${n} รายการ)`;
+  const ip = importPlan(), n = ip.upd.length + ip.add.length; $('import-btn').hidden = !n; $('import-btn').textContent = `📥 นำเข้าเมนูชุดร้าน (${n} รายการ)`;
   $('menu-admin').innerHTML = menu.map(it => `<div class="mrow ${it.available === false ? 'out' : ''}">${thumb(it)}
     <div class="info"><div>${it.recommend ? '⭐ ' : ''}${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
     <div class="acts"><button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
@@ -3527,7 +3527,7 @@ function renderMenuAdmin(){
     <button class="ghost" data-menu-edit="${esc(it.id)}">แก้ไข</button></div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
 }
 /* ---------- เมนูชุด Ravii (จากแผ่นเมนูที่เจ้าของร้านส่งมา ใช้รหัสตามป้ายใต้รูป) ----------
-   [หมวด, รหัสไม้, ชื่อ, ราคา] — ปุ่ม "นำเข้าเมนูชุด Ravii" จะปรับเมนูเดิมที่รหัสตรงกันและเพิ่มที่ยังไม่มี กดซ้ำได้ ไม่เพิ่มซ้ำ */
+   [หมวด, รหัสไม้, ชื่อ, ราคา] — ปุ่ม "นำเข้าเมนูชุดร้าน" จะปรับเมนูเดิมที่รหัสตรงกันและเพิ่มที่ยังไม่มี กดซ้ำได้ ไม่เพิ่มซ้ำ */
 const MENU_SET = [
   ['เนื้อสัตว์ (หมู)','O1','สามชั้น',20], ['เนื้อสัตว์ (หมู)','O2','สันคอหมู',20], ['เนื้อสัตว์ (หมู)','O4','สันนอกหมู',20], ['เนื้อสัตว์ (หมู)','O5','คอหมูหมักงา',25],
   ['เนื้อสัตว์ (หมู)','O6','หมูหมาล่า',25], ['เนื้อสัตว์ (หมู)','O7','หมูพริกไทยดำ',25], ['เนื้อสัตว์ (หมู)','O8','หมูสไลซ์',20], ['เนื้อสัตว์ (หมู)','O9','หมูสามชั้นพันเห็ดเข็มทอง',29],
@@ -3567,13 +3567,13 @@ function importPlan(){
 let importing = false;
 function sheetImport(msg, armed){
   const { upd, add, extra } = importPlan(), n = upd.length + add.length;
-  openSheet(head('นำเข้าเมนูชุด Ravii') + (msg ? `<p class="note"><strong>${esc(msg)}</strong></p>` : '') +
+  openSheet(head('นำเข้าเมนูชุดร้าน') + (msg ? `<p class="note"><strong>${esc(msg)}</strong></p>` : '') +
     (n ? `<p class="note">ตรวจรายการก่อนกดนำเข้า ถ้าชื่อหรือราคาไม่ถูก แก้ทีหลังได้ที่ปุ่ม "แก้ไข" ของแต่ละเมนู</p>
       ${upd.length ? `<div class="round-head">ปรับเมนูเดิม ${upd.length} รายการ</div>` + upd.map(u => `<div class="line"><div class="info"><div>${esc(u.to.name)} (${esc(u.to.code)})</div><div class="opt">${u.m.name !== u.to.name ? 'เดิม: ' + esc(u.m.name) + ' · ' : ''}${esc(u.to.category)}</div></div><span class="num">${u.m.price !== u.to.price ? baht(u.m.price) + ' → ' : ''}<strong>${baht(u.to.price)}</strong></span></div>`).join('') : ''}
       ${add.length ? `<div class="round-head">เพิ่มเมนูใหม่ ${add.length} รายการ</div>` + add.map(a => `<div class="line"><div class="info"><div>${esc(a.name)} (${esc(a.code)})</div><div class="opt">${esc(a.category)}</div></div><span class="num">${baht(a.price)}</span></div>`).join('') : ''}
       <div class="err" id="imp-status" style="color:var(--muted);min-height:22px;margin-top:10px"></div>
       <button class="primary" style="margin-top:6px" data-import-go>นำเข้า ${n} รายการ</button>`
-      : `<p class="empty">เมนูชุด Ravii ${MENU_SET.length} รายการอยู่ในระบบครบแล้ว</p>`) +
+      : `<p class="empty">เมนูชุดร้าน ${MENU_SET.length} รายการอยู่ในระบบครบแล้ว</p>`) +
     (extra.length ? `<div class="round-head" style="color:var(--fg)">เมนูในระบบที่ไม่อยู่ในชุดนี้ ${extra.length} รายการ</div>
       <p class="note">${extra.map(x => label(x)).join(', ')}</p>
       <div class="err" id="del-status" style="color:var(--muted);min-height:22px"></div>
