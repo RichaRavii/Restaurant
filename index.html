@@ -108,7 +108,7 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .ticket li b{min-width:30px}
 .ticket em{font-style:normal;color:var(--accent);font-weight:600}
 
-.pill.bar{background:#dff1f8;color:#1d6f8f} .ticket.bar{border-top-color:#3aa0c8}
+.pill.drink{background:#dff1f8;color:#1d6f8f} .ticket.drink{border-top-color:#3aa0c8}
 /* หน้าแรกลูกค้า: ร้านแนะนำ + ขายดี */
 .picks h2{margin-top:18px}
 .hcards{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
@@ -3959,8 +3959,8 @@ const partial = o => (o.status === 'new' || o.status === 'cooking') && o.items.s
 function serveTickets(list){
   return list.length ? list.map(o => { const part = o.status !== 'ready', idx = o.items.map((c,i) => i).filter(i => !part || o.items[i].done);
     const todo = idx.filter(i => !o.items[i].served), got = idx.filter(i => o.items[i].served);
-    return `<div class="ticket ready ${isBarOrder(o) ? 'bar' : ''}">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${isBarOrder(o) ? '<span class="pill bar">🥤 เครื่องดื่ม</span>' : ''}${part ? '<span class="pill cook">ทยอยเสิร์ฟ</span>' : ''}<span class="num ono">${time(o.createdAt)}</span></h3>
+    return `<div class="ticket ready ${isBarOrder(o) ? 'drink' : ''}">
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${isBarOrder(o) ? '<span class="pill drink">🥤 เครื่องดื่ม</span>' : ''}${part ? '<span class="pill cook">ทยอยเสิร์ฟ</span>' : ''}<span class="num ono">${time(o.createdAt)}</span></h3>
        ${part ? `<div class="wait">ย่างเสร็จแล้วบางส่วน ที่เหลือยังอยู่บนเตา ${o.items.filter(c => !c.done).length} รายการ</div>` : ''}
        <ul>${todo.map(i => tickBtn('serve', o.id, i, o.items[i], false)).join('')}</ul>
        ${doneFold('s' + o.id, 'เสิร์ฟแล้ว', got.map(i => tickBtn('serve', o.id, i, o.items[i], true)))}
