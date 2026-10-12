@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>ซ้อมเปิดร้านไม้ละ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* layout: one column run sheet, sticky progress strip, sections per role like stations on a grill line */
+:root{
+  --bg:#f6f1ec; --card:#fffdfa; --ink:#2a1f1b; --muted:#7a6a62; --line:#e6dbd2;
+  --chili:#b3261e; --chili-soft:#f8e3df; --ok:#2f7a4f; --ok-soft:#e1f1e6; --warn:#a86a00; --warn-soft:#fbefd6;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1b1513; --card:#251d1a; --ink:#f3e9e3; --muted:#b3a299; --line:#3a2e29;
+  --chili:#ff7a6b; --chili-soft:#3d211d; --ok:#6fcf97; --ok-soft:#1e3326; --warn:#f0b75a; --warn-soft:#3a2d15; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1b1513; --card:#251d1a; --ink:#f3e9e3; --muted:#b3a299; --line:#3a2e29;
+  --chili:#ff7a6b; --chili-soft:#3d211d; --ok:#6fcf97; --ok-soft:#1e3326; --warn:#f0b75a; --warn-soft:#3a2d15; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);margin:0}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:20px 80px}
+h1{font:600 28px/1.2 var(--display);margin:0;text-wrap:balance}
+h1 small{display:block;font:500 13px var(--mono);letter-spacing:.18em;color:var(--chili);margin-bottom:4px}
+.lead{color:var(--muted);margin:8px 0 0;max-width:62ch}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px;margin-top:12px;border-bottom:1px solid var(--line)}
+.prog{display:flex;align-items:center;gap:12px}
+.bar{flex:1;height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--chili);transition:width .3s}
+.pct{font:500 15px var(--mono);font-variant-numeric:tabular-nums;min-width:5.5ch;text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips button{font:500 14px var(--body);border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:6px 12px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sync{font-size:13px;color:var(--muted);margin-top:8px}
+section{margin-top:28px}
+.sh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sh h2{font:600 20px/1.3 var(--display);margin:0}
+.sh .who{font-size:13px;color:var(--muted)}
+.sh .cnt{margin-left:auto;font:500 13px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.sh .cnt.full{color:var(--ok)}
+.intro{color:var(--muted);font-size:14px;margin:4px 0 10px}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+li{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;grid-template-columns:28px 1fr;gap:4px 12px}
+li.done{border-color:var(--ok);background:var(--ok-soft)}
+li.issue{border-color:var(--warn)}
+.ck{width:26px;height:26px;border:2px solid var(--muted);border-radius:7px;background:none;cursor:pointer;display:grid;place-items:center;color:var(--ok);font-weight:700;padding:0}
+li.done .ck{border-color:var(--ok);background:var(--card)}
+.ck:focus-visible,.chips button:focus-visible,.ln:focus-visible,.tools button:focus-visible{outline:3px solid var(--chili);outline-offset:2px}
+.tx{min-width:0}
+.tx b{font-weight:600}
+.pass{font-size:14px;color:var(--muted);margin-top:2px}
+.pass::before{content:"ผ่านถ้า: ";color:var(--ok);font-weight:600}
+.ln{grid-column:2;justify-self:start;background:none;border:none;color:var(--chili);font:500 13px var(--body);padding:2px 0;cursor:pointer}
+li.issue .ln{color:var(--warn)}
+textarea{grid-column:1/-1;width:100%;min-height:64px;font:16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:32px}
+.tools button{font:500 15px var(--body);border-radius:10px;padding:11px 16px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.tools .main{background:var(--chili);border-color:var(--chili);color:#fff}
+.confirm{margin-top:10px;padding:12px;border-radius:10px;background:var(--chili-soft);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.confirm button{font:500 14px var(--body);border-radius:8px;padding:8px 12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.confirm .del{background:var(--chili);color:#fff;border-color:var(--chili)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;margin-top:10px}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <h1><small>MAI LA · DRY RUN</small>เช็กลิสต์ซ้อมเปิดร้าน ไม้ละ</h1>
+  <p class="lead">ชวนเพื่อน 3–4 โต๊ะมาเป็นลูกค้า ให้พนักงานทุกคนใช้บัญชีของตัวเอง ทำทีละข้อแล้วติ๊ก ข้อไหนไม่ผ่านหรือมีอะไรแปลก ๆ แตะ "จดปัญหา" แล้วเขียนสั้น ๆ จบแล้วกด "คัดลอกสรุปผล" ส่งให้ Claude แก้ ปิดหน้าแล้วเปิดใหม่ติ๊กยังอยู่ในเครื่องเดิม</p>
+
+  <div class="strip">
+    <div class="prog"><div class="bar"><i id="bar"></i></div><span class="pct" id="pct">0/0</span></div>
+    <div class="chips" id="chips"></div>
+    <div class="sync" id="sync">กำลังเชื่อมต่อ…</div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="tools">
+    <button class="main" id="copy">📋 คัดลอกสรุปผล</button>
+    <button id="reset">เริ่มซ้อมใหม่ (ล้างติ๊ก)</button>
+  </div>
+  <div id="confirm"></div>
+  <pre id="out" hidden></pre>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SECTIONS = [
+ { id:'prep', name:'เตรียมก่อนซ้อม', who:'เจ้าของร้าน / แอดมิน', intro:'ทำให้เสร็จก่อนวันซ้อม', items:[
+  ['p1','อัปเดตเว็บเป็น v24 ทั้งสองไฟล์','อัปโหลด index.html ขึ้น GitHub, วาง Code.gs แล้ว Deploy → New version · แท็บบัญชีมีปุ่ม "ดูใบเสร็จช่วงนี้"'],
+  ['p2','ทุกเครื่องขึ้นชื่อ "ไม้ละ"','ลบไอคอนเก่าบน iPad/iPhone แล้วเพิ่มใหม่จาก richafoodii.com · หัวเว็บไม่มีคำว่า Ravii'],
+  ['p3','สร้างบัญชีพนักงานรายคน','ชีต Employees มีชื่อจริงทุกคน รหัสคนละชุด และ role ถูก (admin / kitchen / floor / stock)'],
+  ['p4','เมนูและราคาถูกต้องครบ','เช็กราคาน้ำเปล่า (2 หรือ 20 บาท) ใส่รูปเมนู ติดดาวเมนูแนะนำ'],
+  ['p5','ใส่สต็อกตั้งต้นตามจริง','แท็บสต็อกแสดงจำนวนไม้ตรงกับของในตู้'],
+  ['p6','ตั้งเป้ายอดขายวันนี้และเดือนนี้','สรุปประจำวันขึ้นเป้าและเปอร์เซ็นต์'],
+  ['p7','ติด QR ทุกโต๊ะ (1–12)','พิมพ์จาก richafoodii.com เท่านั้น · สแกนแล้วขึ้นเลขโต๊ะถูก'],
+  ['p8','เน็ตหลัก + ฮอตสปอตสำรองพร้อม','iPad ครัวเสียบชาร์จ ตั้ง Auto-Lock เป็น "ไม่ใช้" จอไม่ดับเอง'],
+  ['p9','Thunder ยังมีโควตาตรวจสลิป','เข้าเว็บ Thunder ดูโควตาคงเหลือพอสำหรับวันซ้อมและวันเปิด'],
+ ]},
+ { id:'cust', name:'ลูกค้า', who:'เพื่อนที่มาเป็นลูกค้า', intro:'ใช้มือถือของตัวเอง ไม่ต้องล็อกอิน', items:[
+  ['c1','สแกน QR ก่อนพนักงานเปิดโต๊ะ','ขึ้นข้อความให้รอพนักงานเปิดโต๊ะ สั่งไม่ได้'],
+  ['c2','สแกนหลังเปิดโต๊ะ','เห็นเมนู มี ⭐ ร้านแนะนำ / 🔥 ขายดี หน้าแรก'],
+  ['c3','สั่งของย่างกับเครื่องดื่มในรอบเดียวกัน','ส่งได้ ไม่ค้าง ขึ้นในบิลทั้งสองอย่าง'],
+  ['c4','สั่งเพิ่มรอบที่ 2','บิลแสดงเป็น 2 รอบ ยอดรวมถูก'],
+  ['c5','ติดตามสถานะออเดอร์','เห็นคิว → กำลังย่าง → เสิร์ฟแล้ว เปลี่ยนเองโดยไม่ต้องรีเฟรช'],
+  ['c6','กดเรียกพนักงาน','หน้าร้านเห็นการเรียกภายในไม่กี่วินาที'],
+  ['c7','จ่ายด้วย QR พร้อมเพย์ (โอนยอดเล็กจริง)','สแกนแล้วยอดขึ้นตรง ชื่อผู้รับเป็นบัญชีร้าน'],
+  ['c8','หลังปิดบิล ลองเปิดลิงก์โต๊ะเดิมอีกครั้ง','สั่งไม่ได้จนกว่าพนักงานเปิดโต๊ะใหม่'],
+ ]},
+ { id:'floor', name:'หน้าร้าน', who:'บัญชี role = floor', intro:'รับลูกค้า เสิร์ฟ เก็บเงิน', items:[
+  ['f1','ล็อกอินด้วยบัญชีตัวเอง','เห็นแค่แท็บ โต๊ะ / เสิร์ฟ / เมนู'],
+  ['f2','กด 🔓 เปิดโต๊ะให้ลูกค้า','ลูกค้าสแกนแล้วสั่งได้ทันที'],
+  ['f3','เครื่องดื่มไปแท็บเสิร์ฟเลย','มีป้าย 🥤 เครื่องดื่ม ไม่ไปค้างในครัว'],
+  ['f4','ของย่างที่ครัวติ๊กเสร็จบางส่วน','ขึ้นในแท็บเสิร์ฟพร้อมป้าย "ทยอยเสิร์ฟ"'],
+  ['f5','ติ๊กเสิร์ฟทีละรายการ','รายการที่ติ๊กยุบลงเป็น "✓ เสิร์ฟแล้ว" · ลองติ๊กผิดแล้วกด "ดู ▼" ยกเลิกได้'],
+  ['f6','รับเรียกพนักงาน','กดรับทราบแล้วการเรียกหายจากจอ'],
+  ['f7','ปิดบิลเงินสด 1 โต๊ะ','โต๊ะปิด ยอดเข้าแท็บบัญชีเป็นเงินสด'],
+  ['f8','ปิดบิลโอน สลิปถูก','ตรวจสลิปขึ้นเขียว ปิดบิลได้'],
+  ['f9','ลองใช้สลิปเดิมซ้ำกับอีกโต๊ะ','ขึ้นแดง "สลิปเคยถูกใช้แล้ว" หน้าร้านปิดบิลเองไม่ได้ ต้องเรียกแอดมิน'],
+ ]},
+ { id:'kit', name:'ครัว', who:'บัญชี role = kitchen', intro:'แตะหน้าจอ iPad ครัวหนึ่งครั้งก่อน เสียงเตือนถึงจะดัง', items:[
+  ['k1','ล็อกอินบัญชีครัว','เห็นแค่แท็บ ครัว / เมนู / สต็อก'],
+  ['k2','ออเดอร์ใหม่เด้งขึ้นเอง','มีเสียงเตือน · จดในหมายเหตุว่าจากลูกค้ากดสั่งถึงขึ้นจอครัวกี่วินาที'],
+  ['k3','กด "เริ่มย่าง"','ลูกค้าเห็นสถานะเปลี่ยนเป็นกำลังย่าง'],
+  ['k4','ติ๊กทีละรายการที่ย่างเสร็จ','รายการที่ติ๊กยุบลงล่าง และไปโผล่แท็บเสิร์ฟทันที'],
+  ['k5','ติ๊กครบทุกรายการ','ใบย้ายไป "พร้อมเสิร์ฟ" เอง'],
+  ['k6','ปิดเมนูที่ของหมด','ลูกค้าเห็นว่าหมด กดสั่งไม่ได้'],
+  ['k7','ตัวหนังสืออ่านได้จากหน้าเตา','ยืนห่างจอ 1 เมตรยังอ่านชื่อไม้และจำนวนได้'],
+ ]},
+ { id:'admin', name:'แอดมิน / เจ้าของ', who:'บัญชี role = admin', intro:'ทำหลังลูกค้าจ่ายครบแล้ว', items:[
+  ['a1','ยอดวันนี้ตรงกับเงินจริง','แท็บบัญชี: เงินสด + โอน ตรงกับเงินในลิ้นชักและในแอปธนาคาร'],
+  ['a2','ใบเสร็จย้อนหลัง','เปิดรายการได้ ค้นหาเลขโต๊ะได้ ยอดในใบตรงกับบิล'],
+  ['a3','ปิดบิลที่สลิปขึ้นแดงด้วยแอดมิน','แอดมินปิดได้ (หน้าร้านปิดไม่ได้)'],
+  ['a4','บันทึกรายจ่าย 1 รายการพร้อมรูปบิล','กำไรในแท็บบัญชีลดลงตามจำนวน'],
+  ['a5','สรุปประจำวัน → คัดลอกส่ง LINE ทีม','ข้อความวางใน LINE แล้วอ่านรู้เรื่อง มีของที่ควรซื้อ/เตรียม'],
+  ['a6','สต็อกลดตามที่ขาย','จำนวนไม้ในแท็บสต็อกลดเท่ากับที่ลูกค้าสั่ง'],
+  ['a7','ลองใส่รหัสผิด 5 ครั้ง (บัญชีทดสอบ)','โดนล็อก 15 นาที บัญชีอื่นยังเข้าได้ปกติ'],
+ ]},
+ { id:'stock', name:'คนซื้อของ', who:'บัญชี role = stock', intro:'', items:[
+  ['s1','รับของเข้าพร้อมราคาทุน','จำนวนไม้เพิ่ม รายจ่ายบันทึกอัตโนมัติ'],
+  ['s2','นับสต็อกหลายรายการพร้อมกัน','บันทึกครั้งเดียวได้ครบทุกรายการ'],
+  ['s3','ลองเข้าแท็บบัญชี','เข้าไม่ได้ / ไม่เห็นยอดขาย'],
+ ]},
+ { id:'drill', name:'ซ้อมเหตุฉุกเฉิน', who:'ทั้งทีม', intro:'ทำตอนมีลูกค้าในร้านอย่างน้อย 2 โต๊ะ', items:[
+  ['e1','4 โต๊ะกดสั่งพร้อมกันภายใน 1 นาที','ครัวเห็นครบทุกใบ เรียงคิวถูก ไม่มีใบหาย'],
+  ['e2','ปิด WiFi ร้าน 1 นาที แล้วสลับไปฮอตสปอต','ระบบกลับมาทำงาน ออเดอร์เดิมยังอยู่ครบ'],
+  ['e3','รีสตาร์ท iPad ครัวกลางคัน','เปิดใหม่ยังล็อกอินอยู่ ออเดอร์ค้างยังอยู่'],
+  ['e4','ทุกคนรู้แผนสำรองถ้าเน็ตล่มนาน','มีกระดาษจดออเดอร์ที่เคาน์เตอร์ และรู้ว่าใครเป็นคนเก็บเงิน'],
+ ]},
+ { id:'after', name:'หลังซ้อม', who:'เจ้าของร้าน', intro:'', items:[
+  ['z1','จดวันที่ซ้อมไว้ ไม่นับเป็นยอดจริง','หรือลบแถวทดสอบใน Orders / Sessions ก่อนวันเปิดจริง'],
+  ['z2','ตั้งสต็อกใหม่ให้ตรงของจริง','ใช้ "นับสต็อก" ใส่จำนวนจริงหลังซ้อม'],
+  ['z3','ส่งสรุปผลให้ Claude','กด "คัดลอกสรุปผล" ด้านล่าง แล้ววางในแชต'],
+ ]},
+];
+const ALL = SECTIONS.flatMap(s => s.items.map(([id]) => id));
+let state = {};            // id -> {done, note}
+let filter = 'all', openNote = new Set(), mode = 'local', db = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function loadLocal(){ try { state = JSON.parse(localStorage.getItem('maila-rehearsal') || '{}') || {}; } catch(e){ state = {}; } }
+function saveLocal(){ try { localStorage.setItem('maila-rehearsal', JSON.stringify(state)); } catch(e){} }
+async function put(id){
+  const v = state[id] || {done:false, note:''};
+  if (mode === 'shared') { try { await db.collection('checks').doc(id).set({done: !!v.done, note: String(v.note || '').slice(0, 500), at: new Date().toISOString()}); } catch(e){ toast('บันทึกไม่สำเร็จ ลองอีกครั้ง'); } }
+  else saveLocal();
+}
+
+function render(){
+  const done = ALL.filter(id => state[id] && state[id].done).length;
+  $('bar').style.width = (done / ALL.length * 100) + '%';
+  $('pct').textContent = `${done}/${ALL.length}`;
+  $('chips').innerHTML = [['all','ทั้งหมด'], ...SECTIONS.map(s => [s.id, s.name])].map(([k, t]) => `<button data-f="${k}" aria-pressed="${filter === k}">${t}</button>`).join('');
+  const focus = document.activeElement && document.activeElement.tagName === 'TEXTAREA' ? document.activeElement.id : null;
+  $('list').innerHTML = SECTIONS.filter(s => filter === 'all' || s.id === filter).map(s => {
+    const n = s.items.filter(([id]) => state[id] && state[id].done).length;
+    return `<section><div class="sh"><h2>${s.name}</h2><span class="who">${s.who}</span><span class="cnt ${n === s.items.length ? 'full' : ''}">${n}/${s.items.length}</span></div>
+      ${s.intro ? `<p class="intro">${s.intro}</p>` : ''}
+      <ul>${s.items.map(([id, t, pass]) => { const v = state[id] || {}, note = v.note || '', open = openNote.has(id) || note;
+        return `<li class="${v.done ? 'done' : ''} ${note ? 'issue' : ''}">
+          <button class="ck" data-ck="${id}" aria-pressed="${!!v.done}" aria-label="${esc(t)}">${v.done ? '✓' : ''}</button>
+          <div class="tx"><b>${esc(t)}</b><div class="pass">${esc(pass)}</div></div>
+          ${open ? `<textarea id="n-${id}" data-note="${id}" placeholder="เกิดอะไรขึ้น อยู่หน้าไหน ใช้เครื่องอะไร">${esc(note)}</textarea>`
+                 : `<button class="ln" data-open="${id}">+ จดปัญหา</button>`}
+        </li>`; }).join('')}</ul></section>`;
+  }).join('');
+  if (focus && $(focus)) { const el = $(focus); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
+function summary(){
+  const done = ALL.filter(id => state[id] && state[id].done).length, lines = [`ผลซ้อมเปิดร้านไม้ละ: ผ่าน ${done}/${ALL.length} ข้อ`];
+  SECTIONS.forEach(s => {
+    const rows = s.items.filter(([id]) => !(state[id] && state[id].done) || (state[id] && state[id].note));
+    if (!rows.length) return;
+    lines.push('', `[${s.name}]`);
+    rows.forEach(([id, t]) => { const v = state[id] || {}; lines.push(`${v.done ? '✓' : '✗'} ${t}${v.note ? ' — ' + v.note.trim() : ''}`); });
+  });
+  return lines.join('\n');
+}
+function toast(t){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, 2200); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.f) { filter = b.dataset.f; render(); }
+  else if (b.dataset.ck) { const id = b.dataset.ck, v = state[id] || (state[id] = {done:false, note:''}); v.done = !v.done; render(); put(id); }
+  else if (b.dataset.open) { openNote.add(b.dataset.open); render(); const t = $('n-' + b.dataset.open); if (t) t.focus(); }
+  else if (b.id === 'copy') {
+    const txt = summary(); $('out').textContent = txt; $('out').hidden = false;
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents($('out')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('เลือกข้อความไว้แล้ว กดคัดลอกเองได้เลย'); };
+    try { navigator.clipboard.writeText(txt).then(() => toast('คัดลอกแล้ว วางใน LINE หรือแชตได้เลย'), fallback); } catch(err){ fallback(); }
+  }
+  else if (b.id === 'reset') $('confirm').innerHTML = `<div class="confirm"><span>ล้างติ๊กและหมายเหตุทั้งหมด${mode === 'shared' ? ' ของทั้งทีม' : ''}?</span><button class="del" id="reset-yes">ล้างเลย</button><button id="reset-no">ยกเลิก</button></div>`;
+  else if (b.id === 'reset-no') $('confirm').innerHTML = '';
+  else if (b.id === 'reset-yes') { const ids = Object.keys(state); state = {}; openNote.clear(); $('confirm').innerHTML = ''; $('out').hidden = true; render();
+    if (mode === 'shared') ids.forEach(id => db.collection('checks').doc(id).delete().catch(() => {})); else saveLocal(); toast('เริ่มใหม่แล้ว'); }
+});
+let noteT = {};
+document.addEventListener('input', e => {
+  const id = e.target.dataset && e.target.dataset.note; if (!id) return;
+  const v = state[id] || (state[id] = {done:false, note:''}); v.note = e.target.value;
+  clearTimeout(noteT[id]); noteT[id] = setTimeout(() => put(id), 700);
+});
+document.addEventListener('focusout', e => { const id = e.target.dataset && e.target.dataset.note; if (id && !(state[id] && state[id].note)) { openNote.delete(id); setTimeout(render, 0); } });
+
+loadLocal(); render();
+$('sync').textContent = 'บันทึกไว้ในเครื่องนี้ (แต่ละเครื่องติ๊กแยกกัน)';
+(async () => {
+  try {
+    db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) return;
+    mode = 'shared';
+    $('sync').textContent = '● บันทึกร่วมกันทั้งทีม ใครติ๊กทุกคนเห็นพร้อมกัน';
+    db.collection('checks').onSnapshot(snap => {
+      const next = {}; snap.docs.forEach(d => { const x = d.data() || {}; next[d.id] = {done: !!x.done, note: String(x.note || '')}; });
+      // keep a note the viewer is typing right now
+      const a = document.activeElement; if (a && a.dataset && a.dataset.note && state[a.dataset.note]) next[a.dataset.note] = {...(next[a.dataset.note] || {done:false}), note: state[a.dataset.note].note};
+      state = next; render();
+    }, () => { mode = 'local'; loadLocal(); $('sync').textContent = 'เชื่อมต่อไม่ได้ บันทึกไว้ในเครื่องนี้แทน'; render(); });
+  } catch(e){ mode = 'local'; }
+})();
+</script>
+</body></html>
