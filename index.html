@@ -4283,6 +4283,19 @@ function sheetBillLog(){
       <b class="num">${x.type === 'discount_off' ? '' : '−' + baht(x.amount)}</b></div>`; }).join('')}</div>` : `<p class="empty">ไม่มีการลดราคาหรือยกเลิกรายการในช่วงนี้</p>`));
 }
 
+// ส่งใบเสร็จเป็นข้อความ: iPhone/iPad เปิดหน้าแชร์ (LINE, ข้อความ, อีเมล) ถ้าไม่รองรับให้คัดลอกแทน
+function receiptText(html){
+  const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;white-space:normal';
+  box.innerHTML = html; box.querySelectorAll('svg').forEach(x => x.remove());
+  box.querySelectorAll('tr').forEach(tr => { const td = [...tr.children].map(x => x.innerText.trim()).filter(Boolean); tr.replaceWith(Object.assign(document.createElement('div'), { textContent: td.join('  ') })); });
+  box.querySelectorAll('hr').forEach(h => h.replaceWith(Object.assign(document.createElement('div'), { textContent: '----------------' })));
+  document.body.appendChild(box); const t = box.innerText.replace(/\n{3,}/g, '\n\n').trim(); box.remove(); return t;
+}
+async function shareReceipt(){
+  const text = receiptText(lastReceipt);
+  if (navigator.share) { try { await navigator.share({ title: 'ใบเสร็จ ' + SHOP_NAME, text }); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
+  copyText(text, 'ใบเสร็จ');
+}
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -4311,7 +4324,7 @@ function sheetReceiptOne(id){
   const b = rcp.list && rcp.list.bills.find(x => x.id === id); if (!b) return;
   lastReceipt = receiptHtml(b.tableNo, [{ items: b.items }], { method: b.method, by: b.by, at: b.closedAt, no: b.id, copy: true }, { discount: b.discount, discountNote: b.discountNote });
   openSheet(head(`ใบเสร็จ ${TABLE_WORD} ${esc(b.tableNo)}`) + `<div class="rc-preview">${lastReceipt}</div>
-    <button class="primary" data-print-receipt>🖨️ พิมพ์สำเนา / PDF</button><button class="ghost" style="width:100%;margin-top:8px" data-receipts-back>← กลับไปรายการ</button>`);
+    <button class="primary" data-print-receipt>🖨️ พิมพ์สำเนา / PDF</button><button class="ghost" style="width:100%;margin-top:8px" data-share-receipt>📤 ส่งใบเสร็จ (LINE / ข้อความ)</button><button class="ghost" style="width:100%;margin-top:8px" data-receipts-back>← กลับไปรายการ</button>`);
 }
 function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
   const s = sessOf(t), mine = s ? orders.filter(o => o.sessionId === s.id) : [];
@@ -4593,6 +4606,7 @@ document.addEventListener('click', async e => {
   else if (d.method) { payState.method = d.method; payState.seen = false; sheetTable(d.t, 'pay'); }
   else if (d.printBill) { const s = sessOf(d.printBill); if (s) printHtml(receiptHtml(d.printBill, orders.filter(o => o.sessionId === s.id), null, s)); }
   else if ('printReceipt' in d) printHtml(lastReceipt);
+  else if ('shareReceipt' in d) shareReceipt();
   else if (d.pay) {
     const s = sessOf(d.pay); if (!s) return closeSheet();
     const mine = orders.filter(o => o.sessionId === s.id), method = mine.length ? payState.method : 'none';
@@ -4605,7 +4619,7 @@ document.addEventListener('click', async e => {
       lastReceipt = pm ? receipt.replace('<hr><div class="c">' + esc(RECEIPT_FOOTER), `<hr><div class="c b">⭐ ${esc(pm.name)} +${pm.got} แต้ม · รวม ${pm.points} แต้ม</div>${pm.per ? `<div class="c">อีก ${baht(pm.per - (pm.carry || 0))} ได้แต้มถัดไป (เศษยอดสะสมไว้บิลหน้า)</div>` : ''}${pm.capped ? '<div class="c">วันนี้ได้แต้มครบจำนวนบิลแล้ว</div>' : ''}<hr><div class="c">` + esc(RECEIPT_FOOTER)) : receipt;
       if (pm) toast(`ปิดบิลแล้ว ⭐ ${pm.name} ได้ +${pm.got} แต้ม (รวม ${pm.points})`);
       openSheet(head(`ปิดบิล ${TABLE_WORD} ${esc(d.pay)} แล้ว`) + `<div class="rc-preview">${lastReceipt}</div>
-        <button class="primary" data-print-receipt>🖨️ พิมพ์ใบเสร็จ</button><button class="ghost" style="width:100%;margin-top:8px" data-close>ไม่พิมพ์ ปิดหน้านี้</button>`);
+        <button class="primary" data-print-receipt>🖨️ พิมพ์ใบเสร็จ</button><button class="ghost" style="width:100%;margin-top:8px" data-share-receipt>📤 ส่งใบเสร็จ (LINE / ข้อความ)</button><button class="ghost" style="width:100%;margin-top:8px" data-close>ไม่พิมพ์ ปิดหน้านี้</button>`);
     }
     else b.disabled = false;
   }
