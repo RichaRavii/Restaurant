@@ -228,6 +228,16 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .rlist{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
 .rrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .rrow small{color:var(--muted)} .rc .en{letter-spacing:.2em;font-size:11px;margin-top:-4px}
+.mcard{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0 0;color:var(--fg);font:inherit}
+.mcard span{color:var(--muted);font-size:14px} .mcard.go{border:1.5px dashed var(--accent);cursor:pointer} .mcard.go b{color:var(--accent)}
+.mcard.on{border-color:var(--accent)} .mtop{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.mdots{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0} .mdots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--line)} .mdots i.on{background:var(--accent);border-color:var(--accent)}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;align-self:flex-start;width:auto;margin:0}
+.mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;background:var(--sunk);border-radius:10px;padding:10px 12px;margin:8px 0}
+.mrow > span{flex:1;min-width:0} .mrow.on{border:1px solid var(--accent)} .mrow small{color:var(--muted)} .mrow .ghost{width:auto;margin:0}
+.shopinfo{display:flex;flex-direction:column;gap:10px;margin:22px 0 10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.wifi{display:flex;justify-content:space-between;align-items:center;gap:10px} .wifi .ghost{width:auto;margin:0}
+.links{display:flex;flex-wrap:wrap;gap:8px} .links a{padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:14px}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -472,12 +482,14 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
     <button class="ghost" data-call="bill" id="call-bill"></button>
   </div>
   <div class="track" id="track"></div>
+  <div id="member"></div>
   <div class="search" id="search-box">
     <input id="search" type="search" placeholder="ค้นหาเมนู หรือรหัสไม้ เช่น O1" autocomplete="off" aria-label="ค้นหาเมนู">
     <button id="search-clear" hidden aria-label="ล้างคำค้น">✕</button>
   </div>
   <div class="chips" id="chips"></div>
   <div id="menu"></div>
+  <div id="shopinfo"></div>
 </main>
 
 <main id="v-tables" class="wrap wide" hidden>
@@ -2984,9 +2996,15 @@ function makeGasDb(url){
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
     async saveMenu(it){ await call('saveMenu', it); },
     async deleteMenu(id){ await call('deleteMenu', {id}); },
+    async custMember(f){ return (await call('custMember', {table: tbl, key: tkey, ...f})).member; },
+    async setMember(sessionId, f){ return await call('setMember', {sessionId, ...f}); },
+    async redeem(sessionId){ return (await call('redeem', {sessionId})).member; },
+    async members(){ return await call('members', {}); },
+    async memberSettings(f){ await call('memberSettings', f); },
+    async deleteMember(phone){ await call('deleteMember', {phone}); },
     async paySession(id, info){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
-      await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
+      lastPay = await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async report(from, to){ return await call('report', {from, to}); },
     async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
@@ -3033,13 +3051,13 @@ function applyRole(){
 let stockList = [], stockLog = [], stockState = '', stockToday = null, stockDate = '', stockView = 'table';
 let serverVer = 0, ksub = 'kit'; try { serverVer = +localStorage.getItem('ravii-sv') || 0; } catch(e){}
 const canCook = () => !GAS_URL || serverVer >= 12;   // ขั้น "กำลังย่าง" ต้องใช้ Code.gs v12 ขึ้นไป
-let loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let wifi = null, lastPay = null, loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
   try {
-    if (tbl) { const had = orders.length; const r = await db.custLoad(tbl); valid = r.valid; invalidWhy = r.reason || ''; tclosed = !!r.closed; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut);
-      if (had && !orders.length) { closeSheet(); toast('ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
+    if (tbl) { const had = orders.length, hadMem = !!(sess && sess.member); const r = await db.custLoad(tbl); wifi = r.wifi || null; valid = r.valid; invalidWhy = r.reason || ''; tclosed = !!r.closed; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut);
+      if (had && !orders.length) { closeSheet(); toast(hadMem ? 'ชำระเงินเรียบร้อย ⭐ แต้มเข้าบัญชีสมาชิกแล้ว ขอบคุณที่มาอุดหนุน' : 'ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
     else { sessions = await db.loadSessions(); orders = await db.loadOrders(); calls = await db.loadCalls(); }
     loadFails = 0;
   } catch(e){ console.error(e); if (++loadFails >= 3) toast('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองใหม่อัตโนมัติ'); return; }   // พลาดครั้งสองครั้งเป็นเรื่องปกติ ไม่ต้องเตือน
@@ -3488,6 +3506,8 @@ function renderReport(){
       <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
     <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🧾 ใบเสร็จย้อนหลัง</h2><button class="ghost" style="width:auto;margin:0" data-receipts>ดูใบเสร็จช่วงนี้ (${bills} ใบ)</button></div>
       <p class="note" style="margin:6px 0 0">เปิดดู ค้นหาโต๊ะ และพิมพ์สำเนาใบเสร็จของบิลที่ปิดแล้วในช่วงวันที่ด้านบน</p></div>
+    ${db.members ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">⭐ สมาชิกสะสมแต้ม</h2><button class="ghost" style="width:auto;margin:0" data-members>ดูสมาชิก / ตั้งค่า</button></div>
+      <p class="note" style="margin:6px 0 0">ลูกค้าประจำ คนที่หายไปนาน คนเกิดเดือนนี้ ตั้งของรางวัล รหัส WiFi และลิงก์โซเชียลที่โชว์ในหน้าลูกค้า</p></div>` : ''}
     ${expensePanel(D, total)}
     ${prepPanel(D)}
     ${timePanel(D.time)}
@@ -3661,7 +3681,7 @@ $('img-file').addEventListener('change', async e => {
 const cartQty = it => cart.filter(c => c.id === it.id).reduce((s,c) => s + c.qty, 0);
 function renderMenu(){
   if (!valid) {
-    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('search-box').hidden = true; $('hero').hidden = true; $('callrow').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
+    $('chips').innerHTML = ''; $('track').innerHTML = ''; $('member').innerHTML = ''; $('shopinfo').innerHTML = ''; $('search-box').hidden = true; $('hero').hidden = true; $('callrow').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
     $('menu').innerHTML = `<p class="empty">${invalidWhy === 'bad_key' ? 'ลิงก์นี้ใช้ไม่ได้ กรุณาสแกน QR ที่โต๊ะอีกครั้ง หรือแจ้งพนักงาน' : 'ไม่พบโต๊ะนี้ กรุณาแจ้งพนักงาน'}</p>`;
     return closeSheet();
   }
@@ -3672,6 +3692,7 @@ function renderMenu(){
   $('call-bill').textContent = cb ? '✓ ขอเช็คบิลแล้ว' : '🧾 เช็คบิล'; $('call-bill').classList.toggle('sent', cb); $('call-bill').disabled = cb;
   $('call-bill').hidden = !orders.length && !cb;
   $('track').innerHTML = orders.filter(o => o.status !== 'served').map(o => `<button class="prog" data-bill>${progress(o)}</button>`).join('');
+  renderMember(); renderShopInfo();
   const cats = [...new Set(menu.map(i => i.category))];
   $('chips').innerHTML = ['ทั้งหมด', ...cats].map(c => `<button aria-pressed="${c===cat}" data-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('');
   // ค้นหา = หาทุกหมวด จากชื่อหรือรหัสไม้ ไม่สนตัวพิมพ์เล็กใหญ่และช่องว่าง
@@ -3889,6 +3910,166 @@ function printHtml(html){
   window.addEventListener('afterprint', done);
   window.print();
 }
+
+/* ---------- v25: สมาชิกสะสมแต้ม ---------- */
+const mcfg = () => settings.member || null;
+const memOn = () => !!(mcfg() && mcfg().on && db.custMember);
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function dots(points, goal){
+  const n = Math.min(goal, 20), on = Math.min(n, Math.round(Math.min(points, goal) / goal * n));
+  return `<span class="mdots" aria-label="${points} จาก ${goal} แต้ม">${Array.from({length:n}, (_, i) => `<i class="${i < on ? 'on' : ''}"></i>`).join('')}</span>`;
+}
+const billAmt = () => sum(orders.flatMap(o => o.items));
+function renderMember(){
+  const el = $('member'); if (!memOn()) return el.innerHTML = '';
+  const c = mcfg(), m = sess && sess.member, est = Math.floor(billAmt() / c.per);
+  if (!sess) return el.innerHTML = `<div class="mcard"><b>⭐ สมาชิก${esc(SHOP_NAME)}</b><span>ทุก ${baht(c.per)} ได้ 1 แต้ม · ครบ ${c.goal} แต้ม รับ${esc(c.reward)} · ใส่เบอร์ได้เมื่อเริ่มสั่งอาหาร</span></div>`;
+  if (!m) return el.innerHTML = `<button class="mcard go" data-mem-join><b>⭐ ใส่เบอร์โทร รับแต้มบิลนี้</b><span>ทุก ${baht(c.per)} = 1 แต้ม · ครบ ${c.goal} แต้ม รับ${esc(c.reward)}${c.newBonus ? ` · สมาชิกใหม่รับเพิ่ม ${c.newBonus} แต้ม` : ''}</span></button>`;
+  const full = m.points >= c.goal;
+  el.innerHTML = `<div class="mcard on"><div class="mtop"><b>⭐ ${esc(m.name || 'สมาชิก')}</b><span class="num">${m.points}/${c.goal} แต้ม</span></div>${dots(m.points, c.goal)}
+    <span>${full ? `🎁 แต้มครบแล้ว บอกพนักงานเพื่อแลก${esc(c.reward)}` : `บิลนี้จะได้ประมาณ +${est}${m.isNew && c.newBonus ? ` (+${c.newBonus} สมาชิกใหม่)` : ''} แต้มเมื่อชำระเงิน`}</span>
+    <button class="linkbtn" data-mem-join>ไม่ใช่เบอร์นี้? เปลี่ยน</button></div>`;
+}
+function renderShopInfo(){
+  const el = $('shopinfo'), L = settings.links || {}, w = wifi && wifi.pass ? wifi : null;
+  const links = [['ig','📸 Instagram'],['tiktok','🎵 TikTok'],['line','💬 LINE'],['review','⭐ รีวิวเราใน Google']].filter(([k]) => /^https:\/\//.test(L[k] || ''));
+  el.innerHTML = w || links.length ? `<div class="shopinfo">${w ? `<div class="wifi"><span>📶 WiFi <b>${esc(w.name || '')}</b><br>รหัส <b class="num">${esc(w.pass)}</b></span><button class="ghost" data-copy="${esc(w.pass)}">คัดลอกรหัส</button></div>` : ''}
+    ${links.length ? `<div class="links">${links.map(([k, t]) => `<a href="${esc(L[k])}" target="_blank" rel="noopener">${t}</a>`).join('')}</div>` : ''}</div>` : '';
+}
+let memMsg = '';
+function sheetJoin(){
+  const c = mcfg(); let saved = ''; try { saved = localStorage.getItem('maila_phone') || ''; } catch(e){}
+  openSheet(head('⭐ สะสมแต้มกับ' + esc(SHOP_NAME)) + `<div class="form">
+    <p class="note" style="margin:0">ทุก ${baht(c.per)} ได้ 1 แต้ม · ครบ ${c.goal} แต้ม รับ<b>${esc(c.reward)}</b>${c.newBonus ? ` · สมาชิกใหม่รับเพิ่ม ${c.newBonus} แต้ม` : ''}</p>
+    <label>เบอร์โทรศัพท์<input id="mj-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="12" placeholder="08x xxx xxxx" value="${esc(saved)}"></label>
+    <div id="mj-new" ${memMsg === 'need_name' || memMsg === 'need_consent' ? '' : 'hidden'}>
+      <p class="note" style="margin:0 0 8px">เบอร์นี้ยังไม่เป็นสมาชิก สมัครง่าย ๆ ใส่ชื่อเล่นแล้วกดยินยอม</p>
+      <div class="two"><label>ชื่อเล่น<input id="mj-name" type="text" maxlength="30" autocomplete="nickname" placeholder="เช่น ต้น"></label>
+        <label>เดือนเกิด (ไม่บังคับ)<select id="mj-bm"><option value="0">-</option>${MONTHS_TH.map((t, i) => `<option value="${i + 1}">${t}</option>`).join('')}</select></label></div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="mj-ok"><span>ยินยอมให้${esc(SHOP_NAME)}เก็บเบอร์โทร ชื่อเล่น และเดือนเกิด เพื่อสะสมแต้มและแจ้งโปรโมชันของร้านเท่านั้น ขอลบข้อมูลได้ทุกเมื่อที่พนักงาน</span></label>
+    </div>
+    <div class="err" id="mf-err">${esc(memErr(memMsg))}</div></div>
+    <button class="primary" style="margin-top:0" data-mem-save>รับแต้มบิลนี้</button>`);
+}
+const memErr = e => ({ bad_phone:'เบอร์โทรไม่ถูกต้อง ใส่ 10 หลัก เช่น 0812345678', need_name:'', need_consent:'กดยินยอมก่อน จึงจะสมัครสมาชิกได้', too_many:'เปลี่ยนเบอร์หลายครั้งเกินไป ให้พนักงานช่วยใส่ให้',
+  no_session:'ใส่เบอร์ได้เมื่อเริ่มสั่งอาหารแล้ว', off:'ร้านปิดระบบสะสมแต้มชั่วคราว', not_enough:'แต้มยังไม่พอแลก' }[e] ?? (e ? 'บันทึกไม่สำเร็จ ลองอีกครั้ง' : ''));
+async function saveJoin(b){
+  const phone = $('mj-phone').value, isNew = !$('mj-new').hidden;
+  const f = { phone, name: isNew ? $('mj-name').value.trim() : '', birthMonth: isNew ? +$('mj-bm').value : 0, consent: isNew ? $('mj-ok').checked : false };
+  if (isNew && !f.name) return $('mf-err').textContent = 'ใส่ชื่อเล่นด้วย';
+  if (isNew && !f.consent) return $('mf-err').textContent = memErr('need_consent');
+  b.disabled = true;
+  try {
+    const m = await db.custMember(f); memMsg = '';
+    try { localStorage.setItem('maila_phone', phone.replace(/\D/g, '')); } catch(e){}
+    if (sess) sess.member = m; closeSheet(); renderMember(); toast(`⭐ สวัสดี ${m.name || ''} มี ${m.points} แต้ม แต้มบิลนี้จะเข้าเมื่อชำระเงิน`);
+  } catch(e){
+    b.disabled = false;
+    if (e.message === 'need_name') { memMsg = 'need_name'; $('mj-new').hidden = false; $('mf-err').textContent = ''; $('mj-name').focus(); return; }
+    $('mf-err').textContent = memErr(e.message);
+  }
+}
+// พนักงาน: แถวสมาชิกในบิลของโต๊ะ
+const redeemArm = new Set();
+function memberRow(s){
+  if (!mcfg() || !mcfg().on || !db.setMember || !s || myRole === 'kitchen') return '';
+  const c = mcfg(), m = s.member;
+  if (!m) return `<div class="mrow"><span>⭐ ยังไม่มีสมาชิกในบิลนี้</span><button class="ghost" data-mem-staff="${esc(s.tableNo)}">+ ใส่เบอร์สมาชิก</button></div>`;
+  const can = m.points >= c.goal, armed = redeemArm.has(s.id);
+  return `<div class="mrow on"><span><b>⭐ ${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><span class="num">${m.points}/${c.goal} แต้ม</span> · มาแล้ว ${m.visits} ครั้ง${m.birthMonth === new Date().getMonth() + 1 ? ' · 🎂 เกิดเดือนนี้' : ''}</span>
+    ${can ? `<button class="${armed ? 'primary' : 'ghost'}" style="margin:0;width:auto" data-redeem="${esc(s.tableNo)}">${armed ? 'แตะอีกครั้งเพื่อยืนยัน' : `🎁 แลก${esc(c.reward)} (−${c.goal})`}</button>` : ''}
+    <button class="linkbtn" data-mem-staff="${esc(s.tableNo)}">เปลี่ยน</button></div>`;
+}
+let staffMemT = '';
+function sheetMemStaff(t, err, isNew){
+  staffMemT = t;
+  openSheet(head(`⭐ สมาชิก ${TABLE_WORD} ${esc(t)}`) + `<div class="form">
+    <label>เบอร์โทรลูกค้า<input id="ms-phone" type="tel" inputmode="numeric" maxlength="12" placeholder="08x xxx xxxx" value="${esc($('ms-phone') ? $('ms-phone').value : '')}"></label>
+    <div id="ms-new" ${isNew ? '' : 'hidden'}><div class="two"><label>ชื่อเล่นลูกค้า<input id="ms-name" type="text" maxlength="30"></label>
+      <label>เดือนเกิด<select id="ms-bm"><option value="0">-</option>${MONTHS_TH.map((x, i) => `<option value="${i + 1}">${x}</option>`).join('')}</select></label></div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="ms-ok"><span>ลูกค้ายินยอมให้ร้านเก็บเบอร์และชื่อเล่น เพื่อสะสมแต้มและแจ้งโปรโมชัน (ถามลูกค้าก่อนติ๊ก)</span></label></div>
+    <div class="err" id="mf-err">${esc(err || '')}</div></div>
+    <button class="primary" style="margin-top:0" data-ms-save>บันทึก</button>
+    ${(sessOf(t) || {}).member ? `<button class="ghost" style="width:100%;margin-top:8px" data-ms-clear>เอาสมาชิกออกจากบิลนี้</button>` : ''}
+    <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`);
+}
+async function saveMemStaff(b, clear){
+  const s = sessOf(staffMemT); if (!s) return closeSheet();
+  const isNew = $('ms-new') && !$('ms-new').hidden;
+  const f = clear ? { phone: '' } : { phone: $('ms-phone').value, name: isNew ? $('ms-name').value.trim() : '', birthMonth: isNew ? +$('ms-bm').value : 0, consent: isNew ? $('ms-ok').checked : false };
+  if (isNew && !f.name) return $('mf-err').textContent = 'ใส่ชื่อเล่นลูกค้า';
+  if (isNew && !f.consent) return $('mf-err').textContent = 'ต้องถามลูกค้าและติ๊กยินยอมก่อน';
+  b.disabled = true;
+  try { const r = await db.setMember(s.id, f); toast(clear ? 'เอาสมาชิกออกแล้ว' : `⭐ ${r.member.name} · ${r.member.points} แต้ม`); await refresh(); sheetTable(staffMemT, 'bill'); }
+  catch(e){ b.disabled = false; if (e.message === 'need_name') return sheetMemStaff(staffMemT, 'เบอร์นี้ยังไม่เป็นสมาชิก ใส่ชื่อเล่นและถามความยินยอม', true); $('mf-err').textContent = memErr(e.message); }
+}
+async function doRedeem(t, b){
+  const s = sessOf(t); if (!s) return;
+  if (!redeemArm.has(s.id)) { redeemArm.add(s.id); setTimeout(() => { redeemArm.delete(s.id); }, 6000); return sheetTable(t, 'bill'); }
+  redeemArm.delete(s.id); b.disabled = true;
+  try { const m = await db.redeem(s.id); toast(`🎁 แลก${mcfg().reward}แล้ว เหลือ ${m.points} แต้ม · อย่าลืมเสิร์ฟของรางวัลให้ลูกค้า`); await refresh(); sheetTable(t, 'bill'); }
+  catch(e){ b.disabled = false; toast(memErr(e.message)); }
+}
+// แอดมิน: สมาชิก + ตั้งค่าแต้ม
+const mem = { data: null, err: '', tab: 'all' };
+const daysAgo = iso => iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : 9999;
+async function sheetMembers(){
+  mem.data = null; mem.err = ''; renderMembers();
+  try { mem.data = await db.members(); } catch(e){ mem.err = e.message === 'forbidden' ? 'ดูได้เฉพาะแอดมิน' : 'โหลดไม่ได้ ถ้าเพิ่งอัปเดต ให้วาง Code.gs v25 แล้ว Deploy เวอร์ชันใหม่'; }
+  renderMembers();
+}
+function memberLists(){
+  const all = mem.data.members, bm = new Date().getMonth() + 1;
+  return { all: all.slice().sort((a, b) => b.visits - a.visits || b.spent - a.spent),
+    lost: all.filter(m => m.visits > 0 && daysAgo(m.lastVisitAt) > 30).sort((a, b) => daysAgo(b.lastVisitAt) - daysAgo(a.lastVisitAt)),
+    bday: all.filter(m => m.birthMonth === bm), ready: all.filter(m => m.points >= mem.data.cfg.goal) };
+}
+function renderMembers(){
+  const top = head('⭐ สมาชิกสะสมแต้ม');
+  if (mem.err) return openSheet(top + `<p class="empty">${mem.err}</p>`);
+  if (!mem.data) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
+  const D = mem.data, c = D.cfg, L = D.links || {}, W = D.wifi || {}, all = D.members, ls = memberLists();
+  const rep = all.filter(m => m.visits >= 2).length, vis = all.filter(m => m.visits >= 1).length;
+  const list = ls[mem.tab] || ls.all;
+  openSheet(top + `<div class="tiles" style="grid-template-columns:repeat(2,1fr)">
+      <div class="tile"><span>สมาชิกทั้งหมด</span><b class="num">${all.length}</b></div>
+      <div class="tile"><span>กลับมากินซ้ำ (2 ครั้งขึ้นไป)</span><b class="num">${vis ? Math.round(rep / vis * 100) : 0}%</b></div>
+      <div class="tile"><span>หายไปเกิน 30 วัน</span><b class="num">${ls.lost.length}</b></div>
+      <div class="tile"><span>เกิดเดือนนี้</span><b class="num">${ls.bday.length}</b></div></div>
+    <div class="opts" style="margin-top:12px">${[['all','ทั้งหมด'],['lost','หายไปนาน'],['bday','เกิดเดือนนี้'],['ready','แต้มครบ']].map(([k, t]) => `<button data-mtab="${k}" aria-pressed="${mem.tab === k}">${t} (${ls[k].length})</button>`).join('')}</div>
+    ${list.length ? `<div class="rlist" style="max-height:40vh">${list.map(m => `<div class="rrow"><span><b>${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><small class="num">${m.points} แต้ม · มา ${m.visits} ครั้ง · ${baht(m.spent)}${m.lastVisitAt ? ` · ล่าสุด ${daysAgo(m.lastVisitAt)} วันก่อน` : ''}${m.birthMonth ? ` · เกิด ${MONTHS_TH[m.birthMonth - 1]}` : ''}</small></span>
+        <button class="linkbtn" data-mdel="${esc(m.phone)}">${mem.del === m.phone ? 'ยืนยันลบ' : 'ลบ'}</button></div>`).join('')}</div>
+      <button class="ghost" style="width:100%;margin-top:8px" data-mcopy>📋 คัดลอกรายชื่อและเบอร์ในแท็บนี้</button>` : `<p class="empty">ยังไม่มีสมาชิกในกลุ่มนี้</p>`}
+    <h3 style="margin:18px 0 6px">ตั้งค่าแต้ม</h3>
+    <div class="form">
+      <label class="check"><input type="checkbox" id="mc-on" ${c.on ? 'checked' : ''}><span>เปิดระบบสะสมแต้ม</span></label>
+      <div class="two"><label>ทุกกี่บาทได้ 1 แต้ม<input id="mc-per" type="number" inputmode="numeric" min="1" value="${c.per}"></label>
+        <label>ครบกี่แต้มแลกรางวัล<input id="mc-goal" type="number" inputmode="numeric" min="1" value="${c.goal}"></label></div>
+      <label>ของรางวัล<input id="mc-reward" type="text" maxlength="60" value="${esc(c.reward)}" placeholder="เช่น ฟรี 5 ไม้"></label>
+      <div class="two"><label>แต้มต้อนรับสมาชิกใหม่<input id="mc-new" type="number" inputmode="numeric" min="0" value="${c.newBonus}"></label>
+        <label>ได้แต้มสูงสุดกี่บิล/วัน<input id="mc-cap" type="number" inputmode="numeric" min="1" value="${c.cap}"></label></div>
+      <p class="note" style="margin:0">ลูกค้าต้องจ่ายครบ ${baht(c.goal * c.per)} จึงแลกรางวัลได้ 1 ครั้ง · ถ้าของรางวัลมีต้นทุน ฿50 เท่ากับคืนลูกค้า ${Math.round(5000 / (c.goal * c.per) * 10) / 10}% ของยอดขาย</p>
+      <div class="two"><label>ชื่อ WiFi<input id="mc-wn" type="text" maxlength="60" value="${esc(W.name || '')}"></label>
+        <label>รหัส WiFi<input id="mc-wp" type="text" maxlength="60" value="${esc(W.pass || '')}"></label></div>
+      <label>ลิงก์ Instagram<input id="mc-ig" type="url" placeholder="https://instagram.com/..." value="${esc(L.ig || '')}"></label>
+      <label>ลิงก์ TikTok<input id="mc-tt" type="url" placeholder="https://tiktok.com/@..." value="${esc(L.tiktok || '')}"></label>
+      <label>ลิงก์ LINE OA<input id="mc-line" type="url" placeholder="https://lin.ee/..." value="${esc(L.line || '')}"></label>
+      <label>ลิงก์รีวิว Google Maps<input id="mc-rv" type="url" placeholder="https://g.page/r/..." value="${esc(L.review || '')}"></label>
+      <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-mc-save>บันทึกการตั้งค่า</button>`);
+}
+async function saveMemberCfg(b){
+  const v = id => $(id).value.trim(), f = { on: $('mc-on').checked, per: +v('mc-per'), goal: +v('mc-goal'), reward: v('mc-reward'), newBonus: +v('mc-new'), cap: +v('mc-cap'),
+    wifiName: v('mc-wn'), wifiPass: v('mc-wp'), ig: v('mc-ig'), tiktok: v('mc-tt'), line: v('mc-line'), review: v('mc-rv') };
+  const bad = ['ig','tiktok','line','review'].find(k => f[k] && !/^https:\/\//i.test(f[k]));
+  if (bad) return $('mf-err').textContent = 'ลิงก์ต้องขึ้นต้นด้วย https://';
+  if (!(f.per >= 1) || !(f.goal >= 1)) return $('mf-err').textContent = 'ใส่ตัวเลขบาทต่อแต้ม และแต้มที่ใช้แลก ให้มากกว่า 0';
+  b.disabled = true;
+  try { await db.memberSettings(f); settings = { ...settings, member: { on: f.on, per: f.per, goal: f.goal, reward: f.reward || 'ฟรี 5 ไม้', newBonus: f.newBonus, cap: f.cap }, links: { ig: f.ig, tiktok: f.tiktok, line: f.line, review: f.review } };
+    toast('บันทึกการตั้งค่าแต้มแล้ว'); sheetMembers(); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'บันทึกไม่สำเร็จ'; }
+}
+
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -3930,8 +4111,8 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
         <button class="primary" data-method="transfer" data-t="${esc(t)}">เงินเข้าแล้ว ไปปิดบิล</button>
         <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>${db.openTable && requireOpen ? `<button class="primary" data-open-table="${esc(t)}">🔓 เปิดโต๊ะให้ลูกค้าสั่ง</button><p class="note">ลูกค้าสแกน QR ที่โต๊ะแล้วสั่งได้ทันที ปิดบิลแล้วโต๊ะจะปิดเองจนกว่าจะเปิดให้ลูกค้าชุดถัดไป</p>` : ''}`
-      : mode === 'pay' ? payStep(t, mine)
-      : billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
+      : mode === 'pay' ? memberRow(s) + payStep(t, mine)
+      : memberRow(s) + billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
         (mine.length ? `<button class="ghost" style="width:100%;margin-top:14px" data-print-bill="${esc(t)}">🖨️ พิมพ์ใบแจ้งยอด</button>` : '') +
         (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:8px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-tmode="pay" data-t="${esc(t)}">${mine.length ? 'คิดเงิน' : 'ปิดโต๊ะ (ไม่มีออเดอร์)'}</button>`),
@@ -4115,6 +4296,19 @@ document.addEventListener('click', async e => {
   else if ('tableMode' in d) { b.disabled = true; await act(() => db.tableMode(!requireOpen), !requireOpen ? 'เปิดแล้ว: ต้องเปิดโต๊ะก่อนลูกค้าสั่ง' : 'ปิดแล้ว: ลูกค้าสแกนแล้วสั่งได้เลย'); b.disabled = false; }
   else if (d.table) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.table, 'bill'); }
   else if (d.tmode) sheetTable(d.t, d.tmode);
+  else if ('memJoin' in d) { memMsg = ''; sheetJoin(); }
+  else if ('memSave' in d) saveJoin(b);
+  else if (d.memStaff) sheetMemStaff(d.memStaff);
+  else if ('msSave' in d) saveMemStaff(b, false);
+  else if ('msClear' in d) saveMemStaff(b, true);
+  else if (d.redeem) doRedeem(d.redeem, b);
+  else if ('members' in d) { mem.tab = 'all'; sheetMembers(); }
+  else if (d.mtab) { mem.tab = d.mtab; renderMembers(); }
+  else if ('mcSave' in d) saveMemberCfg(b);
+  else if (d.mdel) { if (mem.del !== d.mdel) { mem.del = d.mdel; return renderMembers(); } mem.del = ''; b.disabled = true;
+    try { await db.deleteMember(d.mdel); toast('ลบข้อมูลสมาชิกแล้ว'); sheetMembers(); } catch(e){ b.disabled = false; toast('ลบไม่สำเร็จ'); } }
+  else if ('mcopy' in d) { const ls = memberLists()[mem.tab] || []; copyText(ls.map(m => `${m.name}\t${m.phone}\t${m.points} แต้ม`).join('\n')); }
+  else if (d.copy) copyText(d.copy);
   else if ('print' in d) window.print();
   else if (d.slip) { slipFor = d.slip; $('slip-file').click(); }
   else if (d.slipPick) { slipFor = d.slipPick; $('slip-pick').click(); }
@@ -4176,8 +4370,10 @@ document.addEventListener('click', async e => {
     b.disabled = true;
     if (await act(() => db.paySession(s.id, { method, seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: grand(mine.flatMap(o => o.items)) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) {
       if (!receipt) return closeSheet();
-      lastReceipt = receipt;
-      openSheet(head(`ปิดบิล ${TABLE_WORD} ${esc(d.pay)} แล้ว`) + `<div class="rc-preview">${receipt}</div>
+      const pm = lastPay && lastPay.member; lastPay = null;
+      lastReceipt = pm ? receipt.replace('<hr><div class="c">' + esc(RECEIPT_FOOTER), `<hr><div class="c b">⭐ ${esc(pm.name)} +${pm.got} แต้ม · รวม ${pm.points} แต้ม</div>${pm.capped ? '<div class="c">วันนี้ได้แต้มครบจำนวนบิลแล้ว</div>' : ''}<hr><div class="c">` + esc(RECEIPT_FOOTER)) : receipt;
+      if (pm) toast(`ปิดบิลแล้ว ⭐ ${pm.name} ได้ +${pm.got} แต้ม (รวม ${pm.points})`);
+      openSheet(head(`ปิดบิล ${TABLE_WORD} ${esc(d.pay)} แล้ว`) + `<div class="rc-preview">${lastReceipt}</div>
         <button class="primary" data-print-receipt>🖨️ พิมพ์ใบเสร็จ</button><button class="ghost" style="width:100%;margin-top:8px" data-close>ไม่พิมพ์ ปิดหน้านี้</button>`);
     }
     else b.disabled = false;
