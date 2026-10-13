@@ -238,6 +238,16 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .shopinfo{display:flex;flex-direction:column;gap:10px;margin:22px 0 10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .wifi{display:flex;justify-content:space-between;align-items:center;gap:10px} .wifi .ghost{width:auto;margin:0}
 .links{display:flex;flex-wrap:wrap;gap:8px} .links a{padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:14px}
+.denoms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px} .denoms label{font-size:13px} .denoms input{text-align:right}
+.cashsum{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;border-radius:10px;background:var(--sunk)} .cashsum b{font-size:22px}
+.cashadm{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px} .cashadm div{display:flex;justify-content:space-between;gap:10px}
+.cashadm .ok b,.cashdiff.ok{color:var(--ok)} .cashadm .bad b,.cashdiff.bad{color:var(--accent)} .cashdiff.warn{color:var(--wait)}
+.cashres{display:flex;flex-direction:column;gap:4px;padding:14px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)} .cashres b{font-size:17px}
+.cashres.ok{border-color:var(--ok)} .cashres.bad{border-color:var(--accent)} .cashres.warn{border-color:var(--wait)}
+.editrow{display:flex;gap:8px;margin:8px 0} .editrow .ghost{flex:1;margin:0}
+.vbtn{margin-left:8px;padding:4px 10px;border-radius:8px;border:1px solid var(--accent);background:none;color:var(--accent);font:inherit;font-size:13px}
+.line.disc{color:var(--ok)} .vwarn{margin:0;padding:10px 12px;border-radius:10px;background:var(--wait-soft);color:var(--fg)}
+.vstep{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px} .vstep .ghost{width:48px;margin:0;font-size:20px} .vstep b{font-size:22px;min-width:2ch;text-align:center}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -494,7 +504,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 
 <main id="v-tables" class="wrap wide" hidden>
   <div class="row"><strong style="flex:1;min-width:0">แตะโต๊ะเพื่อดูบิล คิดเงิน หรือดู QR ของโต๊ะนั้น</strong>
-    <button class="ghost" data-view="qr">QR ทุกโต๊ะ</button></div>
+    <button class="ghost" data-view="qr">QR ทุกโต๊ะ</button><button class="ghost" data-cash id="cash-btn" hidden>💵 ปิดร้าน นับเงิน</button></div>
   <div class="tables" id="tables"></div>
 </main>
 
@@ -3000,11 +3010,19 @@ function makeGasDb(url){
     async setMember(sessionId, f){ return await call('setMember', {sessionId, ...f}); },
     async redeem(sessionId){ return (await call('redeem', {sessionId})).member; },
     async members(){ return await call('members', {}); },
+    async cashDay(){ return await call('cashDay', {}); },
+    async setDiscount(sessionId, f){ return await call('setDiscount', {sessionId, ...f}); },
+    async voidItem(orderId, index, qty, reason){ await call('voidItem', {orderId, index, qty, reason}); },
+    async cashClose(f){ return await call('cashClose', f); },
+    async cashHistory(){ return (await call('cashHistory', {})).list; },
+    async backupNow(){ return (await call('backupNow', {})).backup; },
+    async backups(){ return await call('backups', {}); },
+    async wipeTest(f){ return await call('wipeTest', f); },
     async memberSettings(f){ await call('memberSettings', f); },
     async deleteMember(phone){ await call('deleteMember', {phone}); },
     async paySession(id, info){
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(info.slip || '');
-      lastPay = await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
+      lastPay = await call('pay', {sessionId: id, method: info.method, seen: info.seen, total: info.total, sub: info.sub, discount: info.discount, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
     async report(from, to){ return await call('report', {from, to}); },
     async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
@@ -3074,8 +3092,9 @@ function applySoldOut(ids){
 async function act(fn, okMsg){
   try { await fn(); if (okMsg) toast(okMsg); await refresh(); return true; }
   catch(e){ console.error(e);
+    if (e.message === 'bill_changed') refresh();
     if (e.message === 'sold_out') { applySoldOut([...menu.filter(m => m.available === false).map(m => m.id), ...((e.data && e.data.ids) || [])]); renderMenu(); if (cart.length) sheetCart(); else closeSheet(); return false; }
-    toast(e.message === 'table_closed' ? (tclosed = true, renderMenu(), 'โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน') : e.message === 'bad_table' ? 'ลิงก์นี้ใช้ไม่ได้ กรุณาสแกน QR ที่โต๊ะอีกครั้ง' : e.message === 'forbidden' ? 'บัญชีนี้ไม่มีสิทธิ์ทำรายการนี้' : e.message === 'slip_blocked' ? 'สลิปไม่ผ่าน ต้องให้ Admin เป็นคนปิดบิลนี้' : e.message === 'slip_failed' ? 'บันทึกรูปสลิปไม่ได้ บิลยังไม่ถูกปิด ลองถ่ายใหม่' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'); return false; }
+    toast(e.message === 'table_closed' ? (tclosed = true, renderMenu(), 'โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน') : e.message === 'bad_table' ? 'ลิงก์นี้ใช้ไม่ได้ กรุณาสแกน QR ที่โต๊ะอีกครั้ง' : e.message === 'forbidden' ? 'บัญชีนี้ไม่มีสิทธิ์ทำรายการนี้' : e.message === 'slip_blocked' ? 'สลิปไม่ผ่าน ต้องให้ Admin เป็นคนปิดบิลนี้' : e.message === 'bill_changed' ? 'บิลนี้เพิ่งถูกแก้รายการหรือส่วนลด ตรวจยอดใหม่แล้วกดปิดบิลอีกครั้ง' : e.message === 'slip_failed' ? 'บันทึกรูปสลิปไม่ได้ บิลยังไม่ถูกปิด ลองถ่ายใหม่' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'); return false; }
 }
 
 /* ---------- ยอดขาย (เฉพาะ admin) ---------- */
@@ -3499,6 +3518,7 @@ function renderReport(){
       <div class="tile ${total - spent >= 0 ? 'pos' : 'neg'}"><span>📈 กำไร (ยอดขาย − รายจ่าย)</span><b class="num">${total - spent < 0 ? '−' : ''}${baht(Math.abs(total - spent))}</b></div>` : ''}
     </div>
     ${total ? `<p class="note num">เงินสด ${baht((D.methods || {}).cash || 0)} · โอน ${baht((D.methods || {}).transfer || 0)}${(D.methods || {}).other ? ` · ไม่ระบุ ${baht(D.methods.other)}` : ''}</p>` : ''}
+    ${D.discount || (D.billLog || []).length ? `<p class="note">🏷️ ส่วนลดรวม <b class="num">${baht(D.discount || 0)}</b> (หักจากยอดขายแล้ว) · ยกเลิกรายการ ${(D.billLog || []).filter(x => x.type === 'void').length} ครั้ง <button class="linkbtn" data-bill-log>ดูว่าใครทำ</button></p>` : ''}
     ${D.open ? `<p class="note">ยังมีบิลที่ไม่ได้ปิดอีก <span class="num">${baht(D.open)}</span> ไม่นับรวมในยอดขาย</p>` : ''}
     ${ser.length > 1 ? `<div class="panel"><h2>${rep.preset === 'year' ? 'ยอดขายรายเดือน' : 'ยอดขายรายวัน'}</h2>
       <div class="readout num">${pick ? `<b>${pick.full}</b> ${baht(pick.total)} · ${pick.bills} บิล` : total ? `สูงสุด <b>${best.full}</b> ${baht(best.total)} · แตะแท่งเพื่อดูแต่ละ${rep.preset === 'year' ? 'เดือน' : 'วัน'}` : 'ยังไม่มียอดขายในช่วงนี้'}</div>
@@ -3506,6 +3526,10 @@ function renderReport(){
       <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
     <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🧾 ใบเสร็จย้อนหลัง</h2><button class="ghost" style="width:auto;margin:0" data-receipts>ดูใบเสร็จช่วงนี้ (${bills} ใบ)</button></div>
       <p class="note" style="margin:6px 0 0">เปิดดู ค้นหาโต๊ะ และพิมพ์สำเนาใบเสร็จของบิลที่ปิดแล้วในช่วงวันที่ด้านบน</p></div>
+    ${db.cashHistory ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">💵 นับเงินปิดร้าน</h2><button class="ghost" style="width:auto;margin:0" data-cash-hist>ดูประวัติ / นับวันนี้</button></div>
+      <p class="note" style="margin:6px 0 0">พนักงานนับเงินในลิ้นชักตอนปิดร้านโดยไม่เห็นยอดที่ควรมี ระบบเทียบให้ว่าเงินตรง ขาด หรือเกิน</p></div>
+    <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🗄️ สำรอง / ล้างข้อมูลซ้อม</h2><button class="ghost" style="width:auto;margin:0" data-backup>จัดการ</button></div>
+      <p class="note" style="margin:6px 0 0">สำรองชีตทั้งหมดลง Google Drive ทุกคืน และล้างข้อมูลที่ซ้อมไว้ก่อนวันเปิดร้านจริง</p></div>` : ''}
     ${db.members ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">⭐ สมาชิกสะสมแต้ม</h2><button class="ghost" style="width:auto;margin:0" data-members>ดูสมาชิก / ตั้งค่า</button></div>
       <p class="note" style="margin:6px 0 0">ลูกค้าประจำ คนที่หายไปนาน คนเกิดเดือนนี้ ตั้งของรางวัล รหัส WiFi และลิงก์โซเชียลที่โชว์ในหน้าลูกค้า</p></div>` : ''}
     ${expensePanel(D, total)}
@@ -3784,39 +3808,45 @@ function payCard(amount){
     <small><strong>โอนเข้าบัญชีนี้เท่านั้น</strong> ตรวจชื่อผู้รับก่อนกดยืนยัน</small></div>`;
 }
 function sheetPay(){
-  const amt = grand(orders.flatMap(o => o.items));
+  const amt = netOf(orders.flatMap(o => o.items), sess);
   if (!amt || !ppTarget()) return sheetBill();
   openSheet(head(`จ่ายเงิน ${TABLE_WORD} ${esc(tbl)}`) + payCard(amt) +
     `<p class="note" style="text-align:center">โอนแล้วแจ้งพนักงาน ร้านตรวจยอดเงินเข้าบัญชีทุกรายการก่อนปิดบิล</p><button class="ghost" style="width:100%" data-bill>กลับไปดูบิล</button>`, sheetPay);
 }
-function totals(all){
-  const sub = sum(all), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100;
+// v28: ส่วนลดทั้งบิล (เก็บที่ session) หักจากยอดสุทธิ
+const discOf = s => (s && Number(s.discount)) || 0;
+const netOf = (items, s) => Math.max(0, Math.round((grand(items) - discOf(s)) * 100) / 100);
+function totals(all, s){
+  const sub = sum(all), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, dc = discOf(s);
   const row = (l,v) => `<div class="line"><div class="info">${l}</div><span class="num">${baht(v)}</span></div>`;
-  return (svc || vat ? row('ค่าอาหาร', sub) : '') + (svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : '') + (vat ? row(`VAT ${VAT_PCT}%`, vat) : '') +
-    `<div class="total"><span>ยอดที่ต้องชำระ</span><span class="num">${baht(sub + svc + vat)}</span></div>`;
+  return (svc || vat || dc ? row('ค่าอาหาร', sub) : '') + (svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : '') + (vat ? row(`VAT ${VAT_PCT}%`, vat) : '') +
+    (dc ? `<div class="line disc"><div class="info">🏷️ ส่วนลด${!tbl && s.discountNote ? ` <small>(${esc(s.discountNote)})</small>` : ''}</div><span class="num">−${baht(dc)}</span></div>` : '') +
+    `<div class="total"><span>ยอดที่ต้องชำระ</span><span class="num">${baht(Math.max(0, sub + svc + vat - dc))}</span></div>`;
 }
-function billRows(mine){
+function billRows(mine, s, edit){
+  mine = mine.filter(o => o.items.length);
   return (mine.length ? mine.map(o => (tbl ? `<div class="prog">${progress(o)}</div>` : '') +
       `<div class="round-head"><span class="num">${time(o.createdAt)}</span>
          <span class="pill ${STATUS[o.status][1]}">${STATUS[o.status][0]}</span>
          <span class="pill n">${count(o.items)} รายการ</span></div>` +
-      o.items.map(c => `<div class="line"><span class="q num">${c.qty}</span>
+      o.items.map((c, i) => `<div class="line"><span class="q num">${c.qty}</span>
          <div class="info"><div>${label(c)}</div>${c.opt?`<div class="opt">${esc(c.opt)}</div>`:''}</div>
-         <span class="num">${baht(c.price*c.qty)}</span></div>`).join('')).join('')
-      : `<p class="empty">ยังไม่มีออเดอร์</p>`) + totals(mine.flatMap(o => o.items));
+         <span class="num">${baht(c.price*c.qty)}</span>${edit ? `<button class="vbtn" data-void="${esc(o.id)}" data-i="${i}" aria-label="แก้ ${esc(c.name)}">แก้</button>` : ''}</div>`).join('')).join('')
+      : `<p class="empty">ยังไม่มีออเดอร์</p>`) + totals(mine.flatMap(o => o.items), s);
 }
 function sheetBill(){
   openSheet(head(`สรุปบิล ${TABLE_WORD} ${esc(tbl)}`) + `<button class="ghost" style="width:100%" data-close>สั่งเพิ่ม</button>` +
-    billRows(orders) + (orders.length && ppTarget() ? `<button class="primary" data-payqr>จ่ายด้วย QR พร้อมเพย์</button>` : '') + `<p class="note">เรียกพนักงานเพื่อคิดเงิน</p>`, sheetBill);
+    billRows(orders, sess) + (orders.length && ppTarget() ? `<button class="primary" data-payqr>จ่ายด้วย QR พร้อมเพย์</button>` : '') + `<p class="note">เรียกพนักงานเพื่อคิดเงิน</p>`, sheetBill);
 }
 
 /* ---------- หน้าพนักงาน: โต๊ะ (รับลูกค้า + คิดเงิน) ---------- */
 const sessOf = t => sessions.find(s => s.tableNo === t);
 function renderTables(){
+  if ($('cash-btn')) $('cash-btn').hidden = !db.cashClose || myRole === 'kitchen' || myRole === 'stock';
   $('tables').innerHTML = tables.map(t => {
     const s = sessOf(t), all = s ? orders.filter(o => o.sessionId === s.id).flatMap(o => o.items) : [];
     return `<button class="tbl ${s?'busy':''}" data-table="${esc(t)}"><b>${s ? '🍲' : '🪑'} ${TABLE_WORD} ${esc(t)}</b>${calls.some(c => c.tableNo === t) ? `<span class="bell">🔔 ${calls.filter(c => c.tableNo === t).map(c => c.type === 'bill' ? 'ขอเช็คบิล' : 'เรียกพนักงาน').join(' · ')}</span>` : ''}
-      <span class="num">${s ? `เริ่ม ${time(s.openedAt)}<br>${baht(sum(all))}` : 'ว่าง'}</span></button>`; }).join('');
+      <span class="num">${s ? `เริ่ม ${time(s.openedAt)}<br>${baht(Math.max(0, sum(all) - discOf(s)))}` : 'ว่าง'}</span></button>`; }).join('');
 }
 function slip(t){
   const url = location.href.split('#')[0] + '#t-' + encodeURIComponent(t) + (tableKeys[t] ? '~' + tableKeys[t] : '');
@@ -3862,7 +3892,7 @@ async function runSlipCheck(t){
   const mine = orders.filter(o => o.sessionId === s.id), slip = payState.slip;
   payState.check = {loading:true}; sheetTable(t, 'pay');
   let out;
-  try { out = { result: await db.checkSlip(s.id, slip, grand(mine.flatMap(o => o.items))) }; }
+  try { out = { result: await db.checkSlip(s.id, slip, netOf(mine.flatMap(o => o.items), s)) }; }
   catch(e){ out = { error: e.message, off: e.message === 'no_slip_key' || e.message === 'unknown_action' }; if (out.off && !GAS_URL) out = null; }
   if (payState.slip !== slip) return;   // ถ่ายรูปใหม่หรือเปลี่ยนโต๊ะไปแล้ว
   payState.check = out;
@@ -3870,10 +3900,10 @@ async function runSlipCheck(t){
   if ($('seen') || document.querySelector('.vslip')) sheetTable(t, 'pay');
 }   // slip = รูปสลิปที่ถ่ายไว้ (data URL) เก็บเป็นหลักฐาน
 function payStep(t, mine){
-  const amt = grand(mine.flatMap(o => o.items)), m = payState.method;
+  const ss = sessOf(t), amt = netOf(mine.flatMap(o => o.items), ss), m = payState.method;
   const bad = m === 'transfer' && payState.check && payState.check.result && payState.check.result.status === 'fail' && !isAdmin;
   const ready = !mine.length || m === 'cash' || (m === 'transfer' && payState.seen && !bad);
-  return totals(mine.flatMap(o => o.items)) + (mine.length ? `
+  return totals(mine.flatMap(o => o.items), ss) + (mine.length ? `
     <div class="opts"><button data-method="cash" data-t="${esc(t)}" aria-pressed="${m==='cash'}">เงินสด</button>
       <button data-method="transfer" data-t="${esc(t)}" aria-pressed="${m==='transfer'}">โอน / สแกน QR</button></div>
     ${m === 'transfer' ? `<label class="check"><input type="checkbox" id="seen" data-t="${esc(t)}" ${payState.seen ? 'checked' : ''}>
@@ -3888,9 +3918,9 @@ function payStep(t, mine){
 /* ---------- ใบแจ้งยอด / ใบเสร็จ ---------- */
 // รวมรายการที่เหมือนกันจากทุกรอบเป็นบรรทัดเดียว (ชื่อ + ระดับเผ็ด + ราคา)
 const billNo = id => String(id).replace(/^s-/, '').slice(0, 8).toUpperCase();
-function receiptHtml(t, mine, info){   // info = null คือใบแจ้งยอดก่อนจ่าย, มีค่า = ใบเสร็จหลังปิดบิล
+function receiptHtml(t, mine, info, ds){   // info = null คือใบแจ้งยอดก่อนจ่าย, มีค่า = ใบเสร็จหลังปิดบิล
   const lines = {}; mine.flatMap(o => o.items).forEach(c => { const k = c.name + '|' + (c.opt || '') + '|' + c.price, l = lines[k] || (lines[k] = {...c, qty: 0}); l.qty += c.qty; });
-  const list = Object.values(lines), sub = sum(list), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, total = grand(list);
+  const list = Object.values(lines), sub = sum(list), svc = sub * SERVICE_PCT / 100, vat = (sub + svc) * VAT_PCT / 100, dc = discOf(ds), total = Math.max(0, grand(list) - dc);
   const row = (l, v) => `<tr><td colspan="2">${l}</td><td class="a">${baht(v)}</td></tr>`;
   let qr = '';
   if (!info && ppTarget() && total) { const q = qrcode(0, 'M'); q.addData(ppPayload(total)); q.make(); qr = `<hr><div class="c b">สแกนจ่ายพร้อมเพย์ ${baht(total)}</div>${q.createSvgTag({cellSize:4, margin:2, scalable:true})}<div class="c">${esc(settings.promptpayName || '')}</div>${settings.promptpayNote ? `<div class="c">${esc(settings.promptpayNote)}</div>` : ''}`; }
@@ -3898,7 +3928,7 @@ function receiptHtml(t, mine, info){   // info = null คือใบแจ้�
   return `<div class="rc"><h4>${esc(SHOP_NAME)}</h4><div class="c en">${esc(SHOP_EN)}</div><div class="c b">${info ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งยอด'}${info && info.copy ? ' (สำเนา)' : ''}</div>
     ${info && info.no ? `<div class="c num">เลขที่ ${esc(billNo(info.no))}</div>` : ''}<div class="c">${TABLE_WORD} ${esc(t)} · ${date(now)} ${time(now)}</div><hr>
     <table>${list.map(c => `<tr><td class="rq">${c.qty}</td><td>${esc(c.name)}${c.code ? ' (' + esc(c.code) + ')' : ''}${c.opt ? `<div class="o">${esc(c.opt)}</div>` : ''}</td><td class="a">${baht(c.price * c.qty)}</td></tr>`).join('')}</table><hr>
-    <table>${svc || vat ? row('ค่าอาหาร', sub) : ''}${svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : ''}${vat ? row(`VAT ${VAT_PCT}%`, vat) : ''}
+    <table>${svc || vat || dc ? row('ค่าอาหาร', sub) : ''}${svc ? row(`ค่าบริการ ${SERVICE_PCT}%`, svc) : ''}${vat ? row(`VAT ${VAT_PCT}%`, vat) : ''}${dc ? `<tr><td colspan="2">ส่วนลด</td><td class="a">-${baht(dc)}</td></tr>` : ''}
       <tr class="tot"><td colspan="2">รวม ${count(list)} ชิ้น</td><td class="a">${baht(total)}</td></tr></table>
     ${info ? `<hr><div>ชำระโดย: ${info.method === 'transfer' ? 'โอน / สแกน QR' : 'เงินสด'}</div><div>พนักงาน: ${esc(info.by || '-')}</div>` : ''}${qr}
     <hr><div class="c">${esc(RECEIPT_FOOTER)}</div></div>`;
@@ -3922,12 +3952,12 @@ function dots(points, goal){
 const billAmt = () => sum(orders.flatMap(o => o.items));
 function renderMember(){
   const el = $('member'); if (!memOn()) return el.innerHTML = '';
-  const c = mcfg(), m = sess && sess.member, est = Math.floor(billAmt() / c.per);
+  const c = mcfg(), m = sess && sess.member, est = Math.floor((billAmt() + (m && m.carry || 0)) / c.per);
   if (!sess) return el.innerHTML = `<div class="mcard"><b>⭐ สมาชิก${esc(SHOP_NAME)}</b><span>ทุก ${baht(c.per)} ได้ 1 แต้ม · ครบ ${c.goal} แต้ม รับ${esc(c.reward)} · ใส่เบอร์ได้เมื่อเริ่มสั่งอาหาร</span></div>`;
   if (!m) return el.innerHTML = `<button class="mcard go" data-mem-join><b>⭐ ใส่เบอร์โทร รับแต้มบิลนี้</b><span>ทุก ${baht(c.per)} = 1 แต้ม · ครบ ${c.goal} แต้ม รับ${esc(c.reward)}${c.newBonus ? ` · สมาชิกใหม่รับเพิ่ม ${c.newBonus} แต้ม` : ''}</span></button>`;
   const full = m.points >= c.goal;
   el.innerHTML = `<div class="mcard on"><div class="mtop"><b>⭐ ${esc(m.name || 'สมาชิก')}</b><span class="num">${m.points}/${c.goal} แต้ม</span></div>${dots(m.points, c.goal)}
-    <span>${full ? `🎁 แต้มครบแล้ว บอกพนักงานเพื่อแลก${esc(c.reward)}` : `บิลนี้จะได้ประมาณ +${est}${m.isNew && c.newBonus ? ` (+${c.newBonus} สมาชิกใหม่)` : ''} แต้มเมื่อชำระเงิน`}</span>
+    <span>${full ? `🎁 แต้มครบแล้ว บอกพนักงานเพื่อแลก${esc(c.reward)}` : `บิลนี้จะได้ประมาณ +${est}${m.isNew && c.newBonus ? ` (+${c.newBonus} สมาชิกใหม่)` : ''} แต้มเมื่อชำระเงิน`}${m.carry ? ` · มีเศษสะสมไว้ ${baht(m.carry)}` : ''}</span>
     <button class="linkbtn" data-mem-join>ไม่ใช่เบอร์นี้? เปลี่ยน</button></div>`;
 }
 function renderShopInfo(){
@@ -3940,7 +3970,7 @@ let memMsg = '';
 function sheetJoin(){
   const c = mcfg(); let saved = ''; try { saved = localStorage.getItem('maila_phone') || ''; } catch(e){}
   openSheet(head('⭐ สะสมแต้มกับ' + esc(SHOP_NAME)) + `<div class="form">
-    <p class="note" style="margin:0">ทุก ${baht(c.per)} ได้ 1 แต้ม · ครบ ${c.goal} แต้ม รับ<b>${esc(c.reward)}</b>${c.newBonus ? ` · สมาชิกใหม่รับเพิ่ม ${c.newBonus} แต้ม` : ''}</p>
+    <p class="note" style="margin:0">ทุก ${baht(c.per)} ได้ 1 แต้ม (เศษไม่หาย สะสมต่อบิลหน้า) · ครบ ${c.goal} แต้ม รับ<b>${esc(c.reward)}</b>${c.newBonus ? ` · สมาชิกใหม่รับเพิ่ม ${c.newBonus} แต้ม` : ''}</p>
     <label>เบอร์โทรศัพท์<input id="mj-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="12" placeholder="08x xxx xxxx" value="${esc(saved)}"></label>
     <div id="mj-new" ${memMsg === 'need_name' || memMsg === 'need_consent' ? '' : 'hidden'}>
       <p class="note" style="margin:0 0 8px">เบอร์นี้ยังไม่เป็นสมาชิก สมัครง่าย ๆ ใส่ชื่อเล่นแล้วกดยินยอม</p>
@@ -3976,7 +4006,7 @@ function memberRow(s){
   const c = mcfg(), m = s.member;
   if (!m) return `<div class="mrow"><span>⭐ ยังไม่มีสมาชิกในบิลนี้</span><button class="ghost" data-mem-staff="${esc(s.tableNo)}">+ ใส่เบอร์สมาชิก</button></div>`;
   const can = m.points >= c.goal, armed = redeemArm.has(s.id);
-  return `<div class="mrow on"><span><b>⭐ ${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><span class="num">${m.points}/${c.goal} แต้ม</span> · มาแล้ว ${m.visits} ครั้ง${m.birthMonth === new Date().getMonth() + 1 ? ' · 🎂 เกิดเดือนนี้' : ''}</span>
+  return `<div class="mrow on"><span><b>⭐ ${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><span class="num">${m.points}/${c.goal} แต้ม${m.carry ? ` + เศษ ${baht(m.carry)}` : ''}</span> · มาแล้ว ${m.visits} ครั้ง${m.birthMonth === new Date().getMonth() + 1 ? ' · 🎂 เกิดเดือนนี้' : ''}</span>
     ${can ? `<button class="${armed ? 'primary' : 'ghost'}" style="margin:0;width:auto" data-redeem="${esc(s.tableNo)}">${armed ? 'แตะอีกครั้งเพื่อยืนยัน' : `🎁 แลก${esc(c.reward)} (−${c.goal})`}</button>` : ''}
     <button class="linkbtn" data-mem-staff="${esc(s.tableNo)}">เปลี่ยน</button></div>`;
 }
@@ -4037,7 +4067,7 @@ function renderMembers(){
       <div class="tile"><span>หายไปเกิน 30 วัน</span><b class="num">${ls.lost.length}</b></div>
       <div class="tile"><span>เกิดเดือนนี้</span><b class="num">${ls.bday.length}</b></div></div>
     <div class="opts" style="margin-top:12px">${[['all','ทั้งหมด'],['lost','หายไปนาน'],['bday','เกิดเดือนนี้'],['ready','แต้มครบ']].map(([k, t]) => `<button data-mtab="${k}" aria-pressed="${mem.tab === k}">${t} (${ls[k].length})</button>`).join('')}</div>
-    ${list.length ? `<div class="rlist" style="max-height:40vh">${list.map(m => `<div class="rrow"><span><b>${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><small class="num">${m.points} แต้ม · มา ${m.visits} ครั้ง · ${baht(m.spent)}${m.lastVisitAt ? ` · ล่าสุด ${daysAgo(m.lastVisitAt)} วันก่อน` : ''}${m.birthMonth ? ` · เกิด ${MONTHS_TH[m.birthMonth - 1]}` : ''}</small></span>
+    ${list.length ? `<div class="rlist" style="max-height:40vh">${list.map(m => `<div class="rrow"><span><b>${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><small class="num">${m.points} แต้ม${m.carry ? ` + เศษ ${baht(m.carry)}` : ''} · มา ${m.visits} ครั้ง · ${baht(m.spent)}${m.lastVisitAt ? ` · ล่าสุด ${daysAgo(m.lastVisitAt)} วันก่อน` : ''}${m.birthMonth ? ` · เกิด ${MONTHS_TH[m.birthMonth - 1]}` : ''}</small></span>
         <button class="linkbtn" data-mdel="${esc(m.phone)}">${mem.del === m.phone ? 'ยืนยันลบ' : 'ลบ'}</button></div>`).join('')}</div>
       <button class="ghost" style="width:100%;margin-top:8px" data-mcopy>📋 คัดลอกรายชื่อและเบอร์ในแท็บนี้</button>` : `<p class="empty">ยังไม่มีสมาชิกในกลุ่มนี้</p>`}
     <h3 style="margin:18px 0 6px">ตั้งค่าแต้ม</h3>
@@ -4070,6 +4100,189 @@ async function saveMemberCfg(b){
   catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'บันทึกไม่สำเร็จ'; }
 }
 
+
+/* ---------- v27: นับเงินปิดร้าน ---------- */
+const DENOMS = [1000, 500, 100, 50, 20, 10, 5, 2, 1];
+const cash = { day: null, err: '', res: null };
+async function sheetCash(){
+  cash.day = null; cash.err = ''; cash.res = null; openSheet(head('💵 ปิดร้าน นับเงินสด') + `<p class="empty">กำลังโหลด…</p>`);
+  try { cash.day = await db.cashDay(); } catch(e){ cash.err = e.message === 'forbidden' ? 'บัญชีนี้นับเงินไม่ได้' : e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v27 ก่อน' : 'โหลดไม่ได้ ลองอีกครั้ง'; }
+  renderCash();
+}
+function renderCash(){
+  const top = head('💵 ปิดร้าน นับเงินสด');
+  if (cash.err) return openSheet(top + `<p class="empty">${cash.err}</p>`);
+  const D = cash.day, adm = typeof D.cashSales === 'number';
+  if (cash.res) { const r = cash.res, st = !adm ? '' : Math.abs(r.diff) < 1 ? 'ok' : r.diff < 0 ? 'bad' : 'warn';
+    return openSheet(top + (adm ? `<div class="cashres ${st}"><b>${st === 'ok' ? '✅ เงินตรงกับระบบ' : r.diff < 0 ? `⚠️ เงินขาด ${baht(-r.diff)}` : `⚠️ เงินเกิน ${baht(r.diff)}`}</b>
+        <span class="num">ควรมี ${baht(r.expected)} · นับได้ ${baht(r.counted)}</span><span class="num">ยอดโอนวันนี้ ${baht(r.transfer)} ให้เช็กกับแอปธนาคาร</span></div>`
+      : `<div class="cashres ok"><b>✅ บันทึกยอดนับเงินแล้ว</b><span>ระบบส่งยอดให้เจ้าของร้านตรวจ ขอบคุณครับ</span></div>`) + `<button class="primary" data-close>เสร็จ</button>`); }
+  openSheet(top + `<div class="form" id="cash-form">
+    <p class="note" style="margin:0">วันที่ <span class="num">${esc(D.date)}</span>${D.counted ? ` · วันนี้บันทึกไปแล้ว ${D.counted} ครั้ง (บันทึกใหม่ได้ ระบบเก็บทุกครั้ง)` : ''}${adm ? '' : '<br>นับเงินในลิ้นชักให้ครบทุกใบ ทุกเหรียญ ระบบจะส่งยอดให้เจ้าของร้านเทียบเอง'}</p>
+    <div class="two"><label>เงินทอนตั้งต้นตอนเปิดร้าน<input id="cs-float" type="number" inputmode="decimal" min="0" value="${D.float}"></label>
+      <label>จ่ายเงินสดออกจากลิ้นชักวันนี้<input id="cs-out" type="number" inputmode="decimal" min="0" placeholder="0"></label></div>
+    <div class="denoms">${DENOMS.map(k => `<label><span class="num">${k >= 20 ? '฿' + k : 'เหรียญ ' + k}</span><input type="number" inputmode="numeric" min="0" data-den="${k}" placeholder="0"></label>`).join('')}</div>
+    <div class="cashsum"><span>นับได้รวม</span><b class="num" id="cs-total">${baht(0)}</b></div>
+    ${adm ? `<div class="cashadm" id="cs-adm"></div>` : ''}
+    <label>หมายเหตุ<input id="cs-note" type="text" maxlength="200" placeholder="เช่น ทอนผิดโต๊ะ 5, จ่ายค่าน้ำแข็ง"></label>
+    <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-cash-save>บันทึกยอดนับเงิน</button>`);
+  cashCalc();
+}
+function cashCalc(){
+  if (!$('cash-form')) return;
+  let total = 0; document.querySelectorAll('[data-den]').forEach(i => { total += (+i.dataset.den) * Math.max(0, Math.floor(+i.value || 0)); });
+  $('cs-total').textContent = baht(total);
+  const D = cash.day; if (!$('cs-adm') || typeof D.cashSales !== 'number') return total;
+  const exp = (+$('cs-float').value || 0) + D.cashSales - (+$('cs-out').value || 0), diff = total - exp;
+  $('cs-adm').innerHTML = `<div><span>ยอดขายเงินสดวันนี้ (ปิดบิลทั้งวัน ${D.bills} บิล)</span><b class="num">${baht(D.cashSales)}</b></div><div><span>ควรมีในลิ้นชัก</span><b class="num">${baht(exp)}</b></div>
+    <div class="${Math.abs(diff) < 1 ? 'ok' : 'bad'}"><span>${Math.abs(diff) < 1 ? 'ตรง' : diff < 0 ? 'ขาด' : 'เกิน'}</span><b class="num">${baht(Math.abs(diff))}</b></div><div><span>เงินโอนวันนี้ (เช็กกับแอปธนาคาร)</span><b class="num">${baht(D.transfer)}</b></div>`;
+  return total;
+}
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#cash-form')) cashCalc(); });
+async function saveCash(b){
+  const counted = cashCalc(), denoms = {}; document.querySelectorAll('[data-den]').forEach(i => { const n = Math.floor(+i.value || 0); if (n > 0) denoms[i.dataset.den] = n; });
+  if (!counted) return $('mf-err').textContent = 'ใส่จำนวนธนบัตรและเหรียญที่นับได้ก่อน';
+  b.disabled = true;
+  try { const r = await db.cashClose({ float: +$('cs-float').value || 0, cashOut: +$('cs-out').value || 0, counted, denoms, note: $('cs-note').value.trim() });
+    cash.res = { ...r, counted }; renderCash(); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'forbidden' ? 'บัญชีนี้นับเงินไม่ได้' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; }
+}
+const cashH = { list: null, err: '' };
+async function sheetCashHistory(){
+  cashH.list = null; cashH.err = ''; renderCashHistory();
+  try { cashH.list = await db.cashHistory(); } catch(e){ cashH.err = 'โหลดไม่ได้ ถ้าเพิ่งอัปเดต ให้วาง Code.gs v27 แล้ว Deploy เวอร์ชันใหม่'; }
+  renderCashHistory();
+}
+function renderCashHistory(){
+  const top = head('💵 ประวัตินับเงินปิดร้าน');
+  if (cashH.err) return openSheet(top + `<p class="empty">${cashH.err}</p>`);
+  if (!cashH.list) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
+  const L = cashH.list, short = L.filter(x => x.diff <= -1).reduce((a, x) => a + x.diff, 0);
+  openSheet(top + `<button class="primary" style="margin-top:0" data-cash>นับเงินวันนี้</button>
+    ${L.length ? `<p class="note">${L.length} ครั้งล่าสุด · เงินขาดรวม <b class="num">${baht(-short)}</b></p><div class="rlist">${L.map(x => { const st = Math.abs(x.diff) < 1 ? 'ok' : x.diff < 0 ? 'bad' : 'warn';
+      return `<div class="rrow"><span><b class="num">${esc(x.date)}</b> <small>${esc(x.by)}</small><br><small class="num">ควรมี ${baht(x.expected)} · นับได้ ${baht(x.counted)} · โอน ${baht(x.transfer)}${x.note ? ' · ' + esc(x.note) : ''}</small></span>
+        <b class="num cashdiff ${st}">${st === 'ok' ? 'ตรง' : (x.diff < 0 ? '−' : '+') + baht(Math.abs(x.diff))}</b></div>`; }).join('')}</div>` : `<p class="empty">ยังไม่มีการนับเงิน</p>`}`);
+}
+/* ---------- v27: สำรองข้อมูล + ล้างข้อมูลซ้อม ---------- */
+const bk = { data: null, err: '', msg: '' };
+async function sheetBackup(){
+  bk.data = null; bk.err = ''; renderBackup();
+  try { bk.data = await db.backups(); } catch(e){ bk.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v27 ก่อน' : 'โหลดไม่ได้ ลองอีกครั้ง'; }
+  renderBackup();
+}
+function renderBackup(){
+  const top = head('🗄️ สำรองข้อมูล / ล้างข้อมูลซ้อม');
+  if (bk.err) return openSheet(top + `<p class="empty">${bk.err}</p>`);
+  if (!bk.data) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
+  const D = bk.data, last = D.last ? new Date(D.last) : null;
+  openSheet(top + `<div class="cashres ${D.auto ? 'ok' : 'warn'}"><b>${D.auto ? '✅ สำรองอัตโนมัติทุกคืนตีสาม' : '⚠️ ยังไม่ได้เปิดสำรองอัตโนมัติ'}</b>
+      <span>${last ? `สำรองล่าสุด ${date(last)} ${time(last)}` : 'ยังไม่เคยสำรอง'}</span>
+      ${D.auto ? '' : '<span>เปิดได้ครั้งเดียวจบ: ในหน้า Apps Script เลือกฟังก์ชัน <b>setupBackup</b> แล้วกด Run และกดอนุญาตสิทธิ์</span>'}</div>
+    <button class="ghost" style="width:100%;margin-top:10px" data-backup-now>สำรองข้อมูลตอนนี้</button>
+    ${bk.msg ? `<p class="note">${bk.msg}</p>` : ''}
+    ${D.list.length ? `<div class="rlist" style="margin-top:10px;max-height:28vh">${D.list.map(f => `<a class="rrow" href="${esc(f.url)}" target="_blank" rel="noopener"><span>${esc(f.name)}</span><small>เปิด ↗</small></a>`).join('')}</div>` : ''}
+    <h3 style="margin:20px 0 6px">ล้างข้อมูลซ้อมก่อนเปิดร้านจริง</h3>
+    <p class="note" style="margin:0 0 8px">ระบบจะสำรองข้อมูลทั้งหมดก่อนล้างทุกครั้ง เมนู สต็อกคงเหลือ พนักงาน โต๊ะ QR และการตั้งค่า <b>ไม่ถูกลบ</b> เลขออเดอร์จะเริ่มที่ #101 ใหม่</p>
+    <div class="form">
+      <label class="check"><input type="checkbox" checked disabled><span>ออเดอร์ บิล การเรียกพนักงาน และการนับเงิน (ล้างเสมอ)</span></label>
+      <label class="check"><input type="checkbox" data-wipe="members" checked><span>สมาชิกและแต้ม</span></label>
+      <label class="check"><input type="checkbox" data-wipe="expenses" checked><span>รายจ่าย</span></label>
+      <label class="check"><input type="checkbox" data-wipe="stocklog" checked><span>ประวัติเข้า-ออกสต็อก (จำนวนคงเหลือไม่เปลี่ยน ให้นับสต็อกใหม่หลังล้าง)</span></label>
+      <label>พิมพ์คำว่า <b>ล้างข้อมูล</b> เพื่อยืนยัน<input id="wipe-ok" type="text" autocomplete="off"></label>
+      <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-wipe-go>สำรองแล้วล้างข้อมูลซ้อม</button>`);
+}
+async function doBackupNow(b){
+  b.disabled = true; b.textContent = 'กำลังสำรอง…';
+  try { const r = await db.backupNow(); bk.msg = `✅ สำรองแล้ว: ${esc(r.name)}`; sheetBackup(); }
+  catch(e){ b.disabled = false; b.textContent = 'สำรองข้อมูลตอนนี้'; toast('สำรองไม่สำเร็จ ลองอีกครั้ง'); }
+}
+async function doWipe(b){
+  if ($('wipe-ok').value.trim() !== 'ล้างข้อมูล') return $('mf-err').textContent = 'พิมพ์คำว่า ล้างข้อมูล ให้ตรงก่อน';
+  const groups = [...document.querySelectorAll('[data-wipe]')].filter(i => i.checked).map(i => i.dataset.wipe);
+  b.disabled = true; b.textContent = 'กำลังสำรองและล้าง…';
+  try { const r = await db.wipeTest({ confirm: 'ล้างข้อมูล', groups });
+    const n = Object.values(r.deleted).reduce((a, x) => a + x, 0);
+    openSheet(head('ล้างข้อมูลซ้อมแล้ว') + `<div class="cashres ok"><b>✅ ลบข้อมูลซ้อม ${n} แถว</b><span>ไฟล์สำรองก่อนล้าง: <a href="${esc(r.backup.url)}" target="_blank" rel="noopener">${esc(r.backup.name)}</a></span><span>อย่าลืมนับสต็อกใหม่ให้ตรงของจริง</span></div><button class="primary" data-close>เสร็จ</button>`);
+    await refresh(); }
+  catch(e){ b.disabled = false; b.textContent = 'สำรองแล้วล้างข้อมูลซ้อม'; $('mf-err').textContent = e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'ล้างไม่สำเร็จ ข้อมูลยังอยู่ครบ ลองอีกครั้ง'; }
+}
+
+
+/* ---------- v28: แก้รายการในบิล + ส่วนลด ---------- */
+let billEdit = false;
+const canEditBill = () => !!db.voidItem && myRole !== 'kitchen' && myRole !== 'stock';
+const VOID_WHY = ['สั่งผิด', 'ลูกค้าเปลี่ยนใจ', 'ของหมด', 'รอนานเกินไป', 'อาหารมีปัญหา'];
+const DISC_WHY = ['ลูกค้าประจำ', 'อาหารช้า', 'อาหารมีปัญหา', 'โปรโมชัน', 'คนรู้จัก / พนักงาน'];
+const ve = { t: '', o: '', i: 0, keep: 0, why: '', other: '' };
+function sheetVoid(t, oid, i){
+  const o = orders.find(x => x.id === oid), c = o && o.items[i]; if (!c) return sheetTable(t, 'bill');
+  if (ve.o !== oid || ve.i !== i) Object.assign(ve, { t, o: oid, i, keep: Math.max(0, c.qty - 1), why: '', other: '' });
+  const done = c.done || c.served || !(o.status === 'new' || (isBarOrder(o) && o.status === 'ready'));
+  openSheet(head('แก้รายการ') + `<div class="form">
+    <div class="line" style="margin:0"><span class="q num">${c.qty}</span><div class="info"><div>${label(c)}</div>${c.opt ? `<div class="opt">${esc(c.opt)}</div>` : ''}</div><span class="num">${baht(c.price * c.qty)}</span></div>
+    ${done && !isAdmin ? `<p class="vwarn">รายการนี้ครัวทำหรือเสิร์ฟแล้ว ต้องให้แอดมินเป็นคนยกเลิก</p>` : done ? `<p class="vwarn">รายการนี้ทำหรือเสิร์ฟแล้ว ยกเลิกได้เพราะเป็นแอดมิน (ไม่คืนสต็อก)</p>` : ''}
+    <div><b>เหลือจำนวน</b><div class="vstep"><button class="ghost" data-vq="-1" aria-label="ลด">−</button><b class="num" id="v-keep">${ve.keep}</b><button class="ghost" data-vq="1" aria-label="เพิ่ม">+</button>
+      <span class="note" style="margin:0">${ve.keep ? `ลด ${c.qty - ve.keep} · หักออก ${baht(c.price * (c.qty - ve.keep))}` : `ยกเลิกทั้งรายการ · หักออก ${baht(c.price * c.qty)}`}</span></div></div>
+    <div><b>เหตุผล</b><div class="chips" style="padding:6px 0 0">${VOID_WHY.map(w => `<button type="button" data-vwhy="${esc(w)}" aria-pressed="${ve.why === w}">${esc(w)}</button>`).join('')}</div>
+      <input id="v-other" type="text" maxlength="60" placeholder="หรือพิมพ์เหตุผลอื่น" value="${esc(ve.other)}" style="margin-top:8px"></div>
+    <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-void-save ${done && !isAdmin ? 'disabled' : ''}>${ve.keep ? 'บันทึกจำนวนใหม่' : 'ยกเลิกรายการนี้'}</button>
+    <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`);
+}
+async function saveVoid(b){
+  ve.other = $('v-other').value.trim(); const why = ve.other || ve.why;
+  if (!why) return $('mf-err').textContent = 'เลือกหรือพิมพ์เหตุผลก่อน (เจ้าของร้านจะเห็นทุกครั้ง)';
+  b.disabled = true;
+  try { await db.voidItem(ve.o, ve.i, ve.keep, why); toast(ve.keep ? 'แก้จำนวนแล้ว' : 'ยกเลิกรายการแล้ว'); const t = ve.t; ve.o = ''; await refresh(); sheetTable(t, 'bill'); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'need_admin' ? 'รายการนี้ทำแล้ว ต้องให้แอดมินยกเลิก' : e.message === 'not_found' ? 'บิลนี้เปลี่ยนไปแล้ว กลับไปดูบิลใหม่' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; }
+}
+const dc = { t: '', kind: 'baht', value: '', why: '', other: '' };
+function sheetDisc(t){
+  const s = sessOf(t); if (!s) return closeSheet();
+  if (dc.t !== t) Object.assign(dc, { t, kind: 'baht', value: '', why: '', other: '' });
+  const sub = sum(orders.filter(o => o.sessionId === s.id).flatMap(o => o.items)), v = +dc.value || 0;
+  const amt = Math.min(sub, dc.kind === 'pct' ? Math.round(sub * Math.min(100, v) / 100) : v);
+  openSheet(head(`🏷️ ส่วนลด ${TABLE_WORD} ${esc(t)}`) + `<div class="form">
+    ${discOf(s) ? `<p class="note" style="margin:0">ตอนนี้ลดอยู่ <b class="num">${baht(discOf(s))}</b> (${esc(s.discountNote)})</p>` : ''}
+    <div class="opts" style="margin:0"><button data-dkind="baht" aria-pressed="${dc.kind === 'baht'}">ลดเป็นบาท</button><button data-dkind="pct" aria-pressed="${dc.kind === 'pct'}">ลดเป็น %</button></div>
+    <label>${dc.kind === 'pct' ? 'ลดกี่ %' : 'ลดกี่บาท'}<input id="d-val" type="number" inputmode="decimal" min="0" value="${esc(dc.value)}" placeholder="0"></label>
+    <div class="chips" style="padding:0">${(dc.kind === 'pct' ? [5, 10, 15, 20] : [10, 20, 50, 100]).map(x => `<button type="button" data-dquick="${x}">${dc.kind === 'pct' ? x + '%' : '฿' + x}</button>`).join('')}</div>
+    <div><b>เหตุผล</b><div class="chips" style="padding:6px 0 0">${DISC_WHY.map(w => `<button type="button" data-dwhy="${esc(w)}" aria-pressed="${dc.why === w}">${esc(w)}</button>`).join('')}</div>
+      <input id="d-other" type="text" maxlength="60" placeholder="หรือพิมพ์เหตุผลอื่น" value="${esc(dc.other)}" style="margin-top:8px"></div>
+    <div class="cashadm"><div><span>ยอดรายการ</span><b class="num">${baht(sub)}</b></div><div><span>ส่วนลด</span><b class="num" id="d-amt">−${baht(amt)}</b></div><div><span>ยอดที่ลูกค้าจ่าย</span><b class="num" id="d-net">${baht(Math.max(0, sub - amt))}</b></div></div>
+    ${isAdmin ? '' : '<p class="note" style="margin:0">พนักงานลดได้ไม่เกิน 10% ของบิล ถ้าเกินต้องให้แอดมินกด</p>'}
+    <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-disc-save>ใช้ส่วนลดนี้</button>
+    ${discOf(s) ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-disc-off>เอาส่วนลดออก</button>` : ''}
+    <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`);
+}
+function discPreview(){
+  const s = sessOf(dc.t); if (!s || !$('d-val')) return;
+  dc.value = $('d-val').value; const sub = sum(orders.filter(o => o.sessionId === s.id).flatMap(o => o.items)), v = +dc.value || 0;
+  const amt = Math.min(sub, dc.kind === 'pct' ? Math.round(sub * Math.min(100, v) / 100) : v);
+  $('d-amt').textContent = '−' + baht(amt); $('d-net').textContent = baht(Math.max(0, sub - amt));
+}
+document.addEventListener('input', e => { if (e.target.id === 'd-val') discPreview(); });
+async function saveDisc(b, off){
+  const s = sessOf(dc.t); if (!s) return closeSheet();
+  dc.other = $('d-other') ? $('d-other').value.trim() : ''; dc.value = $('d-val') ? $('d-val').value : dc.value;
+  const why = dc.other || dc.why, v = off ? 0 : +dc.value || 0;
+  if (!off && !(v > 0)) return $('mf-err').textContent = 'ใส่จำนวนส่วนลดก่อน';
+  if (!off && !why) return $('mf-err').textContent = 'เลือกหรือพิมพ์เหตุผลก่อน (เจ้าของร้านจะเห็นทุกครั้ง)';
+  b.disabled = true;
+  try { const r = await db.setDiscount(s.id, { kind: dc.kind, value: v, reason: why || 'เอาส่วนลดออก' }); toast(off ? 'เอาส่วนลดออกแล้ว' : `ลด ${baht(r.discount)} แล้ว`); const t = dc.t; dc.t = ''; await refresh(); sheetTable(t, 'bill'); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'over_limit' ? `พนักงานลดได้ไม่เกิน ${(e.data && e.data.max) || 10}% ของบิล ให้แอดมินเป็นคนกด` : e.message === 'need_reason' ? 'ต้องใส่เหตุผล' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'; }
+}
+function sheetBillLog(){
+  const L = (rep.data && rep.data.billLog) || [];
+  const T = { void: 'ยกเลิก', discount: 'ส่วนลด', discount_off: 'เอาส่วนลดออก' };
+  openSheet(head('🏷️ ส่วนลด & ยกเลิกรายการ') + (L.length ? `<div class="rlist">${L.map(x => { const d = new Date(x.at);
+    return `<div class="rrow"><span><b>${T[x.type] || esc(x.type)}</b> · ${TABLE_WORD} ${esc(x.tableNo)} <small>${esc(x.by)}</small><br><small>${esc(x.detail)} · เหตุผล: ${esc(x.reason)} · <span class="num">${date(d)} ${time(d)}</span></small></span>
+      <b class="num">${x.type === 'discount_off' ? '' : '−' + baht(x.amount)}</b></div>`; }).join('')}</div>` : `<p class="empty">ไม่มีการลดราคาหรือยกเลิกรายการในช่วงนี้</p>`));
+}
+
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -4081,7 +4294,7 @@ function rcpRows(){
   const list = rcp.list.bills.filter(b => !q || String(b.tableNo).toLowerCase() === q || billNo(b.id).toLowerCase().includes(q));
   return `${rcp.list.count > rcp.list.bills.length ? `<p class="note">แสดง ${rcp.list.bills.length} ใบล่าสุดจาก ${rcp.list.count} ใบ เลือกช่วงวันให้แคบลงเพื่อดูใบเก่ากว่านี้</p>` : ''}
     ${list.length ? `<div class="rlist">${list.map(b => { const d = new Date(b.closedAt);
-      return `<button class="rrow" data-rcp="${esc(b.id)}"><span><b>${TABLE_WORD} ${esc(b.tableNo)}</b> <small class="num">#${esc(billNo(b.id))}</small><br><small class="num">${date(d)} ${time(d)} · ${payWord(b.method)}${b.by ? ' · ' + esc(b.by) : ''}</small></span><b class="num">${baht(grand(b.items))}</b></button>`; }).join('')}</div>`
+      return `<button class="rrow" data-rcp="${esc(b.id)}"><span><b>${TABLE_WORD} ${esc(b.tableNo)}</b> <small class="num">#${esc(billNo(b.id))}</small><br><small class="num">${date(d)} ${time(d)} · ${payWord(b.method)}${b.by ? ' · ' + esc(b.by) : ''}</small></span><b class="num">${baht(Math.max(0, grand(b.items) - (b.discount || 0)))}</b></button>`; }).join('')}</div>`
       : `<p class="empty">${q ? 'ไม่พบบิลที่ค้นหา' : 'ไม่มีบิลที่ปิดแล้วในช่วงนี้'}</p>`}`;
 }
 async function sheetReceipts(keep){
@@ -4096,7 +4309,7 @@ async function sheetReceipts(keep){
 }
 function sheetReceiptOne(id){
   const b = rcp.list && rcp.list.bills.find(x => x.id === id); if (!b) return;
-  lastReceipt = receiptHtml(b.tableNo, [{ items: b.items }], { method: b.method, by: b.by, at: b.closedAt, no: b.id, copy: true });
+  lastReceipt = receiptHtml(b.tableNo, [{ items: b.items }], { method: b.method, by: b.by, at: b.closedAt, no: b.id, copy: true }, { discount: b.discount, discountNote: b.discountNote });
   openSheet(head(`ใบเสร็จ ${TABLE_WORD} ${esc(b.tableNo)}`) + `<div class="rc-preview">${lastReceipt}</div>
     <button class="primary" data-print-receipt>🖨️ พิมพ์สำเนา / PDF</button><button class="ghost" style="width:100%;margin-top:8px" data-receipts-back>← กลับไปรายการ</button>`);
 }
@@ -4107,12 +4320,12 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
     `<div class="opts"><button data-tmode="bill" data-t="${esc(t)}" aria-pressed="${mode!=='qr'}">บิล / คิดเงิน</button>
        <button data-tmode="qr" data-t="${esc(t)}" aria-pressed="${mode==='qr'}">QR โต๊ะนี้</button></div>` +
     (mode === 'qr' ? slip(t) + `<button class="primary" data-print>พิมพ์ QR</button>${isAdmin && db.newTableKey ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-new-key="${esc(t)}" data-armed="">เปลี่ยนรหัส QR โต๊ะนี้ (ใช้เมื่อ QR หลุดออกไป ต้องพิมพ์ใหม่)</button>` : ''}`
-      : mode === 'payqr' && s ? payCard(grand(mine.flatMap(o => o.items))) + `<p class="note" style="text-align:center">ระบบไม่ได้เชื่อมกับธนาคาร จึงไม่รู้เองว่าเงินเข้า พอเห็นแจ้งเตือนเงินเข้าแล้วกดปุ่มด้านล่าง</p>
+      : mode === 'payqr' && s ? payCard(netOf(mine.flatMap(o => o.items), s)) + `<p class="note" style="text-align:center">ระบบไม่ได้เชื่อมกับธนาคาร จึงไม่รู้เองว่าเงินเข้า พอเห็นแจ้งเตือนเงินเข้าแล้วกดปุ่มด้านล่าง</p>
         <button class="primary" data-method="transfer" data-t="${esc(t)}">เงินเข้าแล้ว ไปปิดบิล</button>
         <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>${db.openTable && requireOpen ? `<button class="primary" data-open-table="${esc(t)}">🔓 เปิดโต๊ะให้ลูกค้าสั่ง</button><p class="note">ลูกค้าสแกน QR ที่โต๊ะแล้วสั่งได้ทันที ปิดบิลแล้วโต๊ะจะปิดเองจนกว่าจะเปิดให้ลูกค้าชุดถัดไป</p>` : ''}`
       : mode === 'pay' ? memberRow(s) + payStep(t, mine)
-      : memberRow(s) + billRows(mine) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
+      : memberRow(s) + (canEditBill() && mine.length ? `<div class="editrow"><button class="ghost" data-bill-edit="${esc(t)}" aria-pressed="${billEdit}">✏️ ${billEdit ? 'เสร็จ' : 'แก้รายการ'}</button><button class="ghost" data-disc="${esc(t)}">🏷️ ส่วนลด${discOf(s) ? ` −${baht(discOf(s))}` : ''}</button></div>` : '') + billRows(mine, s, billEdit && canEditBill()) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
         (mine.length ? `<button class="ghost" style="width:100%;margin-top:14px" data-print-bill="${esc(t)}">🖨️ พิมพ์ใบแจ้งยอด</button>` : '') +
         (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:8px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-tmode="pay" data-t="${esc(t)}">${mine.length ? 'คิดเงิน' : 'ปิดโต๊ะ (ไม่มีออเดอร์)'}</button>`),
@@ -4296,6 +4509,24 @@ document.addEventListener('click', async e => {
   else if ('tableMode' in d) { b.disabled = true; await act(() => db.tableMode(!requireOpen), !requireOpen ? 'เปิดแล้ว: ต้องเปิดโต๊ะก่อนลูกค้าสั่ง' : 'ปิดแล้ว: ลูกค้าสแกนแล้วสั่งได้เลย'); b.disabled = false; }
   else if (d.table) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.table, 'bill'); }
   else if (d.tmode) sheetTable(d.t, d.tmode);
+  else if (d.billEdit) { billEdit = !billEdit; sheetTable(d.billEdit, 'bill'); }
+  else if (d.void) { const s = sessions.find(x => orders.some(o => o.id === d.void && o.sessionId === x.id)); if (s) sheetVoid(s.tableNo, d.void, +d.i); }
+  else if (d.vq) { const o = orders.find(x => x.id === ve.o), c = o && o.items[ve.i]; if (c) { ve.other = $('v-other').value; ve.keep = Math.max(0, Math.min(c.qty - 1, ve.keep + (+d.vq))); sheetVoid(ve.t, ve.o, ve.i); } }
+  else if (d.vwhy) { ve.other = ''; ve.why = d.vwhy; sheetVoid(ve.t, ve.o, ve.i); }
+  else if ('voidSave' in d) saveVoid(b);
+  else if (d.disc) sheetDisc(d.disc);
+  else if (d.dkind) { dc.kind = d.dkind; dc.value = ''; sheetDisc(dc.t); }
+  else if (d.dquick) { dc.value = d.dquick; sheetDisc(dc.t); }
+  else if (d.dwhy) { dc.other = ''; dc.why = d.dwhy; dc.value = $('d-val').value; sheetDisc(dc.t); }
+  else if ('discSave' in d) saveDisc(b, false);
+  else if ('discOff' in d) saveDisc(b, true);
+  else if ('billLog' in d) sheetBillLog();
+  else if ('cash' in d) sheetCash();
+  else if ('cashSave' in d) saveCash(b);
+  else if ('cashHist' in d) sheetCashHistory();
+  else if ('backup' in d) { bk.msg = ''; sheetBackup(); }
+  else if ('backupNow' in d) doBackupNow(b);
+  else if ('wipeGo' in d) doWipe(b);
   else if ('memJoin' in d) { memMsg = ''; sheetJoin(); }
   else if ('memSave' in d) saveJoin(b);
   else if (d.memStaff) sheetMemStaff(d.memStaff);
@@ -4360,18 +4591,18 @@ document.addEventListener('click', async e => {
   else if ('saveKey' in d) { const k = $('thunder-key').value.trim(); if (!k) return toast('วาง API key ก่อนกดบันทึก'); saveSlipKey(k); }
   else if ('clearKey' in d) saveSlipKey('');
   else if (d.method) { payState.method = d.method; payState.seen = false; sheetTable(d.t, 'pay'); }
-  else if (d.printBill) { const s = sessOf(d.printBill); if (s) printHtml(receiptHtml(d.printBill, orders.filter(o => o.sessionId === s.id), null)); }
+  else if (d.printBill) { const s = sessOf(d.printBill); if (s) printHtml(receiptHtml(d.printBill, orders.filter(o => o.sessionId === s.id), null, s)); }
   else if ('printReceipt' in d) printHtml(lastReceipt);
   else if (d.pay) {
     const s = sessOf(d.pay); if (!s) return closeSheet();
     const mine = orders.filter(o => o.sessionId === s.id), method = mine.length ? payState.method : 'none';
     let by = ''; try { by = localStorage.getItem('mala_name') || ''; } catch(e){}
-    const receipt = mine.length ? receiptHtml(d.pay, mine, { method, by, no: s.id }) : '';   // เก็บไว้ก่อน เพราะปิดบิลแล้วรายการจะหายจากหน้าจอ
+    const receipt = mine.length ? receiptHtml(d.pay, mine, { method, by, no: s.id }, s) : '';   // เก็บไว้ก่อน เพราะปิดบิลแล้วรายการจะหายจากหน้าจอ
     b.disabled = true;
-    if (await act(() => db.paySession(s.id, { method, seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: grand(mine.flatMap(o => o.items)) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) {
+    if (await act(() => db.paySession(s.id, { method, seen: payState.seen, slip: payState.method === 'transfer' ? payState.slip : '', total: netOf(mine.flatMap(o => o.items), s), sub: sum(mine.flatMap(o => o.items)), discount: discOf(s) }), `ปิดบิล${TABLE_WORD} ${d.pay} แล้ว`)) {
       if (!receipt) return closeSheet();
       const pm = lastPay && lastPay.member; lastPay = null;
-      lastReceipt = pm ? receipt.replace('<hr><div class="c">' + esc(RECEIPT_FOOTER), `<hr><div class="c b">⭐ ${esc(pm.name)} +${pm.got} แต้ม · รวม ${pm.points} แต้ม</div>${pm.capped ? '<div class="c">วันนี้ได้แต้มครบจำนวนบิลแล้ว</div>' : ''}<hr><div class="c">` + esc(RECEIPT_FOOTER)) : receipt;
+      lastReceipt = pm ? receipt.replace('<hr><div class="c">' + esc(RECEIPT_FOOTER), `<hr><div class="c b">⭐ ${esc(pm.name)} +${pm.got} แต้ม · รวม ${pm.points} แต้ม</div>${pm.per ? `<div class="c">อีก ${baht(pm.per - (pm.carry || 0))} ได้แต้มถัดไป (เศษยอดสะสมไว้บิลหน้า)</div>` : ''}${pm.capped ? '<div class="c">วันนี้ได้แต้มครบจำนวนบิลแล้ว</div>' : ''}<hr><div class="c">` + esc(RECEIPT_FOOTER)) : receipt;
       if (pm) toast(`ปิดบิลแล้ว ⭐ ${pm.name} ได้ +${pm.got} แต้ม (รวม ${pm.points})`);
       openSheet(head(`ปิดบิล ${TABLE_WORD} ${esc(d.pay)} แล้ว`) + `<div class="rc-preview">${lastReceipt}</div>
         <button class="primary" data-print-receipt>🖨️ พิมพ์ใบเสร็จ</button><button class="ghost" style="width:100%;margin-top:8px" data-close>ไม่พิมพ์ ปิดหน้านี้</button>`);
