@@ -248,6 +248,7 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .vbtn{margin-left:8px;padding:4px 10px;border-radius:8px;border:1px solid var(--accent);background:none;color:var(--accent);font:inherit;font-size:13px}
 .line.disc{color:var(--ok)} .vwarn{margin:0;padding:10px 12px;border-radius:10px;background:var(--wait-soft);color:var(--fg)}
 .vstep{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px} .vstep .ghost{width:48px;margin:0;font-size:20px} .vstep b{font-size:22px;min-width:2ch;text-align:center}
+.fxrow{display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:8px} .fxrow .ghost{margin:0;width:44px}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -2944,7 +2945,8 @@ function makeLocalDb(){
     async addCall(t, type){ const d = read(); if (!d.calls.some(c => !c.doneAt && c.tableNo === t && c.type === type)) d.calls.push({id:newId('c'), tableNo:t, type, createdAt:new Date().toISOString(), doneAt:''}); write(d); },
     async ackCall(id){ const d = read(); d.calls = d.calls.map(c => c.id === id ? {...c, doneAt:new Date().toISOString()} : c); write(d); },
     async loadSettings(){ return { promptpayId: DEMO_PROMPTPAY.id, promptpayName: DEMO_PROMPTPAY.name }; },
-    async report(from, to){ const d = read(); return aggregate(d.orders, from, to, d.sessions); },
+    async report(from, to){ const d = read(); let fx = null; try { fx = JSON.parse(localStorage.getItem('mala-fixed')); } catch(e){} return { ...aggregate(d.orders, from, to, d.sessions), fixed: fx || [{name:'ค่าเช่า', amount:10000}, {name:'ค่าไฟ', amount:0}, {name:'ค่าน้ำ', amount:0}, {name:'ค่าน้ำแข็ง', amount:0}, {name:'ค่าอื่นๆ', amount:0}] }; },
+    async setFixed(items){ try { localStorage.setItem('mala-fixed', JSON.stringify(items)); } catch(e){} return items; },
     async receipts(from, to){ const d = read(), bills = d.sessions.filter(s => s.paid && s.closedAt && ymd(new Date(s.closedAt)) >= from && ymd(new Date(s.closedAt)) <= to)
         .map(s => ({ id: s.id, tableNo: s.tableNo, closedAt: s.closedAt, method: s.payMethod || s.method || '', by: s.closedBy || '', total: s.total || 0, items: d.orders.filter(o => o.sessionId === s.id).flatMap(o => o.items) }))
         .sort((a, b) => a.closedAt < b.closedAt ? 1 : -1);
@@ -3026,6 +3028,7 @@ function makeGasDb(url){
     async report(from, to){ return await call('report', {from, to}); },
     async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
+    async setFixed(items){ return (await call('setFixed', {items})).items; },
     async setGoals(day, month){ await call('setGoals', {day, month}); },
     async checkSlip(id, dataUrl, total){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       return (await call('checkSlip', {sessionId: id, total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''})).result; },
@@ -3151,7 +3154,7 @@ function reportPrintHtml(){
   const D = rep.data, [f, t] = repRange(), dm = x => x.split('-').reverse().join('/');
   let by = ''; try { by = localStorage.getItem('mala_name') || ''; } catch(e){}
   const total = D.days.reduce((s, d) => s + d.total, 0), bills = D.days.reduce((s, d) => s + d.bills, 0), qty = D.days.reduce((s, d) => s + d.qty, 0), M = D.methods || {};
-  const spent = (D.expenses || []).reduce((a, x) => a + x.amount, 0);
+  const spent = (D.expenses || []).reduce((a, x) => a + x.amount, 0), fx = fixedShare(D), net = total - spent - fx.share;
   const days = D.days.slice().sort((a, b) => a.date < b.date ? -1 : 1), items = D.items.slice().sort((a, b) => b.qty - a.qty || b.total - a.total);
   const T = D.time, avg = (s, c) => c ? Math.round(s / c) + ' นาที' : '-', hh = i => String(i).padStart(2, '0') + ':00';
   const trow = (lab, h) => `<tr><td>${lab}</td><td>${h.tables}</td><td>${h.orders}</td><td>${h.qty}</td><td>${h.done}</td><td>${avg(h.waitSum, h.waitN)}</td><td>${avg(h.grillSum, h.grillN)}</td></tr>`;
@@ -3162,7 +3165,7 @@ function reportPrintHtml(){
       <tr><td>ยอดขาย (บิลที่ปิดแล้ว)</td><td>${baht(total)}</td></tr><tr><td>จำนวนบิล</td><td>${bills}</td></tr>
       <tr><td>เฉลี่ยต่อบิล</td><td>${baht(bills ? total / bills : 0)}</td></tr><tr><td>จำนวนชิ้นที่ขาย</td><td>${qty}</td></tr>
       <tr><td>เงินสด</td><td>${baht(M.cash || 0)}</td></tr><tr><td>โอน</td><td>${baht(M.transfer || 0)}</td></tr>
-      ${D.expenses ? `<tr><td>รายจ่าย</td><td>${baht(spent)}</td></tr><tr><td>กำไร (ยอดขาย − รายจ่าย)</td><td>${total - spent < 0 ? '−' : ''}${baht(Math.abs(total - spent))}</td></tr>` : ''}
+      ${D.expenses ? `<tr><td>รายจ่าย</td><td>${baht(spent)}</td></tr>${D.fixed ? `<tr><td>ต้นทุนคงที่ (${fx.days} วัน)</td><td>${baht(fx.share)}</td></tr>` : ''}<tr><td>กำไรสุทธิ</td><td>${net < 0 ? '−' : ''}${baht(Math.abs(net))}</td></tr>` : ''}
       ${M.other ? `<tr><td>ไม่ระบุวิธีจ่าย</td><td>${baht(M.other)}</td></tr>` : ''}${D.open ? `<tr><td>บิลที่ยังไม่ปิด (ไม่นับในยอดขาย)</td><td>${baht(D.open)}</td></tr>` : ''}</table>
     ${days.length ? `<h2>ยอดขายรายวัน</h2><table><tr><th>วันที่</th><th>บิล</th><th>ชิ้น</th><th>ยอดขาย</th></tr>${days.map(d => `<tr><td>${dm(d.date)}</td><td>${d.bills}</td><td>${d.qty}</td><td>${baht(d.total)}</td></tr>`).join('')}</table>` : ''}
     ${D.expenses && D.expenses.length ? `<h2>รายจ่าย</h2><table><tr><th>วันที่</th><th>หมวด</th><th>รายละเอียด</th><th>จำนวนเงิน</th></tr>${D.expenses.map(x => `<tr><td>${dm(x.date)}</td><td style="text-align:left">${esc(x.category)}</td><td style="text-align:left">${esc(x.note)}</td><td>${baht(x.amount)}</td></tr>`).join('')}</table>` : ''}
@@ -3497,7 +3500,7 @@ function renderReport(){
   if (rep.err) return $('rep').innerHTML = `<p class="empty">${rep.err}</p>`;
   if (!rep.data) return $('rep').innerHTML = `<p class="empty">กำลังโหลด…</p>`;
   const D = rep.data, total = D.days.reduce((s, d) => s + d.total, 0), bills = D.days.reduce((s, d) => s + d.bills, 0), qty = D.days.reduce((s, d) => s + d.qty, 0);
-  const spent = (D.expenses || []).reduce((a, x) => a + x.amount, 0);
+  const spent = (D.expenses || []).reduce((a, x) => a + x.amount, 0), fx = fixedShare(D), net = total - spent - fx.share;
   const ser = repSeries(), max = Math.max(1, ...ser.map(x => x.total));
   const best = ser.reduce((a, x) => x.total > a.total ? x : a, ser[0]);
   const pick = rep.sel === null ? null : ser[rep.sel];
@@ -3515,7 +3518,8 @@ function renderReport(){
       <div class="tile"><span>📊 เฉลี่ยต่อบิล</span><b class="num">${baht(bills ? total / bills : 0)}</b></div>
       <div class="tile"><span>🍢 จำนวนชิ้นที่ขาย</span><b class="num">${qty}</b></div>
       ${D.expenses ? `<div class="tile neg"><span>💸 รายจ่าย</span><b class="num">${baht(spent)}</b></div>
-      <div class="tile ${total - spent >= 0 ? 'pos' : 'neg'}"><span>📈 กำไร (ยอดขาย − รายจ่าย)</span><b class="num">${total - spent < 0 ? '−' : ''}${baht(Math.abs(total - spent))}</b></div>` : ''}
+      ${D.fixed ? `<div class="tile neg"><span>🏠 ต้นทุนคงที่ (${fx.days} วัน)</span><b class="num">${baht(fx.share)}</b></div>` : ''}
+      <div class="tile ${net >= 0 ? 'pos' : 'neg'}"><span>📈 กำไรสุทธิ (ยอดขาย − รายจ่าย${D.fixed ? ' − ต้นทุนคงที่' : ''})</span><b class="num">${net < 0 ? '−' : ''}${baht(Math.abs(net))}</b></div>` : ''}
     </div>
     ${total ? `<p class="note num">เงินสด ${baht((D.methods || {}).cash || 0)} · โอน ${baht((D.methods || {}).transfer || 0)}${(D.methods || {}).other ? ` · ไม่ระบุ ${baht(D.methods.other)}` : ''}</p>` : ''}
     ${D.discount || (D.billLog || []).length ? `<p class="note">🏷️ ส่วนลดรวม <b class="num">${baht(D.discount || 0)}</b> (หักจากยอดขายแล้ว) · ยกเลิกรายการ ${(D.billLog || []).filter(x => x.type === 'void').length} ครั้ง <button class="linkbtn" data-bill-log>ดูว่าใครทำ</button></p>` : ''}
@@ -3532,6 +3536,7 @@ function renderReport(){
       <p class="note" style="margin:6px 0 0">สำรองชีตทั้งหมดลง Google Drive ทุกคืน และล้างข้อมูลที่ซ้อมไว้ก่อนวันเปิดร้านจริง</p></div>` : ''}
     ${db.members ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">⭐ สมาชิกสะสมแต้ม</h2><button class="ghost" style="width:auto;margin:0" data-members>ดูสมาชิก / ตั้งค่า</button></div>
       <p class="note" style="margin:6px 0 0">ลูกค้าประจำ คนที่หายไปนาน คนเกิดเดือนนี้ ตั้งของรางวัล รหัส WiFi และลิงก์โซเชียลที่โชว์ในหน้าลูกค้า</p></div>` : ''}
+    ${fixedPanel(D, total)}
     ${expensePanel(D, total)}
     ${prepPanel(D)}
     ${timePanel(D.time)}
@@ -4296,6 +4301,45 @@ async function shareReceipt(){
   if (navigator.share) { try { await navigator.share({ title: 'ใบเสร็จ ' + SHOP_NAME, text }); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
   copyText(text, 'ใบเสร็จ');
 }
+
+/* ---------- v29: ต้นทุนคงที่รายเดือน ---------- */
+const fixedSum = D => (D.fixed || []).reduce((a, x) => a + (+x.amount || 0), 0);
+// เฉลี่ยค่าใช้จ่ายรายเดือนเป็นรายวัน (เดือนละ 30 วัน) แล้วคูณจำนวนวันของช่วงที่ดู (ไม่นับวันในอนาคต)
+function fixedShare(D){
+  const [f, t] = repRange(), today = ymd(new Date()), end = t > today ? today : t;
+  const days = Math.max(0, Math.round((new Date(end + 'T00:00:00') - new Date(f + 'T00:00:00')) / 864e5) + 1);
+  return { days, perDay: fixedSum(D) / 30, share: Math.round(fixedSum(D) / 30 * days) };
+}
+function fixedPanel(D, total){
+  if (!D.fixed) return '';
+  const m = fixedSum(D), perDay = m / 30, fc = total ? (D.cogs || 0) / total : 0, ratio = fc > 0 && fc < .9 ? fc : .4;
+  return `<div class="panel"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">🏠 ต้นทุนคงที่รายเดือน</h2><button class="ghost noprint" data-fixed-edit>แก้ไข</button></div>
+    ${D.fixed.map(x => `<div class="xrow"><span>${esc(x.name)}</span><b class="num">${baht(+x.amount || 0)}</b></div>`).join('')}
+    <div class="xrow"><span><b>รวมต่อเดือน</b></span><b class="num">${baht(m)}</b></div>
+    <p class="note num">เฉลี่ยวันละ ${baht(perDay)} · ต้องขายให้ได้อย่างน้อยวันละ <b>${baht(Math.ceil(perDay / (1 - ratio)))}</b> ถึงจะคุ้มทุน
+      (คิดต้นทุนวัตถุดิบ ${Math.round(ratio * 100)}% ของยอดขาย${fc > 0 && fc < .9 ? ' จากข้อมูลจริง' : ' โดยประมาณ'} · ถ้ามีเงินเดือนพนักงาน ให้เพิ่มเป็นรายการในนี้ด้วย)</p>
+    <p class="note">ค่าใช้จ่ายที่อยู่ในนี้แล้ว ไม่ต้องบันทึกซ้ำในรายจ่าย กำไรจะถูกหักสองรอบ</p></div>`;
+}
+let fixedEdit = [];
+function sheetFixed(){
+  openSheet(head('🏠 แก้ไขต้นทุนคงที่รายเดือน') + `<div class="form" id="fx-form">
+    <p class="note" style="margin:0">ใส่ยอดต่อเดือน เพิ่มหรือลบรายการได้ เช่น ค่าเช่า ค่าไฟ ค่าน้ำ ค่าน้ำแข็ง เงินเดือนพนักงาน ค่าอินเทอร์เน็ต</p>
+    ${fixedEdit.map((x, i) => `<div class="fxrow"><input type="text" maxlength="40" data-fxn="${i}" value="${esc(x.name)}" placeholder="ชื่อรายการ" aria-label="ชื่อรายการ">
+      <input type="number" inputmode="decimal" min="0" data-fxa="${i}" value="${x.amount || ''}" placeholder="0" aria-label="บาทต่อเดือน"><button class="ghost danger" data-fxdel="${i}" aria-label="ลบ">✕</button></div>`).join('')}
+    <button class="ghost" data-fxadd>+ เพิ่มรายการ</button>
+    <div class="cashsum"><span>รวมต่อเดือน</span><b class="num" id="fx-total">${baht(fixedEdit.reduce((a, x) => a + (+x.amount || 0), 0))}</b></div>
+    <div class="err" id="mf-err"></div></div>
+    <button class="primary" style="margin-top:0" data-fxsave>บันทึก</button>`);
+}
+function fixedRead(){ document.querySelectorAll('[data-fxn]').forEach(i => fixedEdit[+i.dataset.fxn].name = i.value); document.querySelectorAll('[data-fxa]').forEach(i => fixedEdit[+i.dataset.fxa].amount = +i.value || 0); }
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#fx-form')) { fixedRead(); $('fx-total').textContent = baht(fixedEdit.reduce((a, x) => a + (+x.amount || 0), 0)); } });
+async function saveFixed(b){
+  fixedRead(); const items = fixedEdit.map(x => ({ name: x.name.trim(), amount: +x.amount || 0 })).filter(x => x.name);
+  b.disabled = true;
+  try { const r = await db.setFixed(items); if (rep.data) rep.data.fixed = r; closeSheet(); toast('บันทึกต้นทุนคงที่แล้ว'); renderReport(); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v29 ก่อน' : e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'บันทึกไม่สำเร็จ'; }
+}
+
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -4534,6 +4578,10 @@ document.addEventListener('click', async e => {
   else if ('discSave' in d) saveDisc(b, false);
   else if ('discOff' in d) saveDisc(b, true);
   else if ('billLog' in d) sheetBillLog();
+  else if ('fixedEdit' in d) { fixedEdit = ((rep.data && rep.data.fixed) || []).map(x => ({...x})); sheetFixed(); }
+  else if ('fxadd' in d) { fixedRead(); fixedEdit.push({ name: '', amount: 0 }); sheetFixed(); }
+  else if (d.fxdel) { fixedRead(); fixedEdit.splice(+d.fxdel, 1); sheetFixed(); }
+  else if ('fxsave' in d) saveFixed(b);
   else if ('cash' in d) sheetCash();
   else if ('cashSave' in d) saveCash(b);
   else if ('cashHist' in d) sheetCashHistory();
