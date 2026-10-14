@@ -249,6 +249,15 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .line.disc{color:var(--ok)} .vwarn{margin:0;padding:10px 12px;border-radius:10px;background:var(--wait-soft);color:var(--fg)}
 .vstep{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px} .vstep .ghost{width:48px;margin:0;font-size:20px} .vstep b{font-size:22px;min-width:2ch;text-align:center}
 .fxrow{display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:8px} .fxrow .ghost{margin:0;width:44px}
+.mlay{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;align-items:start;margin-top:10px}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,64px) + 6px);max-height:calc(100vh - var(--topH,64px) - 120px);overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 4px}
+.rail::-webkit-scrollbar{display:none}
+.rail button{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:0;border-radius:12px;padding:8px 2px;font:inherit;font-size:12.5px;line-height:1.25;color:var(--muted);text-align:center;word-break:break-word}
+.rail button span{font-size:20px}
+.rail button[aria-current="true"]{background:var(--accent);color:#fff;font-weight:600}
+.mcol{min-width:0} .mcol > h2:first-of-type{margin-top:4px} .mcol h2{scroll-margin-top:80px}
+.mcol .hcard{flex-basis:58%} .mcol .item{padding:10px;gap:10px} .mcol .item .tag{width:60px;height:60px}
+@media (min-width:700px){.mlay{grid-template-columns:110px minmax(0,1fr)} .rail button{font-size:14px}}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -456,7 +465,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 <body>
 <div class="banner" id="banner" hidden>โหมดทดลอง: ยังไม่ได้ใส่ GAS_URL ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น</div>
 
-<header class="top"><div class="top-in">
+<header class="top" id="top-bar"><div class="top-in">
   <span class="logo" data-logo></span>
   <h1 class="brand"><span id="shop"></span><small id="sub"></small></h1>
   <button class="ghost" id="open-bill" hidden>ดูบิล</button>
@@ -2909,7 +2918,7 @@ const mins = t => Math.max(0, Math.floor((Date.now() - new Date(t)) / 60000));
 // แถบสถานะของออเดอร์ 1 รอบ: สั่งแล้ว > ครัวกำลังทำ (คิวที่ N) > ทำเสร็จ รอเสิร์ฟ > เสิร์ฟแล้ว
 function progress(o){
   const i = {new:1, cooking:1, ready:2, served:3}[o.status] || 1;
-  const now = o.status === 'new' ? (o.queue > 1 ? `รอครัว คิวที่ ${o.queue}` : 'ครัวกำลังทำ')
+  const now = o.pending ? 'กำลังส่งเข้าครัว…' : o.status === 'new' ? (o.queue > 1 ? `รอครัว คิวที่ ${o.queue}` : 'ครัวกำลังทำ')
             : o.status === 'cooking' ? 'ครัวกำลังย่างอยู่' : o.status === 'ready' ? 'ทำเสร็จแล้ว กำลังนำมาเสิร์ฟ' : 'เสิร์ฟแล้ว';
   const step = (n, t) => `<div class="${i > n || i === 3 ? 'on' : i === n ? 'now' : ''}">${t}</div>`;
   return `<div class="prog-top"><b>${now}</b><span class="num">สั่ง ${time(o.createdAt)}${o.status === 'served' ? '' : ` · ${mins(o.createdAt)} นาทีแล้ว`}</span></div>
@@ -2991,7 +3000,17 @@ function makeGasDb(url){
     async names(){ const r = await (await fetch(url + '?action=names')).json(); serverVer = +r.version || 0; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} return r.names || []; },
     async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); localStorage.setItem('mala_admin', r.admin ? '1' : '0'); localStorage.setItem('mala_role', r.role || ''); } catch(e){} isAdmin = !!r.admin; myRole = r.role || ''; applyRole(); },
     logout(){ try { localStorage.removeItem(TKEY); localStorage.removeItem('mala_name'); } catch(e){} location.reload(); },
-    async loadMenu(){ this._boot = await (await fetch(url + '?action=menu')).json(); popularIds = this._boot.popular || []; return this._boot.menu || []; },
+    // v30: เก็บเมนูไว้ในเครื่อง เปิดครั้งต่อไปโชว์ทันที แล้วค่อยอัปเดตจากเซิร์ฟเวอร์เบื้องหลัง
+    async loadMenu(){
+      const KEY = 'maila-boot-v1'; let c = null; try { c = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
+      const fresh = fetch(url + '?action=menu').then(r => r.json()).then(b => { if (b && Array.isArray(b.menu)) { try { localStorage.setItem(KEY, JSON.stringify(b)); } catch(e){} } return b; });
+      if (tbl && c && Array.isArray(c.menu) && c.menu.length) {   // ใช้ของในเครื่องเฉพาะหน้าลูกค้า พนักงานแก้เมนูต้องเห็นของล่าสุดเสมอ
+        this._boot = c; popularIds = c.popular || [];
+        fresh.then(b => { if (!b || !Array.isArray(b.menu)) return; this._boot = b; popularIds = b.popular || []; window.dispatchEvent(new CustomEvent('bootfresh', { detail: b })); }).catch(() => {});
+        return c.menu;
+      }
+      this._boot = await fresh; popularIds = this._boot.popular || []; return this._boot.menu || [];
+    },
     async loadTables(){ return (this._boot && this._boot.tables) || []; },
     async loadSettings(){ return (this._boot && this._boot.settings) || {}; },
     async custLoad(t){ return await call('custSync', {table: t, key: tkey}); },   // ลูกค้า: 1 คำขอได้ทั้งสถานะโต๊ะและบิลปัจจุบัน
@@ -3072,13 +3091,13 @@ function applyRole(){
 let stockList = [], stockLog = [], stockState = '', stockToday = null, stockDate = '', stockView = 'table';
 let serverVer = 0, ksub = 'kit'; try { serverVer = +localStorage.getItem('ravii-sv') || 0; } catch(e){}
 const canCook = () => !GAS_URL || serverVer >= 12;   // ขั้น "กำลังย่าง" ต้องใช้ Code.gs v12 ขึ้นไป
-let wifi = null, lastPay = null, loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
+let pendingOrders = [], wifi = null, lastPay = null, loadFails = 0, calls = [], seenCalls = null, settings = {}, find = '', sess = null, valid = true, tables = [], menu = [], sessions = [], orders = [], cat = 'ทั้งหมด', cart = [], view = 'tables', sheetFn = null, pick = null;
 window.addEventListener('hashchange', () => location.reload());
 
 async function refresh(){
   try {
-    if (tbl) { const had = orders.length, hadMem = !!(sess && sess.member); const r = await db.custLoad(tbl); wifi = r.wifi || null; valid = r.valid; invalidWhy = r.reason || ''; tclosed = !!r.closed; sess = r.session; orders = r.orders || []; calls = r.calls || []; applySoldOut(r.soldOut);
-      if (had && !orders.length) { closeSheet(); toast(hadMem ? 'ชำระเงินเรียบร้อย ⭐ แต้มเข้าบัญชีสมาชิกแล้ว ขอบคุณที่มาอุดหนุน' : 'ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
+    if (tbl) { const had = orders.length - pendingOrders.length, hadMem = !!(sess && sess.member); const r = await db.custLoad(tbl); wifi = r.wifi || null; valid = r.valid; invalidWhy = r.reason || ''; tclosed = !!r.closed; sess = r.session; orders = (r.orders || []).concat(pendingOrders); calls = r.calls || []; applySoldOut(r.soldOut);
+      if (had && orders.length === pendingOrders.length && !pendingOrders.length) { closeSheet(); toast(hadMem ? 'ชำระเงินเรียบร้อย ⭐ แต้มเข้าบัญชีสมาชิกแล้ว ขอบคุณที่มาอุดหนุน' : 'ชำระเงินเรียบร้อย ขอบคุณที่มาอุดหนุน'); } }
     else { sessions = await db.loadSessions(); orders = await db.loadOrders(); calls = await db.loadCalls(); }
     loadFails = 0;
   } catch(e){ console.error(e); if (++loadFails >= 3) toast('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองใหม่อัตโนมัติ'); return; }   // พลาดครั้งสองครั้งเป็นเรื่องปกติ ไม่ต้องเตือน
@@ -3088,6 +3107,7 @@ async function refresh(){
 // ของหมด: อัปเดตเมนูตามรายการจากเซิร์ฟเวอร์ และเอาของที่หมดออกจากตะกร้าพร้อมบอกลูกค้า
 function applySoldOut(ids){
   if (!Array.isArray(ids)) return;
+  lastSoldOut = ids;
   menu.forEach(m => m.available = !ids.includes(m.id));
   const gone = cart.filter(c => ids.includes(c.id));
   if (gone.length) { cart = cart.filter(c => !ids.includes(c.id)); toast([...new Set(gone.map(c => c.name))].join(', ') + ' หมดแล้ว นำออกจากตะกร้าให้แล้ว'); }
@@ -3560,7 +3580,7 @@ window.addEventListener('menuimages', () => { try { if (menu.length) { render();
 function thumb(it){
   const tag = `<div class="tag ${catTint(it.category)}">${esc(it.code || catIcon(it.category))}</div>`;
   const src = imgOf(it); if (!src) return tag;
-  return `<img class="tag" loading="lazy" alt="${esc(it.name)}" src="${esc(src)}" data-fallback="${esc(tag)}">`;
+  return `<img class="tag" loading="lazy" decoding="async" width="68" height="68" alt="${esc(it.name)}" src="${esc(src)}" data-fallback="${esc(tag)}">`;
 }
 document.addEventListener('error', e => {
   const t = e.target;
@@ -3707,6 +3727,23 @@ $('img-file').addEventListener('change', async e => {
 });
 
 /* ---------- หน้าลูกค้า ---------- */
+let railOn = 'top', railLock = 0;
+const setTopH = () => { const h = $('top-bar'); if (h) document.documentElement.style.setProperty('--topH', h.offsetHeight + 'px'); };
+window.addEventListener('resize', setTopH);
+function railSpy(){
+  if (Date.now() < railLock) return;
+  const secs = [...document.querySelectorAll('.mcol #top, .mcol h2[id]')]; if (!secs.length) return;
+  const off = ($('top-bar') ? $('top-bar').offsetHeight : 64) + 24;
+  let cur = secs[0].id; secs.forEach(x => { if (x.getBoundingClientRect().top - off <= 0) cur = x.id; });
+  if ((innerHeight + scrollY) >= document.documentElement.scrollHeight - 4) cur = secs[secs.length - 1].id;
+  if (cur === railOn && document.querySelector('.rail [aria-current="true"]')) return;
+  railOn = cur; document.querySelectorAll('.rail button').forEach(b => b.setAttribute('aria-current', b.dataset.jump === cur));
+  const on = document.querySelector('.rail [aria-current="true"]'), r = on && on.parentElement;
+  if (on && r && r.scrollHeight > r.clientHeight) r.scrollTop = on.offsetTop - r.clientHeight / 2 + on.offsetHeight / 2;
+}
+let railTick = false;
+window.addEventListener('scroll', () => { if (!tbl || railTick) return; railTick = true; requestAnimationFrame(() => { railTick = false; railSpy(); }); }, { passive: true });
+
 const cartQty = it => cart.filter(c => c.id === it.id).reduce((s,c) => s + c.qty, 0);
 function renderMenu(){
   if (!valid) {
@@ -3730,7 +3767,7 @@ function renderMenu(){
   $('chips').hidden = !!k; $('search-clear').hidden = !k;
   const hot = popularIds.slice(0, 5), badges = it => (it.recommend ? '<span class="badge">⭐ แนะนำ</span>' : '') + (hot.includes(it.id) ? '<span class="badge hot">🔥 ขายดี</span>' : '');
   const card = (it, rank) => { const q = cartQty(it), src = imgOf(it);
-    return `<div class="hcard">${src ? `<img class="ph" loading="lazy" alt="${esc(it.name)}" src="${esc(src)}">` : `<div class="ph">${esc(it.code || catIcon(it.category))}</div>`}${rank ? `<span class="rk">#${rank}</span>` : ''}
+    return `<div class="hcard">${src ? `<img class="ph" loading="lazy" decoding="async" alt=""${esc(it.name)}" src="${esc(src)}">` : `<div class="ph">${esc(it.code || catIcon(it.category))}</div>`}${rank ? `<span class="rk">#${rank}</span>` : ''}
       <div class="nm">${esc(it.name)}</div><div class="row2"><span class="price num">${baht(it.price)}</span>
       ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
           : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}</div></div>`; };
@@ -3738,8 +3775,11 @@ function renderMenu(){
   const picks = !k && cat === 'ทั้งหมด' && (recs.length || pops.length) ? `<div class="picks">
       ${recs.length ? `<h2>⭐ ร้านแนะนำ</h2><div class="hcards">${recs.map(it => card(it)).join('')}</div>` : ''}
       ${pops.length ? `<h2>🔥 ขายดีประจำร้าน</h2><div class="hcards">${pops.map((it, i) => card(it, i + 1)).join('')}</div>` : ''}</div>` : '';
-  $('menu').innerHTML = picks + cats.filter(c => (k || cat==='ทั้งหมด' || c===cat) && menu.some(i => i.category === c && hit(i))).map(c =>
-    `<h2>${catIcon(c)} ${esc(c)}</h2>` + menu.filter(i => i.category === c && hit(i)).map(it => {
+  // v30: แถบหมวดด้านซ้ายแบบแอปสั่งอาหาร เลื่อนแล้วไฮไลต์หมวดที่กำลังดู แตะเพื่อกระโดดไปหมวดนั้น
+  const useRail = !k && cats.length > 1, showCats = cats.filter(c => (k || useRail || cat==='ทั้งหมด' || c===cat) && menu.some(i => i.category === c && hit(i)));
+  $('chips').hidden = !!k || useRail;
+  const body = showCats.map((c, ci) =>
+    `<h2 id="sec-${ci}" data-sec="${esc(c)}">${catIcon(c)} ${esc(c)}</h2>` + menu.filter(i => i.category === c && hit(i)).map(it => {
       const q = cartQty(it);
       if (it.available === false) return `<div class="item out">${thumb(it)}
         <div class="info"><div class="name">${esc(it.name)}</div><div class="price num">${baht(it.price)}</div></div><span class="outpill">หมด</span></div>`;
@@ -3748,7 +3788,12 @@ function renderMenu(){
         <div class="info"><div class="name">${esc(it.name)}${badges(it)}</div><div class="price num">${baht(it.price)}</div></div>
         ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
             : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}
-      </div>`; }).join('')).join('') || `<p class="empty">${k ? 'ไม่พบเมนูที่ค้นหา ลองคำอื่น' : 'ยังไม่มีเมนู'}</p>`;
+      </div>`; }).join('')).join('');
+  const rail = [...(picks ? [['top', '⭐', 'แนะนำ']] : []), ...showCats.map((c, ci) => ['sec-' + ci, catIcon(c), c])];
+  $('menu').innerHTML = !body && !picks ? `<p class="empty">${k ? 'ไม่พบเมนูที่ค้นหา ลองคำอื่น' : 'ยังไม่มีเมนู'}</p>`
+    : useRail ? `<div class="mlay"><nav class="rail" aria-label="หมวดเมนู">${rail.map(([id, ic, t]) => `<button data-jump="${id}" aria-current="${railOn === id}"><span>${ic}</span>${esc(t)}</button>`).join('')}</nav>
+        <div class="mcol"><div id="top"></div>${picks}${body}</div></div>` : picks + body;
+  if (useRail) { setTopH(); requestAnimationFrame(railSpy); }
   const n = count(cart);
   $('bar').hidden = !n;
   $('bar-l').textContent = `ดูตะกร้า · ${n} ชิ้น`;
@@ -4532,6 +4577,9 @@ document.addEventListener('click', async e => {
     if (!await menuAction(() => db.deleteMenu(d.menuDel), 'ลบเมนูแล้ว')) b.disabled = false;
   }
   else if (d.cat) { cat = d.cat; renderMenu(); }
+  else if (d.jump) { const t = document.getElementById(d.jump); if (t) { railOn = d.jump; railLock = Date.now() + 700;
+    document.querySelectorAll('.rail button').forEach(x => x.setAttribute('aria-current', x.dataset.jump === d.jump));
+    const off = ($('top-bar') ? $('top-bar').offsetHeight : 64) + 8; scrollTo({ top: t.getBoundingClientRect().top + scrollY - off, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }
   else if (d.add) { const it = menu.find(i => i.id === d.add); if (!it || it.available === false) return renderMenu(); if (it.spicy) { pick = {it, opt:SPICE[0], qty:1}; drawOption(); } else addToCart(it, '', 1); }
   else if (d.dec) {   // ลดจากรายการล่าสุดของเมนูนั้น (กรณีสั่งหลายระดับเผ็ด)
     const i = cart.map(c => c.id).lastIndexOf(d.dec);
@@ -4555,10 +4603,18 @@ document.addEventListener('click', async e => {
   else if ('confirmAdd' in d) { addToCart(pick.it, pick.opt, pick.qty); closeSheet(); }
   else if (d.cq) { const c = cart[+d.i]; c.qty += +d.cq; if (c.qty < 1) cart.splice(+d.i, 1); renderMenu(); sheetCart(); }
   else if ('send' in d) {
-    b.disabled = true;
+    // v30: แสดงว่าส่งแล้วทันที บันทึกเบื้องหลัง ถ้าไม่สำเร็จคืนของกลับเข้าตะกร้า
+    if (tclosed) return toast('โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน');
     const o = { id: newId('o'), tableNo: tbl, status:'new', paid:false, createdAt: new Date().toISOString(),
                 items: cart.map(({id,name,code,price,qty,opt}) => ({id,name,code,price,qty,opt,served:false})) };
-    if (await act(() => db.addOrder(o), 'ส่งออเดอร์แล้ว')) { cart = []; renderMenu(); sheetBill(); } else b.disabled = false;
+    const snap = cart, tmp = { ...o, queue: 0, pending: true };
+    pendingOrders.push(tmp); orders = orders.concat(tmp); cart = []; renderMenu(); sheetBill(); toast('ส่งออเดอร์แล้ว 🔥');
+    try { await db.addOrder(o); pendingOrders = pendingOrders.filter(x => x !== tmp); refresh(); }
+    catch(e){
+      pendingOrders = pendingOrders.filter(x => x !== tmp); orders = orders.filter(x => x !== tmp); cart = snap.concat(cart); renderMenu();
+      await act(() => { throw e; });
+      if (cart.length && e.message !== 'sold_out') sheetCart();
+    }
   }
   else if (d.openTable) { b.disabled = true; if (await act(() => db.openTable(d.openTable), `เปิด${TABLE_WORD} ${d.openTable} แล้ว ลูกค้าสั่งได้`)) closeSheet(); else b.disabled = false; }
   else if (d.newKey) { if (!d.armed) { b.dataset.armed = '1'; b.textContent = 'กดอีกครั้งเพื่อยืนยัน QR เดิมของโต๊ะนี้จะใช้ไม่ได้ทันที'; return; }
@@ -4731,6 +4787,13 @@ async function start(){
   await refresh();
   db.subscribe(refresh);
 }
+// v30: เมนูชุดใหม่จากเซิร์ฟเวอร์มาถึงหลังโชว์ของที่เก็บไว้ในเครื่อง
+let lastSoldOut = null;
+window.addEventListener('bootfresh', e => { try {
+  const b = e.detail; menu = sortMenu(b.menu || []); if (lastSoldOut) menu.forEach(m => m.available = !lastSoldOut.includes(m.id));
+  if (Array.isArray(b.tables) && b.tables.length) tables = b.tables;
+  if (b.settings) { settings = b.settings; if (!String(settings.promptpayId || '').replace(/\D/g, '')) settings = { ...settings, promptpayId: SHOP_PROMPTPAY.id, promptpayName: SHOP_PROMPTPAY.name, promptpayNote: SHOP_PROMPTPAY.note }; }
+  render(); } catch(err){ console.error(err); } });
 function gate(){
   let ok = false; try { ok = localStorage.getItem('mala_pass_ok') === '1'; } catch(e){}
   if (tbl || (db.login ? db.hasToken() : ok)) return start();
