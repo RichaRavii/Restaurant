@@ -258,6 +258,51 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .mcol{min-width:0} .mcol > h2:first-of-type{margin-top:4px} .mcol h2{scroll-margin-top:80px}
 .mcol .hcard{flex-basis:58%} .mcol .item{padding:10px;gap:10px} .mcol .item .tag{width:60px;height:60px}
 @media (min-width:700px){.mlay{grid-template-columns:110px minmax(0,1fr)} .rail button{font-size:14px}}
+
+:root{--fl1:#fbe3cf;--fl2:#f6d3b8;--fh1:#fff1dd;--fh2:#fbe6c9;--fk1:#ffd9d2;--fk2:#f7c2b8;--fz1:#d9eef8;--fz2:#c3e2f1;--wood:#8a5a36;--tblc:#c98a55;--aisle:#e9a1a1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fl1:#3a2a20;--fl2:#33241b;--fh1:#2f241c;--fh2:#291f18;--fk1:#3d2420;--fk2:#351f1b;--fz1:#1d2f38;--fz2:#192830;--wood:#6b452a;--tblc:#8a5c38;--aisle:#5a2f33}}
+:root[data-theme="dark"]{--fl1:#3a2a20;--fl2:#33241b;--fh1:#2f241c;--fh2:#291f18;--fk1:#3d2420;--fk2:#351f1b;--fz1:#1d2f38;--fz2:#192830;--wood:#6b452a;--tblc:#8a5c38;--aisle:#5a2f33}
+.mapbar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px} .mapbar span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:14px} .mapbar .hot{border-color:var(--accent);color:var(--accent)}
+.shopmap{border:6px solid var(--wood);border-radius:22px;background:var(--wood);display:flex;flex-direction:column;gap:6px;padding:6px;max-width:560px;margin:0 auto}
+.room{position:relative;border-radius:14px;padding:30px 10px 10px;border:0;font:inherit;color:var(--fg);text-align:left;width:100%;--a:var(--fh1);--b:var(--fh2);background:repeating-conic-gradient(var(--a) 0 25%,var(--b) 0 50%) 0 0/28px 28px}
+.rlabel{position:absolute;top:6px;left:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:600}
+.front{--a:var(--fl1);--b:var(--fl2)} .kitchen{--a:var(--fk1);--b:var(--fk2)} .fridge{--a:var(--fz1);--b:var(--fz2)}
+.spot.counter{display:flex;align-items:center;gap:10px;margin-left:auto;width:auto;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;font:inherit;color:var(--fg);text-align:left;font-size:13px}
+.hallgrid{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:6px}
+.hallgrid .col{display:flex;flex-direction:column;gap:8px}
+.aisle{background:var(--aisle);border-radius:8px;opacity:.55}
+.mt{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:16px 4px 8px;font:inherit;color:var(--fg);min-height:104px}
+.mt.busy{border-color:var(--wait)} .mt.late{border-color:var(--accent);animation:mpulse 1.6s ease-in-out infinite} .mt.ring{border-color:var(--accent)}
+.mt-name{position:absolute;top:-1px;left:-1px;background:var(--wood);color:#fff;font-weight:700;font-size:13px;border-radius:12px 0 10px 0;padding:1px 9px}
+.mt-flag{position:absolute;top:-10px;right:-4px;border-radius:999px;padding:1px 7px;font-size:11.5px;font-weight:600;background:var(--wait);color:#fff}
+.mt-flag.call,.mt-flag.late{background:var(--accent)}
+.mt-desk{display:flex;align-items:flex-end;justify-content:center;gap:2px;min-height:26px;margin-top:4px;padding:0 6px 3px;border-bottom:7px solid var(--tblc);border-radius:2px}
+.mt-empty{font-size:12px;color:var(--muted);padding-bottom:2px}
+.mt-info{font-weight:700;font-size:14px} .mt-sub{font-size:11.5px;color:var(--muted)}
+.backrow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:6px}
+.kbody{display:flex;align-items:flex-end;gap:4px;min-height:40px}
+.grill{display:flex;gap:3px;margin-left:6px;padding:4px;background:#2b2b2b;border-radius:4px} .grill i{width:5px;height:16px;background:#ff8a3c;border-radius:2px;animation:mflick 1s ease-in-out infinite alternate} .grill i:nth-child(2n){animation-delay:.4s}
+.kstat{display:block;margin-top:6px;font-size:12.5px} .fbox{font-size:30px;display:block}
+.room.alarm{outline:3px solid var(--accent);outline-offset:-3px}
+.spr{display:block;image-rendering:pixelated}
+@keyframes mpulse{50%{box-shadow:0 0 0 4px rgba(216,53,42,.25)}} @keyframes mflick{to{opacity:.55}}
+.aisle{position:relative;overflow:visible}
+.walker{position:absolute;left:50%;top:0;margin-left:-8px;animation:mwalk 14s linear infinite;z-index:2} .walker.w2{animation-delay:-7s;animation-duration:11s} .walker.fast{animation-duration:6s}
+.walker .spr{animation:mstep .45s steps(2) infinite}
+@keyframes mwalk{0%{top:0;transform:scaleX(1)}48%{top:calc(100% - 22px);transform:scaleX(1)}50%{top:calc(100% - 22px);transform:scaleX(-1)}98%{top:0;transform:scaleX(-1)}100%{top:0;transform:scaleX(1)}}
+@keyframes mstep{50%{transform:translateY(-2px)}}
+.bob{display:inline-block;animation:mbob 3s ease-in-out infinite} .bob.slow{animation-duration:4.5s}
+@keyframes mbob{0%,100%{transform:translateY(0)}20%{transform:translateY(-2px)}40%{transform:translateY(0)}}
+.cook{display:inline-block} .cook.busy{animation:mcook .6s ease-in-out infinite alternate}
+@keyframes mcook{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-2px) rotate(3deg)}}
+.grill{position:relative}
+.smoke{position:absolute;left:30%;bottom:100%;width:10px;height:10px;border-radius:50%;background:rgba(160,160,160,.55);animation:msmoke 2.4s ease-out infinite}
+.smoke.s2{left:55%;animation-delay:-.8s} .smoke.s3{left:75%;animation-delay:-1.6s}
+@keyframes msmoke{0%{transform:translateY(0) scale(.6);opacity:0}20%{opacity:.8}100%{transform:translateY(-34px) scale(1.8);opacity:0}}
+.bubble{position:absolute;top:-16px;left:50%;margin-left:-14px;width:28px;height:28px;display:grid;place-items:center;background:var(--surface);border:2px solid var(--accent);border-radius:50%;font-size:15px;animation:mbub 1s ease-in-out infinite;z-index:3}
+@keyframes mbub{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.walker,.walker .spr,.bob,.cook.busy,.smoke,.bubble{animation:none}}
+@media (prefers-reduced-motion:reduce){.mt.late,.grill i{animation:none}}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -478,6 +523,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
     <button data-view="menu"><span>📋</span>เมนู</button>
     <button data-view="stock"><span>📦</span>สต็อก</button>
     <button data-view="sales"><span>💰</span>บัญชี</button>
+    <button data-view="map"><span>🗺️</span>ผังร้าน</button>
   </div>
 </div></header>
 
@@ -517,6 +563,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
     <button class="ghost" data-view="qr">QR ทุกโต๊ะ</button><button class="ghost" data-cash id="cash-btn" hidden>💵 ปิดร้าน นับเงิน</button></div>
   <div class="tables" id="tables"></div>
 </main>
+
+<main id="v-map" class="wrap wide" hidden><div id="map"></div></main>
 
 <main id="v-qr" class="wrap wide" hidden>
   <div class="row noprint"><button class="ghost" data-view="tables">← กลับ</button>
@@ -3081,7 +3129,7 @@ let isAdmin = false; try { isAdmin = localStorage.getItem('mala_admin') === '1';
 let myRole = ''; try { myRole = localStorage.getItem('mala_role') || ''; } catch(e){}
 const canBuy = () => isAdmin || myRole === 'stock';
 // แท็บที่แต่ละ role เห็น: kitchen = คนทำอาหาร (ไม่รับเงิน) / floor = หน้าร้าน (ไม่กดสถานะครัว)
-const ROLE_TABS = { kitchen: ['kitchen','menu','stock'], floor: ['tables','serve','menu'] };
+const ROLE_TABS = { kitchen: ['kitchen','menu','stock'], floor: ['tables','serve','menu','map'], stock: ['stock','menu','map'] };
 function applyRole(){
   const allow = ROLE_TABS[myRole] || null, btns = document.querySelectorAll('#staff-tabs button[data-view]'); let n = 0;
   btns.forEach(b => { const on = !allow || allow.includes(b.dataset.view); b.hidden = !on; if (on) n++; });
@@ -3383,7 +3431,7 @@ async function loadDaily(){
   if (!db.daily) return;
   if (!daily) { dailyState = 'loading'; renderDaily(); }
   try { daily = await db.daily(); dailyState = ''; } catch(e){ console.error(e); dailyState = e.message === 'unknown_action' ? 'old' : e.message === 'forbidden' ? 'no' : 'err'; }
-  renderDaily();
+  renderDaily(); if (view === 'map') renderMap();
 }
 // ควรเตรียมเพิ่ม = ของในเมนูที่เหลือน้อยกว่ายอดขายเฉลี่ยต่อวัน (ไม่มีประวัติขายใช้จำนวนเตือนขั้นต่ำ) / ควรซื้อเพิ่ม = ของที่ไม่ได้อยู่ในเมนูและถึงจุดเตือน
 function dailyPlan(D){
@@ -4385,6 +4433,61 @@ async function saveFixed(b){
   catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v29 ก่อน' : e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'บันทึกไม่สำเร็จ'; }
 }
 
+
+/* ---------- v30: ผังร้านสด (แผนผังร้านแบบพิกเซล ข้อมูลจริงจากระบบ) ---------- */
+// ตัวละครพิกเซล 8x10: h=ผม s=ผิว c=เสื้อ w=หมวกเชฟ p=กางเกง e=ตา
+const SPR = {
+  chef: ['..wwww..','.wwwwww.','..wwww..','..ssss..','..eses..','..ssss..','.cccccc.','c.cccc.c','..cccc..','..p..p..'],
+  staff:['..hhhh..','.hhhhhh.','.hssssh.','..eses..','..ssss..','.cccccc.','c.cccc.c','s.cccc.s','..cccc..','..p..p..'],
+  guest:['..hhhh..','.hhhhhh.','.hssssh.','..eses..','..ssss..','..cccc..','.cccccc.','.cccccc.','..cccc..','........']
+};
+function sprite(kind, shirt, hair, size){
+  const P = { h: hair || '#3b2417', s: '#f2c39a', c: shirt || '#d8352a', w: '#ffffff', p: '#3a2a22', e: '#2a1a12' };
+  const rows = SPR[kind], z = size || 3;
+  return `<svg class="spr" width="${8 * z}" height="${10 * z}" viewBox="0 0 8 10" shape-rendering="crispEdges" aria-hidden="true">${rows.map((r, y) => [...r].map((ch, x) => ch === '.' ? '' : `<rect x="${x}" y="${y}" width="1" height="1" fill="${P[ch]}"/>`).join('')).join('')}</svg>`;
+}
+const GUEST_C = ['#2f7d57', '#1f5fa8', '#a8690a', '#7b4bb3', '#d8352a', '#0f8a8a'];
+function renderMap(){
+  const el = $('map'); if (!el) return;
+  const now = Date.now(), late = o => (o.status === 'new' || o.status === 'cooking') && mins(o.createdAt) >= LATE_MIN;
+  const kit = orders.filter(o => o.status === 'new' || o.status === 'cooking'), rdy = serveList();
+  const oldest = kit.reduce((m, o) => Math.max(m, mins(o.createdAt)), 0), lateN = kit.filter(late).length;
+  const busy = tables.filter(t => sessOf(t)).length, openSum = sessions.reduce((a, s) => a + Math.max(0, sum(orders.filter(o => o.sessionId === s.id).flatMap(o => o.items)) - discOf(s)), 0);
+  const D = isAdmin ? daily : null, low = D && D.stock ? D.stock.filter(k => k.qty <= k.min) : [];
+  const tile = (t, i) => { const s = sessOf(t), mine = s ? orders.filter(o => o.sessionId === s.id) : [], items = mine.flatMap(o => o.items);
+    const cs = calls.filter(c => c.tableNo === t), wait = mine.some(late), cook = mine.filter(o => o.status === 'new' || o.status === 'cooking').length, ready = mine.filter(o => o.status === 'ready').length;
+    const g = s ? Math.min(4, Math.max(2, s.guests || 2)) : 0;
+    return `<button class="mt ${s ? 'busy' : ''} ${wait ? 'late' : ''} ${cs.length ? 'ring' : ''}" data-mtable="${esc(t)}" aria-label="${TABLE_WORD} ${esc(t)}">
+      <span class="mt-name">${esc(t)}</span>
+      ${cs.length ? `<span class="bubble" aria-hidden="true">${cs.some(c => c.type === 'bill') ? '🧾' : '🙋'}</span>` : ''}
+      ${cs.length ? `<span class="mt-flag call">${cs.some(c => c.type === 'bill') ? '🧾 เช็คบิล' : '🔔 เรียก'}</span>` : wait ? '<span class="mt-flag late">⏰ รอนาน</span>' : ''}
+      <span class="mt-desk">${s ? Array.from({length: g}, (_, k) => `<span class="bob" style="animation-delay:-${((i * 3 + k * 5) % 9) / 3}s">${sprite('guest', GUEST_C[(i + k) % GUEST_C.length], k % 2 ? '#6b3f22' : '#2a1a12', 2)}</span>`).join('') : '<span class="mt-empty">ว่าง</span>'}</span>
+      ${s ? `<span class="mt-info num">${baht(Math.max(0, sum(items) - discOf(s)))}</span><span class="mt-sub num">${Math.floor((now - new Date(s.openedAt)) / 60000)} นาที${cook ? ` · 🍢${cook}` : ''}${ready ? ` · 🛎️${ready}` : ''}</span>` : ''}
+    </button>`; };
+  const half = Math.ceil(tables.length / 2), L = tables.slice(0, half), R = tables.slice(half);
+  const walkers = (busy ? 1 : 0) + (rdy.length || calls.length ? 1 : 0);
+  const html = `<div class="mapbar"><span>🪑 <b class="num">${busy}/${tables.length}</b> โต๊ะ</span><span class="${lateN ? 'hot' : ''}">🍢 ครัว <b class="num">${kit.length}</b>${lateN ? ` (รอนาน ${lateN})` : ''}</span><span>🛎️ รอเสิร์ฟ <b class="num">${rdy.length}</b></span><span class="${calls.length ? 'hot' : ''}">🔔 <b class="num">${calls.length}</b></span></div>
+  <div class="shopmap">
+    <div class="room front"><div class="rlabel">🚪 หน้าร้าน · ทางเข้า</div>
+      <button class="spot counter" data-view="tables" aria-label="เคาน์เตอร์"><span class="bob slow">${sprite('staff', '#1f5fa8', '#2a1a12', 3)}</span><span><b>เคาน์เตอร์</b><br><span class="num">${D ? `วันนี้ ${baht(D.today.total)}` : 'คิดเงิน'}</span><br><span class="num">รอเก็บ ${baht(openSum)}</span></span></button>
+    </div>
+    <div class="room hall"><div class="rlabel">🍽️ โซนนั่ง</div>
+      <div class="hallgrid"><div class="col">${L.map((t, i) => tile(t, i)).join('')}</div><div class="aisle" aria-hidden="true">${walkers ? `<span class="walker w1">${sprite('staff', '#1f5fa8', '#2a1a12', 2)}</span>` : ''}${walkers > 1 ? `<span class="walker w2 ${calls.length ? 'fast' : ''}">${sprite('staff', '#2f7d57', '#6b3f22', 2)}</span>` : ''}</div><div class="col">${R.map((t, i) => tile(t, i + half)).join('')}</div></div>
+    </div>
+    <div class="backrow">
+      <button class="room kitchen ${lateN ? 'alarm' : ''}" data-view="kitchen" aria-label="ครัว"><div class="rlabel">🔥 เตาย่าง · ครัว</div>
+        <div class="kbody"><span class="cook ${kit.length ? 'busy' : ''}">${sprite('chef', '#ffffff', '', 3)}</span><span class="cook ${kit.length ? 'busy' : ''}" style="animation-delay:-.35s">${sprite('chef', '#ffffff', '', 3)}</span><span class="grill" aria-hidden="true">${kit.length ? '<b class="smoke"></b><b class="smoke s2"></b><b class="smoke s3"></b>' : ''}${'<i></i>'.repeat(5)}</span></div>
+        <span class="kstat">${kit.length ? `ค้าง <b class="num">${kit.length}</b> ใบ · นานสุด <b class="num">${oldest}</b> นาที` : 'ไม่มีออเดอร์ค้าง ✓'}</span></button>
+      <button class="room fridge ${low.length ? 'alarm' : ''}" data-view="stock" aria-label="ตู้แช่ สต็อก"><div class="rlabel">🧊 ตู้แช่</div>
+        <span class="fbox" aria-hidden="true">🧊</span>
+        <span class="kstat">${D ? (low.length ? `ใกล้หมด <b class="num">${low.length}</b> อย่าง` : 'สต็อกพอ ✓') : 'ดูสต็อก'}</span></button>
+    </div>
+  </div>
+  <p class="note">แตะโต๊ะเพื่อดูบิล/คิดเงิน · แตะครัว เคาน์เตอร์ หรือตู้แช่เพื่อไปหน้านั้น · อัปเดตเองทุกไม่กี่วินาที</p>`;
+  if (el._html === html) return;   // ไม่วาดซ้ำถ้าไม่มีอะไรเปลี่ยน ตัวละครจะเดินต่อเนื่องไม่สะดุด
+  el._html = html; el.innerHTML = html;
+}
+
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -4526,11 +4629,11 @@ function render(){
   renderAlerts();
   document.body.classList.toggle('pq', view === 'qr');
   $('home').hidden = view === (ROLE_TABS[myRole] || ['tables'])[0];
-  for (const v of ['tables','kitchen','serve','menu','stock','qr','sales']) $('v-'+v).hidden = v !== view;
+  for (const v of ['tables','kitchen','serve','menu','stock','qr','sales','map']) $('v-'+v).hidden = v !== view;
   document.querySelectorAll('#staff-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view));
   badge('n-kitchen', orders.filter(o => o.status === 'new' || o.status === 'cooking').length);
   badge('n-serve', serveList().length);
-  ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, stock:() => {}, qr:renderQr, sales:() => {}})[view]();
+  ({tables:renderTables, kitchen:renderKitchen, serve:renderServe, menu:() => {}, stock:() => {}, qr:renderQr, sales:() => {}, map:renderMap})[view]();
 }
 
 /* ---------- เหตุการณ์ ---------- */
@@ -4538,7 +4641,8 @@ document.addEventListener('click', async e => {
   if (e.target === $('veil')) return closeSheet();
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
-  if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'stock') loadStock(); }
+  if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'map' && isAdmin) loadDaily(); if (view === 'stock') loadStock(); }
+  else if (d.mtable) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.mtable, 'bill'); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
   else if ('receipts' in d) sheetReceipts();
   else if (d.rcp) sheetReceiptOne(d.rcp);
