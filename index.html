@@ -333,8 +333,13 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .tsheet thead th.we{color:var(--accent)}
 .tsheet tbody th{position:sticky;left:0;background:var(--surface);text-align:left;z-index:1;max-width:90px;overflow:hidden;text-overflow:ellipsis}
 .tsheet td b,.tsheet td small,.tsheet td i{display:block;font-style:normal} .tsheet td small{color:var(--muted)} .tsheet td i{color:var(--accent);font-size:11px}
-.tsheet td.ok{background:var(--ok-soft)} .tsheet td.in{background:var(--wait-soft)} .tsheet td.late{background:var(--accent-soft,#fde3df)} .tsheet td.ab{color:var(--muted)} .tsheet td.bad{color:var(--accent);font-weight:700}
+.tsheet td.ok{background:var(--ok-soft)} .tsheet td.in{background:var(--wait-soft)} .tsheet td.late{background:var(--accent-soft,#fde3df)} .tsheet td.ab{color:var(--muted)} .tsheet td.off{color:var(--muted);background:var(--sunk);font-size:11px} .tsheet td i.ot{color:var(--ok)} .tsheet td.bad{color:var(--accent);font-weight:700}
 .crew[data-attend-open]{cursor:pointer} .crewlink{position:absolute;top:8px;right:10px;font-size:12.5px;color:var(--accent);font-weight:600}
+.knote{margin:4px 0 6px;padding:6px 10px;border-radius:8px;background:var(--wait-soft);font-size:14px;font-weight:600} .knote.staff{background:var(--cook-soft)}
+.nrow small{color:var(--muted)} .cnote{display:flex;flex-direction:column;gap:4px;margin-top:10px;font-size:14px} .cnote input{font-size:16px}
+.clockstrip.board{background:var(--cook-soft);border-color:var(--cook)} .bstxt{flex:1;min-width:0;text-align:left;background:none;border:0;font:inherit;color:var(--fg);padding:0} .clockstrip.board .ghost{width:auto;margin:0;padding:4px 10px}
+.mt-note{position:absolute;top:2px;right:6px;font-size:13px}
+.boardroom{--a:var(--fl1);--b:var(--fl2);display:flex;flex-direction:column;gap:6px} .bmsg{background:var(--surface);border-radius:10px;padding:6px 10px;font-size:13.5px} .bmsg small{color:var(--muted)}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -562,6 +567,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 
 <div class="alerts" id="alerts" hidden></div>
 <div class="clockstrip upd" id="upd-strip" hidden><span id="upd-txt"></span><button class="ghost" data-news>ดูวิธี</button></div>
+<div class="clockstrip board" id="board-strip" hidden><button class="bstxt" data-board><span id="board-txt"></span></button><button class="ghost" data-board-x aria-label="ปิด">✕</button></div>
 <div class="clockstrip" id="clock-strip" hidden><span>🕘 ยังไม่ได้เช็คอินวันนี้</span><button class="primary" data-clock>เช็คอิน</button></div>
 
 <div class="gate" id="gate" hidden>
@@ -3083,7 +3089,7 @@ function makeGasDb(url){
     demo: false,
     hasToken: () => !!token(),
     async names(){ const r = await (await fetch(url + '?action=names')).json(); serverVer = +r.version || 0; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} return r.names || []; },
-    async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); localStorage.setItem('mala_admin', r.admin ? '1' : '0'); localStorage.setItem('mala_role', r.role || ''); } catch(e){} isAdmin = !!r.admin; myRole = r.role || ''; applyRole(); },
+    async login(name, pin){ const r = await call('login', {name, pin}); try { localStorage.setItem(TKEY, r.token); localStorage.setItem('mala_name', r.name || name); localStorage.setItem('mala_admin', r.admin ? '1' : '0'); localStorage.setItem('mala_owner', r.owner === false ? '0' : '1'); localStorage.setItem('mala_role', r.role || ''); } catch(e){} isAdmin = !!r.admin; isOwner = r.owner !== false && !!r.admin; myRole = r.role || ''; applyRole(); },
     logout(){ try { localStorage.removeItem(TKEY); localStorage.removeItem('mala_name'); } catch(e){} location.reload(); },
     // v30: เก็บเมนูไว้ในเครื่อง เปิดครั้งต่อไปโชว์ทันที แล้วค่อยอัปเดตจากเซิร์ฟเวอร์เบื้องหลัง
     async loadMenu(){
@@ -3112,8 +3118,11 @@ function makeGasDb(url){
     async tableMode(on){ await call('tableMode', {requireOpen: on}); },
     async newTableKey(t){ await call('newTableKey', {table: t}); },
     async ackCall(id){ await call('ackCall', {id}); },
-    async loadSessions(){ this._sync = await call('sync'); if (Array.isArray(this._sync.staff)) staffToday = this._sync.staff; if (this._sync.version) { serverVer = +this._sync.version; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} } if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
-    async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
+    async loadSessions(){ this._sync = await call('sync'); if (Array.isArray(this._sync.staff)) staffToday = this._sync.staff; if (this._sync.version) { serverVer = +this._sync.version; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} } if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.owner === 'boolean') { isOwner = this._sync.owner; try { localStorage.setItem('mala_owner', isOwner ? '1' : '0'); } catch(e){} } if (Array.isArray(this._sync.board)) board = this._sync.board; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
+    async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, note: o.note || '', items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
+    async setTableNote(sessionId, note){ await call('setTableNote', {sessionId, note}); },
+    async boardPost(text){ return (await call('boardPost', {text})).board; },
+    async boardDelete(id){ return (await call('boardDelete', {id})).board; },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined, done: patch.items ? patch.items.map(c => !!c.done) : undefined}); },
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
     async saveMenu(it){ await call('saveMenu', it); },
@@ -3168,7 +3177,7 @@ let tbl = null, tkey = ''; try { if (location.hash.startsWith('#t-')) { const ra
   tbl = decodeURIComponent(i > 0 ? raw.slice(0, i) : raw); tkey = i > 0 ? raw.slice(i + 1) : ''; } } catch(e){}
 let tableKeys = {}, requireOpen = false, tclosed = false, invalidWhy = '';
 let popularIds = [];
-let isAdmin = false; try { isAdmin = localStorage.getItem('mala_admin') === '1'; } catch(e){}
+let isAdmin = false, isOwner = false; try { isAdmin = localStorage.getItem('mala_admin') === '1'; isOwner = isAdmin && localStorage.getItem('mala_owner') !== '0'; } catch(e){}
 let myRole = ''; try { myRole = localStorage.getItem('mala_role') || ''; } catch(e){}
 const canBuy = () => isAdmin || myRole === 'stock';
 // แท็บที่แต่ละ role เห็น: kitchen = คนทำอาหาร (ไม่รับเงิน) / floor = หน้าร้าน (ไม่กดสถานะครัว)
@@ -3458,7 +3467,7 @@ $('exp-file').addEventListener('change', async e => {
   if ($('ex-date')) sheetExpense();
 });
 function expensePanel(D, total){
-  if (!D.expenses) return `<div class="panel"><h2>รายจ่ายและกำไร</h2><p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 15 ก่อนจึงจะใช้ส่วนนี้ได้</p></div>`;
+  if (!D.expenses) return isOwner ? `<div class="panel"><h2>รายจ่ายและกำไร</h2><p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 15 ก่อนจึงจะใช้ส่วนนี้ได้</p></div>` : '';
   const by = {}; D.expenses.forEach(x => by[x.category] = (by[x.category] || 0) + x.amount);
   return `<div class="panel"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">รายจ่าย</h2><button class="ghost noprint" data-exp-new>+ บันทึกรายจ่าย</button></div>
     ${D.expenses.some(x => !x.checked) ? `<p class="note" style="color:var(--wait);font-weight:600">มี ${D.expenses.filter(x => !x.checked).length} รายการที่คนอื่นลงไว้ ยังไม่ได้ตรวจ ดูของจริงหรือใบเสร็จแล้วกด "ตรวจแล้ว"</p>` : ''}
@@ -3495,7 +3504,7 @@ function dailyLeft(D){ const now = new Date(), last = new Date(now.getFullYear()
 function dailyHtml(D, forPrint){
   const P = dailyPlan(D), t = D.today, li = (a, b) => `<li><span>${a}</span><b class="num">${b}</b></li>`;
   return `${goalBar('ยอดขายวันนี้', t.total, D.goals.day)}${goalBar('ยอดขายเดือนนี้', D.month.total, D.goals.month, dailyLeft(D))}
-    <p class="note num">${t.bills} บิล · เฉลี่ย ${baht(t.bills ? t.total / t.bills : 0)} · เงินสด ${baht(t.cash)} · โอน ${baht(t.transfer)}${t.open ? ` · บิลค้าง ${baht(t.open)}` : ''}<br>รายจ่ายวันนี้ ${baht(t.spent)} · เหลือ ${t.total - t.spent < 0 ? '−' : ''}${baht(Math.abs(t.total - t.spent))}</p>
+    <p class="note num">${t.bills} บิล · เฉลี่ย ${baht(t.bills ? t.total / t.bills : 0)} · เงินสด ${baht(t.cash)} · โอน ${baht(t.transfer)}${t.open ? ` · บิลค้าง ${baht(t.open)}` : ''}${t.spent === null || t.spent === undefined ? '' : `<br>รายจ่ายวันนี้ ${baht(t.spent)} · เหลือ ${t.total - t.spent < 0 ? '−' : ''}${baht(Math.abs(t.total - t.spent))}`}</p>
     ${D.top.length ? `<div class="dh">ขายดีวันนี้</div><ul class="dlist">${D.top.map(i => li(esc((i.code ? i.code + ' ' : '') + i.name), `${i.qty} ชิ้น`)).join('')}</ul>` : ''}
     <div class="dh">ควรเตรียมเพิ่ม ${P.prep.length ? `(${P.prep.length})` : ''}</div>
     ${P.prep.length ? `<ul class="dlist">${P.prep.slice(0, forPrint ? 999 : 12).map(p => li(`${esc(p.name)} <small class="num">เหลือ ${num(p.have)}${p.avg ? ` · ขายเฉลี่ย ${num(p.avg)}/วัน` : ''}</small>`, `+${num(p.need)} ${esc(p.unit || '')}`)).join('')}</ul>${!forPrint && P.prep.length > 12 ? `<p class="note">และอีก ${P.prep.length - 12} รายการ ดูครบในฉบับพิมพ์หรือข้อความที่คัดลอก</p>` : ''}` : `<p class="note">ของในเมนูมีพอสำหรับยอดขายปกติ</p>`}
@@ -3507,7 +3516,7 @@ function renderDaily(){
   const el = $('daily'); if (!db.daily || dailyState === 'no') return el.innerHTML = '';
   if (dailyState === 'old') return el.innerHTML = `<div class="panel"><h2>สรุปวันนี้</h2><p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 18 ก่อนจึงจะใช้ส่วนนี้ได้</p></div>`;
   if (!daily) return el.innerHTML = `<div class="panel"><h2>สรุปวันนี้</h2><p class="note">${dailyState === 'err' ? 'โหลดไม่ได้ ลองเข้าแท็บนี้ใหม่' : 'กำลังโหลด…'}</p></div>`;
-  el.innerHTML = `<div class="panel" style="margin-top:0"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">สรุปวันนี้ ${daily.date.split('-').reverse().join('/')}</h2><button class="ghost" data-goal-edit>🎯 ตั้งเป้า</button></div>
+  el.innerHTML = `<div class="panel" style="margin-top:0"><div class="row" style="margin:0"><h2 style="flex:1;min-width:0">สรุปวันนี้ ${daily.date.split('-').reverse().join('/')}</h2>${isOwner ? '<button class="ghost" data-goal-edit>🎯 ตั้งเป้า</button>' : ''}</div>
     ${dailyHtml(daily)}
     <div class="stools"><button class="ghost" data-daily-copy>📋 คัดลอกส่งให้ทีม</button><button class="ghost" data-daily-print>🖨️ พิมพ์ / PDF</button></div></div>`;
 }
@@ -3553,7 +3562,7 @@ async function saveSlipKey(key){
   renderReport();
 }
 function slipCfgPanel(){
-  const st = slipCfg.state; if (st === 'demo' || st === '') return '';
+  const st = slipCfg.state; if (st === 'demo' || st === '' || !isOwner) return '';
   return `<div class="panel noprint"><h2>ตรวจสลิปอัตโนมัติ (Thunder)</h2>
     ${st === 'old' ? `<p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 14 ก่อนจึงจะใช้ได้</p>` :
       `<p class="note">${st === 'on' ? '✅ เปิดใช้อยู่ พนักงานถ่ายสลิปตอนปิดบิลแล้วระบบจะตรวจให้ทันที' : 'ยังไม่ได้ใส่ API key วางจากหน้า Thunder แล้วกดบันทึก'}</p>
@@ -3648,8 +3657,8 @@ function renderReport(){
       <p class="note" style="margin:6px 0 0">ใครเข้า-ออกกี่โมง มาสายกี่ครั้ง รวมชั่วโมงทำงานในช่วงวันที่ด้านบน และตั้งตำแหน่งร้านสำหรับเช็คอิน</p></div>` : ''}
     ${db.cashHistory ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">💵 นับเงินปิดร้าน</h2><button class="ghost" style="width:auto;margin:0" data-cash-hist>ดูประวัติ / นับวันนี้</button></div>
       <p class="note" style="margin:6px 0 0">พนักงานนับเงินในลิ้นชักตอนปิดร้านโดยไม่เห็นยอดที่ควรมี ระบบเทียบให้ว่าเงินตรง ขาด หรือเกิน</p></div>
-    <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🗄️ สำรอง / ล้างข้อมูลซ้อม</h2><button class="ghost" style="width:auto;margin:0" data-backup>จัดการ</button></div>
-      <p class="note" style="margin:6px 0 0">สำรองชีตทั้งหมดลง Google Drive ทุกคืน และล้างข้อมูลที่ซ้อมไว้ก่อนวันเปิดร้านจริง</p></div>` : ''}
+    ${isOwner ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">🗄️ สำรอง / ล้างข้อมูลซ้อม</h2><button class="ghost" style="width:auto;margin:0" data-backup>จัดการ</button></div>
+      <p class="note" style="margin:6px 0 0">สำรองชีตทั้งหมดลง Google Drive ทุกคืน และล้างข้อมูลที่ซ้อมไว้ก่อนวันเปิดร้านจริง</p></div>` : ''}` : ''}
     ${db.members ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">⭐ สมาชิกสะสมแต้ม</h2><button class="ghost" style="width:auto;margin:0" data-members>ดูสมาชิก / ตั้งค่า</button></div>
       <p class="note" style="margin:6px 0 0">ลูกค้าประจำ คนที่หายไปนาน คนเกิดเดือนนี้ ตั้งของรางวัล รหัส WiFi และลิงก์โซเชียลที่โชว์ในหน้าลูกค้า</p></div>` : ''}
     ${fixedPanel(D, total)}
@@ -3925,6 +3934,7 @@ function sheetCart(){
        <div class="qty"><button data-cq="-1" data-i="${i}" aria-label="ลด">−</button><b class="num">${c.qty}</b><button data-cq="1" data-i="${i}" aria-label="เพิ่ม">+</button></div></div>`).join('') +
     `<div class="total"><span>รวมรอบนี้</span><span class="num">${baht(sum(cart))}</span></div>
      ${tclosed ? `<p class="note" style="color:var(--accent);font-weight:600">โต๊ะนี้ยังไม่เปิด กด "เรียกพนักงาน" ให้มาเปิดโต๊ะก่อน แล้วค่อยกดส่ง</p>` : ''}
+     <label class="cnote">📝 หมายเหตุถึงครัว (ไม่บังคับ)<input id="cart-note" type="text" maxlength="120" placeholder="เช่น ไม่เอาผักชี, แพ้กุ้ง, ย่างให้สุกมาก" value="${esc(cartNote)}"></label>
      <button class="primary" data-send>ส่งออเดอร์เข้าครัว</button>`);
 }
 const grand = all => { const sub = sum(all), svc = sub * SERVICE_PCT / 100; return Math.round((sub + svc + (sub + svc) * VAT_PCT / 100) * 100) / 100; };
@@ -4005,7 +4015,7 @@ function slip(t){
     <small class="noprint"><a href="${esc(url)}" target="_blank" rel="noopener" style="color:#555">เปิดหน้าลูกค้า</a></small></div>`;
 }
 function renderQrMode(){
-  const r = $('tmode-row'); if (!r) return; r.hidden = !(isAdmin && db.tableMode);
+  const r = $('tmode-row'); if (!r) return; r.hidden = !(isOwner && db.tableMode);
   $('tmode-txt').textContent = requireOpen ? '🔒 ต้องให้พนักงานเปิดโต๊ะก่อน ลูกค้าจึงสั่งได้ (ปิดบิลแล้วโต๊ะปิดเอง)' : '🔓 ลูกค้าสแกนแล้วสั่งได้เลย ไม่ต้องเปิดโต๊ะ';
   $('tmode-btn').textContent = requireOpen ? 'เปลี่ยนเป็นสั่งได้เลย' : 'เปลี่ยนเป็นต้องเปิดโต๊ะ';
 }
@@ -4217,7 +4227,7 @@ function renderMembers(){
       <div class="tile"><span>เกิดเดือนนี้</span><b class="num">${ls.bday.length}</b></div></div>
     <div class="opts" style="margin-top:12px">${[['all','ทั้งหมด'],['lost','หายไปนาน'],['bday','เกิดเดือนนี้'],['ready','แต้มครบ']].map(([k, t]) => `<button data-mtab="${k}" aria-pressed="${mem.tab === k}">${t} (${ls[k].length})</button>`).join('')}</div>
     ${list.length ? `<div class="rlist" style="max-height:40vh">${list.map(m => `<div class="rrow"><span><b>${esc(m.name)}</b> <small class="num">${esc(m.phone)}</small><br><small class="num">${m.points} แต้ม${m.carry ? ` + เศษ ${baht(m.carry)}` : ''} · มา ${m.visits} ครั้ง · ${baht(m.spent)}${m.lastVisitAt ? ` · ล่าสุด ${daysAgo(m.lastVisitAt)} วันก่อน` : ''}${m.birthMonth ? ` · เกิด ${MONTHS_TH[m.birthMonth - 1]}` : ''}</small></span>
-        <button class="linkbtn" data-mdel="${esc(m.phone)}">${mem.del === m.phone ? 'ยืนยันลบ' : 'ลบ'}</button></div>`).join('')}</div>
+        ${isOwner ? '' : '<!--'}<button class="linkbtn" data-mdel="${esc(m.phone)}">${mem.del === m.phone ? 'ยืนยันลบ' : 'ลบ'}</button>${isOwner ? '' : '-->'}</div>`).join('')}</div>
       <button class="ghost" style="width:100%;margin-top:8px" data-mcopy>📋 คัดลอกรายชื่อและเบอร์ในแท็บนี้</button>` : `<p class="empty">ยังไม่มีสมาชิกในกลุ่มนี้</p>`}
     <h3 style="margin:18px 0 6px">ตั้งค่าแต้ม</h3>
     <div class="form">
@@ -4413,7 +4423,7 @@ function discPreview(){
   const amt = Math.min(sub, dc.kind === 'pct' ? Math.round(sub * Math.min(100, v) / 100) : v);
   $('d-amt').textContent = '−' + baht(amt); $('d-net').textContent = baht(Math.max(0, sub - amt));
 }
-document.addEventListener('input', e => { if (e.target.id === 'd-val') discPreview(); });
+document.addEventListener('input', e => { if (e.target.id === 'd-val') discPreview(); if (e.target.id === 'cart-note') cartNote = e.target.value; });
 async function saveDisc(b, off){
   const s = sessOf(dc.t); if (!s) return closeSheet();
   dc.other = $('d-other') ? $('d-other').value.trim() : ''; dc.value = $('d-val') ? $('d-val').value : dc.value;
@@ -4509,7 +4519,7 @@ function renderMap(){
     const cs = calls.filter(c => c.tableNo === t), wait = mine.some(late), cook = mine.filter(o => o.status === 'new' || o.status === 'cooking').length, ready = mine.filter(o => o.status === 'ready').length;
     const g = s ? (s.guests ? Math.min(6, s.guests) : 2) : 0;
     return `<button class="mt ${s ? 'busy' : ''} ${wait ? 'late' : ''} ${cs.length ? 'ring' : ''}" data-mtable="${esc(t)}" aria-label="${TABLE_WORD} ${esc(t)}">
-      <span class="mt-name">${esc(t)}</span>
+      <span class="mt-name">${esc(t)}</span>${s && (s.note || mine.some(o => o.note)) ? '<span class="mt-note" title="มีโน้ต">📝</span>' : ''}
       ${cs.length ? `<span class="bubble" aria-hidden="true">${cs.some(c => c.type === 'bill') ? '🧾' : '🙋'}</span>` : ''}
       ${cs.length ? `<span class="mt-flag call">${cs.some(c => c.type === 'bill') ? '🧾 เช็คบิล' : '🔔 เรียก'}</span>` : wait ? '<span class="mt-flag late">⏰ รอนาน</span>' : ''}
       <span class="mt-desk">${s ? Array.from({length: g}, (_, k) => `<span class="bob" style="animation-delay:-${((i * 3 + k * 5) % 9) / 3}s">${sprite('guest', GUEST_C[(i + k) % GUEST_C.length], k % 2 ? '#6b3f22' : '#2a1a12', 2)}</span>`).join('') : '<span class="mt-empty">ว่าง</span>'}</span>
@@ -4528,6 +4538,7 @@ function renderMap(){
     ${staffToday.length ? `<div class="room crew"${isAdmin ? ' role="button" tabindex="0" data-attend-open' : ''}><div class="rlabel">👥 พนักงานวันนี้ · มา ${staffToday.filter(x => x.inAt && !x.outAt).length}/${staffToday.length}</div>
       ${isAdmin ? '<span class="crewlink">ดูตารางเข้างาน →</span>' : ''}<div class="crewrow">${staffToday.map((x, i) => { const on = x.inAt && !x.outAt;
         return `<span class="crewp ${on ? 'on' : 'off'}">${on ? `<span class="bob" style="animation-delay:-${i * .7}s">` : '<span>'}${sprite(x.role === 'kitchen' ? 'chef' : 'staff', x.role === 'kitchen' ? '#ffffff' : x.role === 'admin' ? '#a8690a' : '#1f5fa8', GUEST_C[i % 3] === '#2f7d57' ? '#2a1a12' : '#6b3f22', 3)}</span>${on ? '' : '<i class="zz">💤</i>'}<b>${esc(x.name)}</b><small class="num">${on ? 'เข้า ' + hm(x.inAt) : x.outAt ? 'ออก ' + hm(x.outAt) : 'ยังไม่มา'}</small></span>`; }).join('')}</div></div>` : ''}
+    ${db.boardPost ? `<button class="room boardroom" data-board><div class="rlabel">📢 กระดานข้อความทีม</div>${board.length ? board.slice(0, 2).map(m => `<div class="bmsg"><b>${esc(m.by)}</b> ${esc(m.text)} <small class="num">${time(new Date(m.at))}</small></div>`).join('') : '<div class="bmsg" style="color:var(--muted)">แตะเพื่อเขียนถึงทุกคนในร้าน</div>'}</button>` : ''}
     <div class="backrow">
       <button class="room kitchen ${lateN ? 'alarm' : ''}" data-view="kitchen" aria-label="ครัว"><div class="rlabel">🔥 เตาย่าง · ครัว</div>
         <div class="kbody"><span class="cook ${kit.length ? 'busy' : ''}">${sprite('chef', '#ffffff', '', 3)}</span><span class="cook ${kit.length ? 'busy' : ''}" style="animation-delay:-.35s">${sprite('chef', '#ffffff', '', 3)}</span><span class="grill" aria-hidden="true">${kit.length ? '<b class="smoke"></b><b class="smoke s2"></b><b class="smoke s3"></b>' : ''}${'<i></i>'.repeat(5)}</span></div>
@@ -4608,7 +4619,7 @@ function renderClock(){
       ${inDone && outDone ? `<div><span>รวมเวลาทำงาน</span><b class="num">${hrs(me.inAt, me.outAt)}</b></div>` : ''}</div>
     <div class="ckbtns"><button class="ckin" data-clock-do="in" ${inDone || clk.busy || clk.err ? 'disabled' : ''}>🌞 เช็คอิน</button><button class="ckout" data-clock-do="out" ${!inDone || outDone || clk.busy || clk.err ? 'disabled' : ''}>🌙 เช็คเอาต์</button></div>
     ${clk.err ? `<div class="ckmsg bad">${esc(clk.err)}</div>` : clk.msg ? `<div class="ckmsg ${clk.msgBad ? 'bad' : ''}">${clk.msg}</div>` : ''}
-    <p class="note">${clk.geo && clk.geo.set ? `ระบบอ่านตำแหน่งจากมือถือตอนกดปุ่ม ต้องอยู่ในรัศมี ${clk.geo.radius} ม. จากร้าน เวลาใช้ของเซิร์ฟเวอร์` : 'ร้านยังไม่ได้ตั้งตำแหน่ง ระบบจะบันทึกเวลาอย่างเดียว (แอดมินตั้งได้ที่แท็บบัญชี → เวลาเข้างาน)'} ถ้ามีหน้าต่างถาม ให้กด "อนุญาต"</p></div>`);
+    <p class="note">${clk.geo && clk.geo.free ? 'บัญชีนี้เช็คอินนอกร้านได้ ' : ''}${clk.geo && clk.geo.set ? `ระบบอ่านตำแหน่งจากมือถือตอนกดปุ่ม ต้องอยู่ในรัศมี ${clk.geo.radius} ม. จากร้าน เวลาใช้ของเซิร์ฟเวอร์` : 'ร้านยังไม่ได้ตั้งตำแหน่ง ระบบจะบันทึกเวลาอย่างเดียว (แอดมินตั้งได้ที่แท็บบัญชี → เวลาเข้างาน)'} ถ้ามีหน้าต่างถาม ให้กด "อนุญาต"</p></div>`);
 }
 function getPos(){
   return new Promise((ok, no) => {
@@ -4629,48 +4640,59 @@ async function doClock(kind){
   clk.busy = false; renderClock();
 }
 // แอดมิน: ตารางเวลาเข้างาน + ตั้งตำแหน่งร้าน
-const att = { data: null, err: '', msg: '' }; let attView = 'grid', attText = () => '';
+const att = { data: null, err: '', msg: '' }; let attOff = []; let attView = 'grid', attText = () => '';
 async function sheetAttend(month){
   att.data = null; att.err = ''; const td = ymd(new Date());
-  att.range = month ? [td.slice(0, 8) + '01', td] : repRange(); renderAttend();
+  att.month = !!month; att.range = month ? [td.slice(0, 8) + '01', td] : repRange(); renderAttend();
   const [f, t] = att.range;
-  try { att.data = await db.attendance(f, t); } catch(e){ att.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v31 ก่อน' : 'โหลดไม่ได้'; }
+  try { att.data = await db.attendance(f, t); attOff = (att.data.geo.daysOff || []).slice(); } catch(e){ att.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v31 ก่อน' : 'โหลดไม่ได้'; }
   renderAttend();
 }
-function lateMin(iso, shift){ if (!iso || !shift) return 0; const [h, m] = shift.split(':').map(Number), d = new Date(iso), lm = d.getHours() * 60 + d.getMinutes() - (h * 60 + m); return lm > 5 ? lm : 0; }
+const tmin = hhmm => { const [h, m] = String(hhmm || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+const dmin = iso => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+function lateMin(iso, shift, grace){ if (!iso || !shift) return 0; const lm = dmin(iso) - tmin(shift); return lm > (grace === undefined ? 5 : grace) ? lm : 0; }
+// ออกก่อนเวลา / OT เทียบเวลาเลิกกะ (กะข้ามเที่ยงคืน: ออกหลังเที่ยงคืนนับเป็นวันเดียวกัน)
+function outDiff(inIso, outIso, end){ if (!outIso || !end) return 0; let m = dmin(outIso); if (new Date(outIso).toDateString() !== new Date(inIso).toDateString()) m += 1440; return m - tmin(end); }
+const offDay = (d, G) => (G.daysOff || []).includes(new Date(d + 'T00:00:00').getDay()) || (G.holidays || []).includes(d);
 function renderAttend(){
   const top = head('🕘 เวลาเข้างานพนักงาน'), [f, t] = att.range || repRange();
   if (att.err) return openSheet(top + `<p class="empty">${att.err}</p>`);
   if (!att.data) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
   const L = att.data.list, G = att.data.geo, per = {};
-  L.forEach(x => { const p = per[x.name] || (per[x.name] = { days: 0, min: 0, late: 0 }); p.days++; if (x.inAt && x.outAt) p.min += Math.round((new Date(x.outAt) - new Date(x.inAt)) / 60000); if (lateMin(x.inAt, G.shift)) p.late++; });
+  const gr = G.grace === undefined ? 5 : G.grace;
+  L.forEach(x => { const p = per[x.name] || (per[x.name] = { days: 0, min: 0, late: 0, early: 0, ot: 0, offWork: 0 }); p.days++; if (x.inAt && x.outAt) p.min += Math.round((new Date(x.outAt) - new Date(x.inAt)) / 60000);
+    if (lateMin(x.inAt, G.shift, gr)) p.late++; const od = outDiff(x.inAt, x.outAt, G.end); if (od < -gr) p.early++; if (od >= 15) p.ot += od; if (offDay(x.date, G)) p.offWork++; });
   const dates = []; for (let d = new Date(f + 'T00:00:00'); ymd(d) <= t && dates.length < 62; d.setDate(d.getDate() + 1)) dates.push(ymd(d));
   const names = [...new Set([...staffToday.map(x => x.name), ...L.map(x => x.name)])], cell = {};
   L.forEach(x => cell[x.name + '|' + x.date] = x);
-  const grid = `<div class="tsheet-wrap"><table class="tsheet"><thead><tr><th>พนักงาน</th>${dates.map(d => { const dd = new Date(d + 'T00:00:00'); return `<th class="${dd.getDay() === 0 || dd.getDay() === 6 ? 'we' : ''}">${dd.getDate()}<small>${DAY_TH[dd.getDay()].slice(0, 2)}</small></th>`; }).join('')}<th>วัน</th><th>ชม.</th><th>สาย</th></tr></thead>
-    <tbody>${names.map(n => { const p = per[n] || { days: 0, min: 0, late: 0 };
-      return `<tr><th>${esc(n)}</th>${dates.map(d => { const x = cell[n + '|' + d]; if (!x) return '<td class="ab">–</td>'; const lm = lateMin(x.inAt, G.shift);
-        return `<td class="${lm ? 'late' : x.outAt ? 'ok' : 'in'}" title="${esc(n)} ${d}"><b>${hm(x.inAt)}</b><small>${x.outAt ? hm(x.outAt) : 'ยังไม่ออก'}</small>${lm ? `<i>สาย ${lm}</i>` : ''}</td>`; }).join('')}
-        <td class="num">${p.days}</td><td class="num">${Math.floor(p.min / 60)}:${String(p.min % 60).padStart(2, '0')}</td><td class="num ${p.late ? 'bad' : ''}">${p.late}</td></tr>`; }).join('')}</tbody></table></div>
-    <p class="note" style="margin:6px 0 0">เขียว = เข้า-ออกครบ · เหลือง = ยังไม่เช็คเอาต์ · แดง = มาสาย · – = ไม่ได้เช็คอิน · เลื่อนตารางซ้าย-ขวาได้</p>
+  const grid = `<div class="tsheet-wrap"><table class="tsheet"><thead><tr><th>พนักงาน</th>${dates.map(d => { const dd = new Date(d + 'T00:00:00'); return `<th class="${dd.getDay() === 0 || dd.getDay() === 6 ? 'we' : ''}">${dd.getDate()}<small>${DAY_TH[dd.getDay()].slice(0, 2)}</small></th>`; }).join('')}<th>วัน</th><th>ชม.</th><th>สาย</th><th>ออกก่อน</th><th>OT</th></tr></thead>
+    <tbody>${names.map(n => { const p = per[n] || { days: 0, min: 0, late: 0, early: 0, ot: 0 };
+      return `<tr><th>${esc(n)}</th>${dates.map(d => { const x = cell[n + '|' + d]; if (!x) return offDay(d, G) ? '<td class="off">หยุด</td>' : '<td class="ab">–</td>'; const lm = lateMin(x.inAt, G.shift, gr), od = outDiff(x.inAt, x.outAt, G.end);
+        return `<td class="${lm ? 'late' : x.outAt ? 'ok' : 'in'}" title="${esc(n)} ${d}"><b>${hm(x.inAt)}</b><small>${x.outAt ? hm(x.outAt) : 'ยังไม่ออก'}</small>${lm ? `<i>สาย ${lm}</i>` : ''}${od < -gr ? `<i>ออกก่อน ${-od}</i>` : ''}${od >= 15 ? `<i class="ot">OT ${od}</i>` : ''}${offDay(d, G) ? '<i class="ot">วันหยุด</i>' : ''}</td>`; }).join('')}
+        <td class="num">${p.days}</td><td class="num">${Math.floor(p.min / 60)}:${String(p.min % 60).padStart(2, '0')}</td><td class="num ${p.late ? 'bad' : ''}">${p.late}</td><td class="num ${p.early ? 'bad' : ''}">${p.early || 0}</td><td class="num">${p.ot ? Math.floor(p.ot / 60) + ':' + String(p.ot % 60).padStart(2, '0') : '0'}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="note" style="margin:6px 0 0">เขียว = เข้า-ออกครบ · เหลือง = ยังไม่เช็คเอาต์ · แดง = มาสาย (เกินผ่อนผัน ${gr} นาที) · เทา "หยุด" = วันหยุดร้าน · OT นับเมื่อออกหลังเลิกกะ 15 นาทีขึ้นไป · เลื่อนตารางซ้าย-ขวาได้</p>
     <button class="ghost" style="width:100%;margin-top:8px" data-att-copy>📋 คัดลอกตารางส่ง LINE</button>`;
   attText = () => `เวลาเข้างาน ${f === t ? f : f + ' ถึง ' + t}\n` + names.filter(n => per[n]).map(n => { const p = per[n];
-    return `\n${n}: มา ${p.days} วัน · ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ' · สาย ' + p.late + ' ครั้ง' : ''}\n` + dates.filter(d => cell[n + '|' + d]).map(d => { const x = cell[n + '|' + d], lm = lateMin(x.inAt, G.shift);
+    return `\n${n}: มา ${p.days} วัน · ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ' · สาย ' + p.late + ' ครั้ง' : ''}${p.early ? ' · ออกก่อน ' + p.early + ' ครั้ง' : ''}${p.ot ? ' · OT ' + Math.floor(p.ot / 60) + ' ชม. ' + (p.ot % 60) + ' น.' : ''}\n` + dates.filter(d => cell[n + '|' + d]).map(d => { const x = cell[n + '|' + d], lm = lateMin(x.inAt, G.shift, gr);
       return `  ${d.slice(8)}/${d.slice(5, 7)} ${hm(x.inAt)}-${x.outAt ? hm(x.outAt) : '?'}${lm ? ' (สาย ' + lm + ' น.)' : ''}`; }).join('\n'); }).join('\n');
   openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · เริ่มกะ ${esc(G.shift)} (สายเกิน 5 นาทีขึ้นป้าย) · ${att.range && rep.preset === 'today' ? 'แสดงเดือนนี้' : 'ช่วงวันตามที่เลือกในแท็บบัญชี'}</p>
     <div class="opts" style="margin:0 0 10px"><button data-att-view="grid" aria-pressed="${attView === 'grid'}">📅 ตาราง</button><button data-att-view="list" aria-pressed="${attView === 'list'}">📋 รายการ</button></div>
     ${attView === 'grid' ? (names.length ? grid : '<p class="empty">ยังไม่มีพนักงาน</p>') : `
-    ${Object.keys(per).length ? `<div class="rlist" style="max-height:none">${Object.entries(per).map(([n, p]) => `<div class="rrow"><span><b>${esc(n)}</b><br><small class="num">มา ${p.days} วัน · รวม ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ` · <b style="color:var(--accent)">สาย ${p.late} ครั้ง</b>` : ''}</small></span></div>`).join('')}</div>` : '<p class="empty">ยังไม่มีการลงเวลาในช่วงนี้</p>'}
-    ${L.length ? `<h3 style="margin:14px 0 6px">รายวัน</h3><div class="rlist">${L.map(x => { const lm = lateMin(x.inAt, G.shift);
+    ${Object.keys(per).length ? `<div class="rlist" style="max-height:none">${Object.entries(per).map(([n, p]) => `<div class="rrow"><span><b>${esc(n)}</b><br><small class="num">มา ${p.days} วัน · รวม ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ` · <b style="color:var(--accent)">สาย ${p.late} ครั้ง</b>` : ''}${p.early ? ` · <b style="color:var(--accent)">ออกก่อน ${p.early} ครั้ง</b>` : ''}${p.ot ? ` · OT ${Math.floor(p.ot / 60)} ชม. ${p.ot % 60} น.` : ''}${p.offWork ? ` · มาวันหยุด ${p.offWork} วัน` : ''}</small></span></div>`).join('')}</div>` : '<p class="empty">ยังไม่มีการลงเวลาในช่วงนี้</p>'}
+    ${L.length ? `<h3 style="margin:14px 0 6px">รายวัน</h3><div class="rlist">${L.map(x => { const lm = lateMin(x.inAt, G.shift, gr);
       return `<div class="rrow"><span><b>${esc(x.name)}</b> <small class="num">${esc(x.date)}</small><br><small class="num">เข้า ${hm(x.inAt)}${x.inDist !== null ? ` (${x.inDist} ม.)` : ''} · ออก ${hm(x.outAt)}${x.outAt ? ' · ' + hrs(x.inAt, x.outAt) : ''}${x.note ? ' · ' + esc(x.note) : ''}</small></span>${lm ? `<b class="cashdiff bad num">สาย ${lm} น.</b>` : ''}</div>`; }).join('')}</div>` : ''}`}
-    <h3 style="margin:18px 0 6px">ตั้งค่า</h3>
+    ${isOwner ? `<h3 style="margin:18px 0 6px">ตั้งค่า</h3>
     <div class="form">
       <p class="note" style="margin:0">${G.lat !== null ? `📍 ตั้งตำแหน่งร้านแล้ว (<span class="num">${G.lat.toFixed(5)}, ${G.lng.toFixed(5)}</span>) <a href="https://maps.google.com/?q=${G.lat},${G.lng}" target="_blank" rel="noopener">ดูบนแผนที่</a>` : '⚠️ ยังไม่ได้ตั้งตำแหน่งร้าน พนักงานจะเช็คอินจากที่ไหนก็ได้'}</p>
       <button class="ghost" data-att-here>📍 ตั้งตำแหน่งร้านจากตรงนี้ (กดตอนอยู่ที่ร้าน)</button>
-      <div class="two"><label>รัศมีที่ยอมให้เช็คอิน (เมตร)<input id="att-r" type="number" inputmode="numeric" min="30" max="2000" value="${G.radius}"></label>
-        <label>เวลาเริ่มกะ<input id="att-s" type="time" value="${esc(G.shift)}"></label></div>
+      <div class="two"><label>เวลาเริ่มกะ<input id="att-s" type="time" value="${esc(G.shift)}"></label><label>เวลาเลิกกะ<input id="att-e" type="time" value="${esc(G.end || '23:00')}"></label></div>
+      <div class="two"><label>ผ่อนผันมาสาย (นาที)<input id="att-g" type="number" inputmode="numeric" min="0" max="120" value="${gr}"></label>
+        <label>รัศมีเช็คอิน (เมตร)<input id="att-r" type="number" inputmode="numeric" min="30" max="2000" value="${G.radius}"></label></div>
+      <div><b style="font-size:14px">วันหยุดประจำสัปดาห์</b><div class="chips" style="padding:6px 0 0">${DAY_TH.map((d, i) => `<button type="button" data-att-off="${i}" aria-pressed="${attOff.includes(i)}">${d.slice(0, 2)}</button>`).join('')}</div></div>
+      <label>วันหยุดพิเศษ (ปี ค.ศ. คั่นด้วยจุลภาค เช่น 2026-12-31, 2027-01-01)<input id="att-h" type="text" value="${esc((G.holidays || []).join(', '))}"></label>
+      <label>ชื่อพนักงานที่เช็คอินนอกร้านได้ (เช่น คนซื้อของ คั่นด้วยจุลภาค)<input id="att-a" type="text" value="${esc((G.anywhere || []).join(', '))}"></label>
       <div class="err" id="mf-err">${esc(att.msg)}</div></div>
-    <button class="primary" style="margin-top:0" data-att-save>บันทึกการตั้งค่า</button>`);
+    <button class="primary" style="margin-top:0" data-att-save>บันทึกการตั้งค่า</button>` : ''}`);
   requestAnimationFrame(() => { const w = document.querySelector('.tsheet-wrap'); if (w) w.scrollLeft = w.scrollWidth; });   // เลื่อนไปวันล่าสุด
 }
 async function attHere(b){
@@ -4681,14 +4703,15 @@ async function attHere(b){
 }
 async function attSave(b){
   b.disabled = true;
-  try { await db.attendSettings({ radius: +$('att-r').value || 150, shift: $('att-s').value || '16:00' }); toast('บันทึกแล้ว'); sheetAttend(); }
+  try { await db.attendSettings({ radius: +$('att-r').value || 150, shift: $('att-s').value || '16:00', end: $('att-e').value || '23:00', grace: +$('att-g').value || 0, daysOff: attOff, holidays: $('att-h').value, anywhere: $('att-a').value }); toast('บันทึกแล้ว'); sheetAttend(!!att.month); }
   catch(e){ b.disabled = false; $('mf-err').textContent = 'บันทึกไม่สำเร็จ'; }
 }
 
 
 /* ---------- v32: มีอะไรใหม่ + เตือนอัปเดต Code.gs ---------- */
-const APP_VERSION = 32, NEED_SERVER = 32;
+const APP_VERSION = 33, NEED_SERVER = 33;
 const CHANGELOG = [
+  [33, '20 ต.ค. 2569', ['👔 ตำแหน่งใหม่ "ผู้จัดการ" (role = manager) ทำงานหน้าร้านได้ครบ แต่ไม่เห็นกำไร ต้นทุน รายจ่าย และตั้งค่าระบบ', '🕘 ลงเวลาละเอียดขึ้น: เวลาเลิกกะ ผ่อนผันมาสาย วันหยุดร้าน ออกก่อนเวลา OT และคนที่เช็คอินนอกร้านได้', '📌 โน้ตโต๊ะถึงครัว + ลูกค้าเขียนหมายเหตุตอนสั่งได้ ขึ้นในใบออเดอร์ครัว', '📢 กระดานข้อความทีม ข้อความใหม่ขึ้นแถบด้านบนให้ทุกคนเห็น']],
   [32, '20 ต.ค. 2569', ['แจ้ง "มีอะไรใหม่" ทุกครั้งที่อัปเดตเว็บ เปิดดูย้อนหลังได้ที่ปุ่ม 🆕 แท็บบัญชี', 'เตือนแอดมินเมื่อ Code.gs บนเซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า']],
   [31, '20 ต.ค. 2569', ['🕘 เช็คอิน-เช็คเอาต์พนักงานด้วย GPS (ปุ่ม 🕘 มุมบนขวา)', 'แอดมินดูเวลาเข้างาน มาสาย รวมชั่วโมง และตั้งตำแหน่งร้านได้ที่แท็บบัญชี', 'ผังร้านมีห้อง "พนักงานวันนี้" ใครมาแล้ว ใครยังไม่มา']],
   [30, '20 ต.ค. 2569', ['👥 ใส่จำนวนลูกค้าตอนเปิดโต๊ะ แก้ −/+ ในบิลได้ รายงานมียอดเฉลี่ยต่อคน', '🎨 สีไม้ตามราคา (ผัก/แดง/น้ำเงิน/ดำ) ตั้งทีเดียวทั้งเมนูที่แท็บเมนู ลูกค้าและครัวเห็นสีไม้']],
@@ -4712,6 +4735,51 @@ function newsCheck(){
   if (tbl) return; let seen = 0; try { seen = +localStorage.getItem('maila-news') || 0; } catch(e){}
   if (!seen) { try { localStorage.setItem('maila-news', String(APP_VERSION)); } catch(e){} return; }   // เครื่องที่เพิ่งใช้ครั้งแรกไม่ต้องเด้ง
   if (seen < APP_VERSION && $('veil').hidden) sheetNews(false);
+}
+
+
+/* ---------- v33: โน้ตโต๊ะ + กระดานข้อความทีม ---------- */
+let cartNote = '', board = [];
+function kNotes(o){
+  const s = sessions.find(x => x.id === o.sessionId), a = o.note ? `<div class="knote">📝 ลูกค้า: ${esc(o.note)}</div>` : '', b = s && s.note ? `<div class="knote staff">📌 โต๊ะ: ${esc(s.note)}</div>` : '';
+  return a + b;
+}
+function noteRow(s){
+  if (!db.setTableNote || !s || myRole === 'kitchen') return '';
+  const on = orders.filter(o => o.sessionId === s.id && o.note).map(o => o.note);
+  return `<div class="grow nrow"><span>📌 ${s.note ? `<b>${esc(s.note)}</b>` : '<span style="color:var(--muted)">โน้ตโต๊ะถึงครัว (เช่น แพ้กุ้ง เด็ก 2 คน)</span>'}${on.length ? `<br><small>📝 ลูกค้าเขียน: ${on.map(esc).join(' · ')}</small>` : ''}</span><button class="ghost" style="width:auto;margin:0" data-tnote="${esc(s.tableNo)}">${s.note ? 'แก้' : '+ เขียน'}</button></div>`;
+}
+function sheetTNote(t){
+  const s = sessOf(t); if (!s) return closeSheet();
+  openSheet(head(`📌 โน้ตโต๊ะ ${TABLE_WORD} ${esc(t)}`) + `<div class="form"><label>ข้อความนี้จะขึ้นในใบออเดอร์ทุกใบของโต๊ะนี้ที่ครัวและแท็บเสิร์ฟ<input id="tn-text" type="text" maxlength="150" value="${esc(s.note || '')}" placeholder="เช่น แพ้กุ้ง, ไม่เผ็ด, ลูกค้า VIP"></label>
+    <div class="chips" style="padding:0">${['แพ้กุ้ง', 'แพ้ถั่ว', 'ไม่เผ็ด', 'ไม่ใส่ผักชี', 'มีเด็ก', 'รีบ'].map(x => `<button type="button" data-tn-add="${x}">+ ${x}</button>`).join('')}</div>
+    <div class="err" id="mf-err"></div></div><button class="primary" style="margin-top:0" data-tn-save="${esc(t)}">บันทึก</button>
+    <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`);
+}
+async function saveTNote(t, b){
+  const s = sessOf(t); if (!s) return closeSheet(); const v = $('tn-text').value.trim(); b.disabled = true;
+  try { await db.setTableNote(s.id, v); s.note = v; toast('บันทึกโน้ตแล้ว ครัวจะเห็นในใบออเดอร์'); sheetTable(t, 'bill'); refresh(); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v33 ก่อน' : 'บันทึกไม่สำเร็จ'; }
+}
+function boardSeen(){ try { return localStorage.getItem('maila-board-seen') || ''; } catch(e){ return ''; } }
+function renderBoardStrip(){
+  const el = $('board-strip'); if (!el) return;
+  const m = board[0], fresh = m && (Date.now() - new Date(m.at)) < 12 * 3600e3 && m.id !== boardSeen();
+  el.hidden = tbl || !fresh; if (!fresh) return;
+  $('board-txt').innerHTML = `📢 <b>${esc(m.by)}</b>: ${esc(m.text)} <small class="num">${time(new Date(m.at))}</small>`;
+}
+function sheetBoard(){
+  let me = ''; try { me = (localStorage.getItem('mala_name') || '').toLowerCase(); } catch(e){}
+  if (board[0]) { try { localStorage.setItem('maila-board-seen', board[0].id); } catch(e){} renderBoardStrip(); }
+  openSheet(head('📢 กระดานข้อความทีม') + `<div class="form"><label>เขียนถึงทุกคนในร้าน<textarea id="bd-text" maxlength="300" rows="2" placeholder="เช่น วันนี้เปิด 17:00, ถ่านหมดให้ซื้อเพิ่ม, โต๊ะ 5 จองไว้ 19:00"></textarea></label>
+    <div class="err" id="mf-err"></div></div><button class="primary" style="margin-top:0" data-bd-post>ส่งข้อความ</button>
+    ${board.length ? `<div class="rlist" style="margin-top:12px;max-height:50vh">${board.map(m => `<div class="rrow"><span><b>${esc(m.by)}</b> <small class="num">${date(new Date(m.at))} ${time(new Date(m.at))}</small><br>${esc(m.text)}</span>${isAdmin || m.by.toLowerCase() === me ? `<button class="linkbtn" data-bd-del="${esc(m.id)}">ลบ</button>` : ''}</div>`).join('')}</div>` : '<p class="empty">ยังไม่มีข้อความใน 3 วันนี้</p>'}`);
+}
+async function boardPost(b){
+  const t = $('bd-text').value.trim(); if (!t) return $('mf-err').textContent = 'พิมพ์ข้อความก่อน';
+  b.disabled = true;
+  try { board = await db.boardPost(t); if (board[0]) { try { localStorage.setItem('maila-board-seen', board[0].id); } catch(e){} } sheetBoard(); toast('ส่งข้อความถึงทีมแล้ว'); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v33 ก่อน' : 'ส่งไม่สำเร็จ'; }
 }
 
 let lastReceipt = '';
@@ -4750,13 +4818,13 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
   openSheet(head(`${TABLE_WORD} ${esc(t)}`) +
     `<div class="opts"><button data-tmode="bill" data-t="${esc(t)}" aria-pressed="${mode!=='qr'}">บิล / คิดเงิน</button>
        <button data-tmode="qr" data-t="${esc(t)}" aria-pressed="${mode==='qr'}">QR โต๊ะนี้</button></div>` +
-    (mode === 'qr' ? slip(t) + `<button class="primary" data-print>พิมพ์ QR</button>${isAdmin && db.newTableKey ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-new-key="${esc(t)}" data-armed="">เปลี่ยนรหัส QR โต๊ะนี้ (ใช้เมื่อ QR หลุดออกไป ต้องพิมพ์ใหม่)</button>` : ''}`
+    (mode === 'qr' ? slip(t) + `<button class="primary" data-print>พิมพ์ QR</button>${isOwner && db.newTableKey ? `<button class="ghost danger" style="width:100%;margin-top:8px" data-new-key="${esc(t)}" data-armed="">เปลี่ยนรหัส QR โต๊ะนี้ (ใช้เมื่อ QR หลุดออกไป ต้องพิมพ์ใหม่)</button>` : ''}`
       : mode === 'payqr' && s ? payCard(netOf(mine.flatMap(o => o.items), s)) + `<p class="note" style="text-align:center">ระบบไม่ได้เชื่อมกับธนาคาร จึงไม่รู้เองว่าเงินเข้า พอเห็นแจ้งเตือนเงินเข้าแล้วกดปุ่มด้านล่าง</p>
         <button class="primary" data-method="transfer" data-t="${esc(t)}">เงินเข้าแล้ว ไปปิดบิล</button>
         <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
       : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>${db.openTable && requireOpen ? `<p style="margin:10px 0 6px"><b>ลูกค้ากี่คน</b></p><div class="gpick">${[1,2,3,4,5,6,7,8].map(n => `<button data-gpick="${n}" aria-pressed="${guestPick === n}">${n}</button>`).join('')}</div><button class="primary" data-open-table="${esc(t)}">🔓 เปิดโต๊ะ${guestPick ? ` (${guestPick} คน)` : ''} ให้ลูกค้าสั่ง</button><p class="note">ลูกค้าสแกน QR ที่โต๊ะแล้วสั่งได้ทันที ปิดบิลแล้วโต๊ะจะปิดเองจนกว่าจะเปิดให้ลูกค้าชุดถัดไป</p>` : ''}`
       : mode === 'pay' ? memberRow(s) + payStep(t, mine)
-      : guestRow(s) + memberRow(s) + (canEditBill() && mine.length ? `<div class="editrow"><button class="ghost" data-bill-edit="${esc(t)}" aria-pressed="${billEdit}">✏️ ${billEdit ? 'เสร็จ' : 'แก้รายการ'}</button><button class="ghost" data-disc="${esc(t)}">🏷️ ส่วนลด${discOf(s) ? ` −${baht(discOf(s))}` : ''}</button></div>` : '') + billRows(mine, s, billEdit && canEditBill()) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
+      : guestRow(s) + noteRow(s) + memberRow(s) + (canEditBill() && mine.length ? `<div class="editrow"><button class="ghost" data-bill-edit="${esc(t)}" aria-pressed="${billEdit}">✏️ ${billEdit ? 'เสร็จ' : 'แก้รายการ'}</button><button class="ghost" data-disc="${esc(t)}">🏷️ ส่วนลด${discOf(s) ? ` −${baht(discOf(s))}` : ''}</button></div>` : '') + billRows(mine, s, billEdit && canEditBill()) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
         (mine.length ? `<button class="ghost" style="width:100%;margin-top:14px" data-print-bill="${esc(t)}">🖨️ พิมพ์ใบแจ้งยอด</button>` : '') +
         (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:8px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-tmode="pay" data-t="${esc(t)}">${mine.length ? 'คิดเงิน' : 'ปิดโต๊ะ (ไม่มีออเดอร์)'}</button>`),
@@ -4785,7 +4853,7 @@ function serveTickets(list){
   return list.length ? list.map(o => { const part = o.status !== 'ready', idx = o.items.map((c,i) => i).filter(i => !part || o.items[i].done);
     const todo = idx.filter(i => !o.items[i].served), got = idx.filter(i => o.items[i].served);
     return `<div class="ticket ready ${isBarOrder(o) ? 'drink' : ''}">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${isBarOrder(o) ? '<span class="pill drink">🥤 เครื่องดื่ม</span>' : ''}${part ? '<span class="pill cook">ทยอยเสิร์ฟ</span>' : ''}<span class="num ono">${time(o.createdAt)}</span></h3>
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${isBarOrder(o) ? '<span class="pill drink">🥤 เครื่องดื่ม</span>' : ''}${part ? '<span class="pill cook">ทยอยเสิร์ฟ</span>' : ''}<span class="num ono">${time(o.createdAt)}</span></h3>${kNotes(o)}
        ${part ? `<div class="wait">ย่างเสร็จแล้วบางส่วน ที่เหลือยังอยู่บนเตา ${o.items.filter(c => !c.done).length} รายการ</div>` : ''}
        <ul>${todo.map(i => tickBtn('serve', o.id, i, o.items[i], false)).join('')}</ul>
        ${doneFold('s' + o.id, 'เสิร์ฟแล้ว', got.map(i => tickBtn('serve', o.id, i, o.items[i], true)))}
@@ -4807,7 +4875,7 @@ function renderKitchen(){
     : `<p class="empty">ยังไม่มีออเดอร์ที่เสิร์ฟแล้วของโต๊ะที่ยังไม่ปิดบิล</p>`;
   $('tickets').innerHTML = kit.length ? kit.map(o => { const m = mins(o.createdAt), ck = o.status === 'cooking';
     return `<div class="ticket ${ck ? 'cook' : ''}">
-       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${m >= LATE_MIN ? '<span class="pill late">รอนาน</span>' : ''}<span class="pill ${ck ? 'cook' : ''}">${ck ? 'กำลังย่าง' : 'รอทำ'}</span></h3>
+       <h3>${TABLE_WORD} ${esc(o.tableNo)} ${oNo(o)}<span class="sp"></span>${m >= LATE_MIN ? '<span class="pill late">รอนาน</span>' : ''}<span class="pill ${ck ? 'cook' : ''}">${ck ? 'กำลังย่าง' : 'รอทำ'}</span></h3>${kNotes(o)}
        <div class="wait num ${m >= LATE_MIN ? 'late' : ''}">รอมาแล้ว ${m} นาที · สั่ง ${time(o.createdAt)}</div>
        ${myRole === 'floor' ? `<ul class="kl">${o.items.filter(c => !c.done).map(kLine).join('')}</ul>${doneFold('k' + o.id, 'ย่างเสร็จแล้ว', o.items.filter(c => c.done).map(kLine))}`
          : `<ul>${o.items.map((c,i) => c.done ? '' : tickBtn('grill', o.id, i, c, false)).join('')}</ul>
@@ -4836,6 +4904,7 @@ function beep(){
 }
 document.addEventListener('pointerdown', () => { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch(e){} }, { once:true });
 function renderClockState(){
+  renderBoardStrip();
   if (tbl || !db.clock) return;
   let me = ''; try { me = (localStorage.getItem('mala_name') || '').trim().toLowerCase(); } catch(e){}
   const r = staffToday.find(x => x.name.toLowerCase() === me), inNow = !!(r && r.inAt && !r.outAt);
@@ -4885,6 +4954,13 @@ document.addEventListener('click', async e => {
   else if ('stkPreview' in d) { stkRead(); sheetSticks(); }
   else if ('stkSave' in d) saveSticks(b);
   else if ('mfStick' in d) { $('mf-stick').value = d.mfStick; document.querySelectorAll('[data-mf-stick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mfStick === d.mfStick)); }
+  else if (d.tnote) sheetTNote(d.tnote);
+  else if (d.tnAdd) { const i = $('tn-text'); i.value = i.value ? i.value.replace(/[,\s]*$/, '') + ', ' + d.tnAdd : d.tnAdd; }
+  else if (d.tnSave) saveTNote(d.tnSave, b);
+  else if ('board' in d) sheetBoard();
+  else if ('bdPost' in d) boardPost(b);
+  else if (d.bdDel) { b.disabled = true; try { board = await db.boardDelete(d.bdDel); sheetBoard(); } catch(e){ b.disabled = false; toast('ลบไม่สำเร็จ'); } }
+  else if ('boardX' in d) { if (board[0]) { try { localStorage.setItem('maila-board-seen', board[0].id); } catch(e){} } renderBoardStrip(); }
   else if ('newsOk' in d) { try { localStorage.setItem('maila-news', String(APP_VERSION)); } catch(e){} closeSheet(); }
   else if ('newsAll' in d) sheetNews(true);
   else if ('news' in d) sheetNews(true);
@@ -4894,6 +4970,7 @@ document.addEventListener('click', async e => {
   else if ('attHere' in d) attHere(b);
   else if ('attSave' in d) attSave(b);
   else if (d.attView) { attView = d.attView; renderAttend(); }
+  else if (d.attOff !== undefined) { const i = +d.attOff; attOff = attOff.includes(i) ? attOff.filter(x => x !== i) : attOff.concat(i); b.setAttribute('aria-pressed', attOff.includes(i)); }
   else if ('attCopy' in d) copyText(attText(), 'เวลาเข้างาน');
   else if (d.mtable) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.mtable, 'bill'); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
@@ -4962,13 +5039,15 @@ document.addEventListener('click', async e => {
   else if ('send' in d) {
     // v30: แสดงว่าส่งแล้วทันที บันทึกเบื้องหลัง ถ้าไม่สำเร็จคืนของกลับเข้าตะกร้า
     if (tclosed) return toast('โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน');
-    const o = { id: newId('o'), tableNo: tbl, status:'new', paid:false, createdAt: new Date().toISOString(),
+    if ($('cart-note')) cartNote = $('cart-note').value.trim();
+    const o = { id: newId('o'), tableNo: tbl, status:'new', paid:false, createdAt: new Date().toISOString(), note: cartNote,
                 items: cart.map(({id,name,code,price,qty,opt}) => ({id,name,code,price,qty,opt,served:false})) };
+    const snapNote = cartNote; cartNote = '';
     const snap = cart, tmp = { ...o, queue: 0, pending: true };
     pendingOrders.push(tmp); orders = orders.concat(tmp); cart = []; renderMenu(); sheetBill(); toast('ส่งออเดอร์แล้ว 🔥');
     try { await db.addOrder(o); pendingOrders = pendingOrders.filter(x => x !== tmp); refresh(); }
     catch(e){
-      pendingOrders = pendingOrders.filter(x => x !== tmp); orders = orders.filter(x => x !== tmp); cart = snap.concat(cart); renderMenu();
+      pendingOrders = pendingOrders.filter(x => x !== tmp); orders = orders.filter(x => x !== tmp); cart = snap.concat(cart); cartNote = snapNote; renderMenu();
       await act(() => { throw e; });
       if (cart.length && e.message !== 'sold_out') sheetCart();
     }
@@ -5138,7 +5217,7 @@ async function start(){
     if (staff) { $('home').hidden = false; $('home').textContent = '← หน้าพนักงาน'; }
   } else {
     let who = ''; try { who = localStorage.getItem('mala_name') || ''; } catch(e){}
-    $('sub').textContent = who ? 'พนักงาน · ' + who : 'พนักงาน';
+    $('sub').textContent = (who ? 'พนักงาน · ' + who : 'พนักงาน') + (myRole === 'manager' ? ' · ผู้จัดการ' : '');
     $('staff-tabs').hidden = false; $('logout').hidden = false; if (db.clock) $('clock-btn').hidden = false; applyRole();
     try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e){}
   }
