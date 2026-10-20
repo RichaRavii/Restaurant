@@ -311,6 +311,21 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .grow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sunk);border-radius:10px;padding:8px 12px;margin:8px 0}
 .gstep{display:flex;gap:6px} .gstep .ghost{width:40px;margin:0;font-size:18px;padding:4px 0}
 .stkrow{display:grid;grid-template-columns:auto minmax(0,1fr) 80px auto;gap:8px;align-items:center} .stkrow input{text-align:right}
+.clockbtn{position:relative;width:auto;padding:6px 10px} .clockbtn i{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--muted)} .clockbtn i.on{background:var(--ok)} .clockbtn i.done{background:var(--line)}
+.clockstrip{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:880px;margin:8px auto 0;padding:10px 14px;border-radius:12px;background:var(--wait-soft);border:1px solid var(--wait)} .clockstrip .primary{width:auto;margin:0;padding:8px 18px}
+@media (max-width:700px){.clockstrip{margin:8px 16px 0}}
+.clockbox{display:flex;flex-direction:column;gap:10px}
+.bigtime{font-size:56px;font-weight:700;line-height:1;letter-spacing:.02em}
+.cktimes{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:14px} .cktimes div{display:flex;justify-content:space-between}
+.ckbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px} .ckbtns button{padding:22px 0;border-radius:16px;border:0;font:inherit;font-size:18px;font-weight:600;color:#fff}
+.ckin{background:var(--ok)} .ckout{background:#555a66} .ckbtns button:disabled{opacity:.35}
+.ckmsg{padding:12px;border-radius:12px;background:var(--ok-soft);border:1px solid var(--ok);font-size:14.5px} .ckmsg.bad{background:var(--wait-soft);border-color:var(--wait)}
+.crew{--a:var(--fz1);--b:var(--fz2)} .crewrow{display:flex;flex-wrap:wrap;gap:10px}
+.crewp{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;padding:6px 4px;border-radius:12px;background:var(--surface);border:1.5px solid var(--line);font-size:12.5px}
+.crewp.on{border-color:var(--ok)} .crewp.off .spr{filter:grayscale(1);opacity:.45} .crewp small{color:var(--muted)} .crewp .zz{position:absolute;top:2px;right:4px;font-style:normal;font-size:12px}
+.clockstrip.upd{background:var(--sunk);border-color:var(--accent)} .clockstrip.upd .ghost{width:auto;margin:0}
+.news{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0} .news-h{display:flex;justify-content:space-between;gap:8px} .news-h span{color:var(--muted);font-size:13px}
+.news ul{margin:6px 0 0;padding-left:20px} .news li{margin:3px 0}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -523,6 +538,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <h1 class="brand"><span id="shop"></span><small id="sub"></small></h1>
   <button class="ghost" id="open-bill" hidden>ดูบิล</button>
   <button class="ghost" id="home" hidden>← หน้าแรก</button>
+  <button class="ghost clockbtn" id="clock-btn" data-clock hidden aria-label="ลงเวลาเข้า-ออกงาน">🕘<i id="clock-dot"></i></button>
   <button class="ghost" id="logout" hidden>ออก<span class="lg">จากระบบ</span></button>
   <div class="seg" id="staff-tabs" role="group" aria-label="มุมมองพนักงาน" hidden>
     <button data-view="tables"><span>🪑</span>โต๊ะ</button>
@@ -536,6 +552,8 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 </div></header>
 
 <div class="alerts" id="alerts" hidden></div>
+<div class="clockstrip upd" id="upd-strip" hidden><span id="upd-txt"></span><button class="ghost" data-news>ดูวิธี</button></div>
+<div class="clockstrip" id="clock-strip" hidden><span>🕘 ยังไม่ได้เช็คอินวันนี้</span><button class="primary" data-clock>เช็คอิน</button></div>
 
 <div class="gate" id="gate" hidden>
   <strong>สำหรับพนักงาน</strong>
@@ -3075,13 +3093,17 @@ function makeGasDb(url){
     async loadOrders(){ return this._sync.orders; },
     async loadCalls(){ return this._sync.calls || []; },
     async addCall(t, type){ await call('custCall', {table: t, type, key: tkey}); },
+    async attendMe(){ return await call('attendMe', {}); },
+    async clock(kind, pos){ return await call(kind === 'in' ? 'checkIn' : 'checkOut', pos || {}); },
+    async attendance(from, to){ return await call('attendance', {from, to}); },
+    async attendSettings(f){ await call('attendSettings', f); },
     async openTable(t, guests){ await call('openTable', {table: t, guests}); },
     async setGuests(sessionId, guests){ await call('setGuests', {sessionId, guests}); },
     async setSticks(items){ return await call('setSticks', {items}); },
     async tableMode(on){ await call('tableMode', {requireOpen: on}); },
     async newTableKey(t){ await call('newTableKey', {table: t}); },
     async ackCall(id){ await call('ackCall', {id}); },
-    async loadSessions(){ this._sync = await call('sync'); if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
+    async loadSessions(){ this._sync = await call('sync'); if (Array.isArray(this._sync.staff)) staffToday = this._sync.staff; if (this._sync.version) { serverVer = +this._sync.version; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} } if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
     async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
     async updateOrder(id, patch){ await call('setOrder', {id, status: patch.status, served: patch.items ? patch.items.map(c => !!c.served) : undefined, done: patch.items ? patch.items.map(c => !!c.done) : undefined}); },
     async setAvailable(id, on){ await call('setAvailable', {id, available: on}); },
@@ -3611,6 +3633,10 @@ function renderReport(){
       <div class="xlab">${ser.map((x, i) => `<span>${i % every === 0 ? x.short : ''}</span>`).join('')}</div></div>` : ''}
     <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🧾 ใบเสร็จย้อนหลัง</h2><button class="ghost" style="width:auto;margin:0" data-receipts>ดูใบเสร็จช่วงนี้ (${bills} ใบ)</button></div>
       <p class="note" style="margin:6px 0 0">เปิดดู ค้นหาโต๊ะ และพิมพ์สำเนาใบเสร็จของบิลที่ปิดแล้วในช่วงวันที่ด้านบน</p></div>
+    <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🆕 อัปเดตระบบ</h2><button class="ghost" style="width:auto;margin:0" data-news>มีอะไรใหม่</button></div>
+      <p class="note num" style="margin:6px 0 0">หน้าเว็บ v${APP_VERSION}${serverVer ? ` · Code.gs v${serverVer}` : ''}${serverBehind() ? ' · <b style="color:var(--accent)">Code.gs ต้องอัปเดต</b>' : ' · ล่าสุดแล้ว ✓'}</p></div>
+    ${db.attendance ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">🕘 เวลาเข้างาน</h2><button class="ghost" style="width:auto;margin:0" data-attend>ดู / ตั้งค่า</button></div>
+      <p class="note" style="margin:6px 0 0">ใครเข้า-ออกกี่โมง มาสายกี่ครั้ง รวมชั่วโมงทำงานในช่วงวันที่ด้านบน และตั้งตำแหน่งร้านสำหรับเช็คอิน</p></div>` : ''}
     ${db.cashHistory ? `<div class="panel"><div class="row"><h2 style="flex:1;margin:0">💵 นับเงินปิดร้าน</h2><button class="ghost" style="width:auto;margin:0" data-cash-hist>ดูประวัติ / นับวันนี้</button></div>
       <p class="note" style="margin:6px 0 0">พนักงานนับเงินในลิ้นชักตอนปิดร้านโดยไม่เห็นยอดที่ควรมี ระบบเทียบให้ว่าเงินตรง ขาด หรือเกิน</p></div>
     <div class="panel"><div class="row"><h2 style="flex:1;margin:0">🗄️ สำรอง / ล้างข้อมูลซ้อม</h2><button class="ghost" style="width:auto;margin:0" data-backup>จัดการ</button></div>
@@ -4490,6 +4516,9 @@ function renderMap(){
     <div class="room hall"><div class="rlabel">🍽️ โซนนั่ง</div>
       <div class="hallgrid"><div class="col">${L.map((t, i) => tile(t, i)).join('')}</div><div class="aisle" aria-hidden="true">${walkers ? `<span class="walker w1">${sprite('staff', '#1f5fa8', '#2a1a12', 2)}</span>` : ''}${walkers > 1 ? `<span class="walker w2 ${calls.length ? 'fast' : ''}">${sprite('staff', '#2f7d57', '#6b3f22', 2)}</span>` : ''}</div><div class="col">${R.map((t, i) => tile(t, i + half)).join('')}</div></div>
     </div>
+    ${staffToday.length ? `<div class="room crew"><div class="rlabel">👥 พนักงานวันนี้ · มา ${staffToday.filter(x => x.inAt && !x.outAt).length}/${staffToday.length}</div>
+      <div class="crewrow">${staffToday.map((x, i) => { const on = x.inAt && !x.outAt;
+        return `<span class="crewp ${on ? 'on' : 'off'}">${on ? `<span class="bob" style="animation-delay:-${i * .7}s">` : '<span>'}${sprite(x.role === 'kitchen' ? 'chef' : 'staff', x.role === 'kitchen' ? '#ffffff' : x.role === 'admin' ? '#a8690a' : '#1f5fa8', GUEST_C[i % 3] === '#2f7d57' ? '#2a1a12' : '#6b3f22', 3)}</span>${on ? '' : '<i class="zz">💤</i>'}<b>${esc(x.name)}</b><small class="num">${on ? 'เข้า ' + hm(x.inAt) : x.outAt ? 'ออก ' + hm(x.outAt) : 'ยังไม่มา'}</small></span>`; }).join('')}</div></div>` : ''}
     <div class="backrow">
       <button class="room kitchen ${lateN ? 'alarm' : ''}" data-view="kitchen" aria-label="ครัว"><div class="rlabel">🔥 เตาย่าง · ครัว</div>
         <div class="kbody"><span class="cook ${kit.length ? 'busy' : ''}">${sprite('chef', '#ffffff', '', 3)}</span><span class="cook ${kit.length ? 'busy' : ''}" style="animation-delay:-.35s">${sprite('chef', '#ffffff', '', 3)}</span><span class="grill" aria-hidden="true">${kit.length ? '<b class="smoke"></b><b class="smoke s2"></b><b class="smoke s3"></b>' : ''}${'<i></i>'.repeat(5)}</span></div>
@@ -4544,6 +4573,119 @@ async function saveSticks(b){
   b.disabled = true;
   try { const r = await db.setSticks(food.map(m => ({ id: m.id, stick: tierOf(m.price) }))); toast(`ใส่สีไม้แล้ว ${r.changed} เมนู`); closeSheet(); await menuAction(async () => {}, ''); }
   catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v30 ก่อน' : 'บันทึกไม่สำเร็จ'; }
+}
+
+
+/* ---------- v31: ลงเวลาเข้า-ออกงาน ---------- */
+let staffToday = [], clk = { me: null, geo: null, msg: '', busy: false, err: '' }, clkTimer = null;
+const hm = iso => iso ? time(new Date(iso)) : '-';
+const DAY_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const MON_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const thDate = d => `วัน${DAY_TH[d.getDay()]}ที่ ${d.getDate()} ${MON_TH[d.getMonth()]} ${d.getFullYear() + 543}`;
+const hrs = (a, b) => { if (!a || !b) return ''; const m = Math.round((new Date(b) - new Date(a)) / 60000); return `${Math.floor(m / 60)} ชม. ${m % 60} น.`; };
+async function sheetClock(){
+  clk.msg = ''; clk.err = ''; renderClock();
+  try { const r = await db.attendMe(); clk.me = r.me; clk.geo = r.geo; } catch(e){ clk.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v31 ก่อน' : 'โหลดไม่ได้ ลองอีกครั้ง'; }
+  renderClock();
+  clearInterval(clkTimer); clkTimer = setInterval(() => { if (!$('ck-time')) return clearInterval(clkTimer); const n = new Date(); $('ck-time').textContent = time(n); }, 1000);
+}
+function renderClock(){
+  const n = new Date(), me = clk.me, inDone = !!(me && me.inAt), outDone = !!(me && me.outAt);
+  let who = ''; try { who = localStorage.getItem('mala_name') || ''; } catch(e){}
+  openSheet(head('🕘 ลงเวลาเข้า-ออกงาน') + `<div class="clockbox">
+    <p class="note" style="margin:0">สวัสดี ${esc(who)}</p>
+    <div class="bigtime num" id="ck-time">${time(n)}</div><p class="note" style="margin:0">${thDate(n)}</p>
+    <div class="cktimes"><div><span>เข้างานวันนี้</span><b class="num">${hm(me && me.inAt)}</b></div><div><span>ออกงานวันนี้</span><b class="num">${hm(me && me.outAt)}</b></div>
+      ${inDone && outDone ? `<div><span>รวมเวลาทำงาน</span><b class="num">${hrs(me.inAt, me.outAt)}</b></div>` : ''}</div>
+    <div class="ckbtns"><button class="ckin" data-clock-do="in" ${inDone || clk.busy || clk.err ? 'disabled' : ''}>🌞 เช็คอิน</button><button class="ckout" data-clock-do="out" ${!inDone || outDone || clk.busy || clk.err ? 'disabled' : ''}>🌙 เช็คเอาต์</button></div>
+    ${clk.err ? `<div class="ckmsg bad">${esc(clk.err)}</div>` : clk.msg ? `<div class="ckmsg ${clk.msgBad ? 'bad' : ''}">${clk.msg}</div>` : ''}
+    <p class="note">${clk.geo && clk.geo.set ? `ระบบอ่านตำแหน่งจากมือถือตอนกดปุ่ม ต้องอยู่ในรัศมี ${clk.geo.radius} ม. จากร้าน เวลาใช้ของเซิร์ฟเวอร์` : 'ร้านยังไม่ได้ตั้งตำแหน่ง ระบบจะบันทึกเวลาอย่างเดียว (แอดมินตั้งได้ที่แท็บบัญชี → เวลาเข้างาน)'} ถ้ามีหน้าต่างถาม ให้กด "อนุญาต"</p></div>`);
+}
+function getPos(){
+  return new Promise((ok, no) => {
+    if (!navigator.geolocation) return no(new Error('no_geo'));
+    navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy || 0) }), e => no(new Error(e.code === 1 ? 'geo_denied' : 'geo_fail')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  });
+}
+async function doClock(kind){
+  clk.busy = true; clk.msgBad = false; clk.msg = 'กำลังอ่านตำแหน่ง… (ถ้ามีหน้าต่างถาม ให้กด "อนุญาต")'; renderClock();
+  let pos = null;
+  if (clk.geo && clk.geo.set) { try { pos = await getPos(); } catch(e){ clk.busy = false; clk.msgBad = true;
+    clk.msg = e.message === 'geo_denied' ? 'มือถือไม่อนุญาตให้อ่านตำแหน่ง: เปิด ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari → "ขณะใช้งาน" แล้วลองใหม่' : 'อ่านตำแหน่งไม่ได้ เปิด GPS แล้วลองใหม่ในที่โล่ง'; return renderClock(); } }
+  clk.msg = 'กำลังบันทึก…'; renderClock();
+  try { const r = await db.clock(kind, pos); clk.me = r.me; clk.msg = kind === 'in' ? `✅ เช็คอินแล้ว ${hm(r.me.inAt)} ขอให้เป็นวันที่ดี` : `✅ เช็คเอาต์แล้ว ${hm(r.me.outAt)} ทำงานวันนี้ ${hrs(r.me.inAt, r.me.outAt)}`; refresh(); }
+  catch(e){ clk.msgBad = true; const x = e.data || {};
+    clk.msg = e.message === 'too_far' ? `อยู่ห่างร้าน ${x.dist} ม. ต้องอยู่ในรัศมี ${x.radius} ม. ถ้าอยู่ที่ร้านจริง ลองเดินออกไปที่โล่งแล้วกดใหม่` : e.message === 'already_in' ? 'วันนี้เช็คอินไปแล้ว' : e.message === 'already_out' ? 'วันนี้เช็คเอาต์ไปแล้ว' : e.message === 'not_in' ? 'ต้องเช็คอินก่อน' : e.message === 'need_location' ? 'ต้องอนุญาตให้อ่านตำแหน่งก่อน' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง';
+    if (x.me) clk.me = x.me; }
+  clk.busy = false; renderClock();
+}
+// แอดมิน: ตารางเวลาเข้างาน + ตั้งตำแหน่งร้าน
+const att = { data: null, err: '', msg: '' };
+async function sheetAttend(){
+  att.data = null; att.err = ''; renderAttend();
+  const [f, t] = repRange();
+  try { att.data = await db.attendance(f, t); } catch(e){ att.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v31 ก่อน' : 'โหลดไม่ได้'; }
+  renderAttend();
+}
+function lateMin(iso, shift){ if (!iso || !shift) return 0; const [h, m] = shift.split(':').map(Number), d = new Date(iso), lm = d.getHours() * 60 + d.getMinutes() - (h * 60 + m); return lm > 5 ? lm : 0; }
+function renderAttend(){
+  const top = head('🕘 เวลาเข้างานพนักงาน'), [f, t] = repRange();
+  if (att.err) return openSheet(top + `<p class="empty">${att.err}</p>`);
+  if (!att.data) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
+  const L = att.data.list, G = att.data.geo, per = {};
+  L.forEach(x => { const p = per[x.name] || (per[x.name] = { days: 0, min: 0, late: 0 }); p.days++; if (x.inAt && x.outAt) p.min += Math.round((new Date(x.outAt) - new Date(x.inAt)) / 60000); if (lateMin(x.inAt, G.shift)) p.late++; });
+  openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · เริ่มกะ ${esc(G.shift)} (สายเกิน 5 นาทีขึ้นป้าย)</p>
+    ${Object.keys(per).length ? `<div class="rlist" style="max-height:none">${Object.entries(per).map(([n, p]) => `<div class="rrow"><span><b>${esc(n)}</b><br><small class="num">มา ${p.days} วัน · รวม ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ` · <b style="color:var(--accent)">สาย ${p.late} ครั้ง</b>` : ''}</small></span></div>`).join('')}</div>` : '<p class="empty">ยังไม่มีการลงเวลาในช่วงนี้</p>'}
+    ${L.length ? `<h3 style="margin:14px 0 6px">รายวัน</h3><div class="rlist">${L.map(x => { const lm = lateMin(x.inAt, G.shift);
+      return `<div class="rrow"><span><b>${esc(x.name)}</b> <small class="num">${esc(x.date)}</small><br><small class="num">เข้า ${hm(x.inAt)}${x.inDist !== null ? ` (${x.inDist} ม.)` : ''} · ออก ${hm(x.outAt)}${x.outAt ? ' · ' + hrs(x.inAt, x.outAt) : ''}${x.note ? ' · ' + esc(x.note) : ''}</small></span>${lm ? `<b class="cashdiff bad num">สาย ${lm} น.</b>` : ''}</div>`; }).join('')}</div>` : ''}
+    <h3 style="margin:18px 0 6px">ตั้งค่า</h3>
+    <div class="form">
+      <p class="note" style="margin:0">${G.lat !== null ? `📍 ตั้งตำแหน่งร้านแล้ว (<span class="num">${G.lat.toFixed(5)}, ${G.lng.toFixed(5)}</span>) <a href="https://maps.google.com/?q=${G.lat},${G.lng}" target="_blank" rel="noopener">ดูบนแผนที่</a>` : '⚠️ ยังไม่ได้ตั้งตำแหน่งร้าน พนักงานจะเช็คอินจากที่ไหนก็ได้'}</p>
+      <button class="ghost" data-att-here>📍 ตั้งตำแหน่งร้านจากตรงนี้ (กดตอนอยู่ที่ร้าน)</button>
+      <div class="two"><label>รัศมีที่ยอมให้เช็คอิน (เมตร)<input id="att-r" type="number" inputmode="numeric" min="30" max="2000" value="${G.radius}"></label>
+        <label>เวลาเริ่มกะ<input id="att-s" type="time" value="${esc(G.shift)}"></label></div>
+      <div class="err" id="mf-err">${esc(att.msg)}</div></div>
+    <button class="primary" style="margin-top:0" data-att-save>บันทึกการตั้งค่า</button>`);
+}
+async function attHere(b){
+  b.disabled = true; b.textContent = 'กำลังอ่านตำแหน่ง…';
+  try { const p = await getPos(); if (p.acc > 100) { att.msg = `ตำแหน่งยังไม่แม่น (คลาดเคลื่อน ${p.acc} ม.) รอสักครู่ในที่โล่งแล้วกดใหม่`; return renderAttend(); }
+    await db.attendSettings({ lat: p.lat, lng: p.lng }); att.msg = ''; toast('ตั้งตำแหน่งร้านแล้ว'); sheetAttend(); }
+  catch(e){ att.msg = e.message === 'geo_denied' ? 'ต้องอนุญาตให้อ่านตำแหน่งก่อน' : 'อ่านตำแหน่งไม่ได้ ลองใหม่'; renderAttend(); }
+}
+async function attSave(b){
+  b.disabled = true;
+  try { await db.attendSettings({ radius: +$('att-r').value || 150, shift: $('att-s').value || '16:00' }); toast('บันทึกแล้ว'); sheetAttend(); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = 'บันทึกไม่สำเร็จ'; }
+}
+
+
+/* ---------- v32: มีอะไรใหม่ + เตือนอัปเดต Code.gs ---------- */
+const APP_VERSION = 32, NEED_SERVER = 32;
+const CHANGELOG = [
+  [32, '20 ต.ค. 2569', ['แจ้ง "มีอะไรใหม่" ทุกครั้งที่อัปเดตเว็บ เปิดดูย้อนหลังได้ที่ปุ่ม 🆕 แท็บบัญชี', 'เตือนแอดมินเมื่อ Code.gs บนเซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า']],
+  [31, '20 ต.ค. 2569', ['🕘 เช็คอิน-เช็คเอาต์พนักงานด้วย GPS (ปุ่ม 🕘 มุมบนขวา)', 'แอดมินดูเวลาเข้างาน มาสาย รวมชั่วโมง และตั้งตำแหน่งร้านได้ที่แท็บบัญชี', 'ผังร้านมีห้อง "พนักงานวันนี้" ใครมาแล้ว ใครยังไม่มา']],
+  [30, '20 ต.ค. 2569', ['👥 ใส่จำนวนลูกค้าตอนเปิดโต๊ะ แก้ −/+ ในบิลได้ รายงานมียอดเฉลี่ยต่อคน', '🎨 สีไม้ตามราคา (ผัก/แดง/น้ำเงิน/ดำ) ตั้งทีเดียวทั้งเมนูที่แท็บเมนู ลูกค้าและครัวเห็นสีไม้']],
+  [29, '19 ต.ค. 2569', ['🗺️ แท็บผังร้านสด เห็นโต๊ะ ครัว ตู้แช่ในจอเดียว ตัวละครขยับตามสถานะจริง', '⚡ หน้าลูกค้าเร็วขึ้น เมนูขึ้นทันที กดส่งออเดอร์ได้ทันที แถบหมวดด้านซ้าย', '🏠 ต้นทุนคงที่รายเดือน (ค่าเช่า ค่าไฟ ฯลฯ) คิดเข้ากำไรสุทธิ และบอกยอดขายขั้นต่ำต่อวัน']],
+  [28, '13 ต.ค. 2569', ['✏️ แก้รายการในบิล / 🏷️ ส่วนลดก่อนเช็คบิล บันทึกว่าใครทำ เพราะอะไร', '📤 ส่งใบเสร็จทาง LINE/ข้อความ']],
+  [27, '13 ต.ค. 2569', ['💵 นับเงินปิดร้าน (พนักงานนับโดยไม่เห็นยอดที่ควรมี)', '🗄️ สำรองข้อมูลอัตโนมัติทุกคืน และล้างข้อมูลซ้อมก่อนเปิดร้าน']],
+  [25, '13 ต.ค. 2569', ['⭐ สมาชิกสะสมแต้มด้วยเบอร์โทร เศษยอดสะสมข้ามบิล', '📶 WiFi และลิงก์โซเชียลในหน้าลูกค้า']],
+  [24, '12 ต.ค. 2569', ['🧾 ใบเสร็จย้อนหลัง ค้นหาและพิมพ์สำเนาได้', 'หัวบิลเป็น ไม้ละ / MAI LA']],
+  [23, '12 ต.ค. 2569', ['🍢 ครัวติ๊กย่างเสร็จทีละรายการ ทยอยส่งไปเสิร์ฟ', '🥤 เครื่องดื่มไม่เข้าครัว ส่งตรงไปแท็บเสิร์ฟ']]
+];
+function sheetNews(all){
+  let seen = 0; try { seen = +localStorage.getItem('maila-news') || 0; } catch(e){}
+  const list = all ? CHANGELOG : CHANGELOG.filter(x => x[0] > seen);
+  openSheet(head(all ? '🆕 ประวัติการอัปเดต' : '🆕 มีอะไรใหม่ในเวอร์ชันนี้') + `<p class="note num" style="margin-top:0">หน้าเว็บ v${APP_VERSION}${serverVer ? ` · เซิร์ฟเวอร์ (Code.gs) v${serverVer}` : ''}</p>
+    ${serverBehind() ? `<div class="ckmsg bad">⚠️ Code.gs บนเซิร์ฟเวอร์ยังเป็น v${serverVer} ฟีเจอร์ใหม่บางอย่างจะยังใช้ไม่ได้ ให้แอดมินวาง Code.gs ตัวล่าสุดแล้วกด Deploy → New version</div>` : ''}
+    ${list.map(([v, d, items]) => `<div class="news"><div class="news-h"><b>เวอร์ชัน ${v}</b><span class="num">${d}</span></div><ul>${items.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`).join('')}
+    <button class="primary" data-news-ok>รับทราบ</button>${all ? '' : `<button class="ghost" style="width:100%;margin-top:8px" data-news-all>ดูประวัติทั้งหมด</button>`}`);
+}
+const serverBehind = () => !!(GAS_URL && serverVer && serverVer < NEED_SERVER);
+function newsCheck(){
+  if (tbl) return; let seen = 0; try { seen = +localStorage.getItem('maila-news') || 0; } catch(e){}
+  if (!seen) { try { localStorage.setItem('maila-news', String(APP_VERSION)); } catch(e){} return; }   // เครื่องที่เพิ่งใช้ครั้งแรกไม่ต้องเด้ง
+  if (seen < APP_VERSION && $('veil').hidden) sheetNews(false);
 }
 
 let lastReceipt = '';
@@ -4667,7 +4809,17 @@ function beep(){
   } catch(e){}
 }
 document.addEventListener('pointerdown', () => { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch(e){} }, { once:true });
+function renderClockState(){
+  if (tbl || !db.clock) return;
+  let me = ''; try { me = (localStorage.getItem('mala_name') || '').trim().toLowerCase(); } catch(e){}
+  const r = staffToday.find(x => x.name.toLowerCase() === me), inNow = !!(r && r.inAt && !r.outAt);
+  $('clock-dot').className = inNow ? 'on' : r && r.outAt ? 'done' : '';
+  $('clock-strip').hidden = !r || !!r.inAt || !staffToday.length;
+  if ($('upd-strip')) $('upd-strip').hidden = !(isAdmin && serverBehind());
+  if ($('upd-txt')) $('upd-txt').textContent = `⚠️ Code.gs บนเซิร์ฟเวอร์เป็น v${serverVer} ต้องอัปเดตเป็น v${NEED_SERVER}`;
+}
 function renderAlerts(){
+  renderClockState();
   const fresh = seenCalls ? calls.filter(c => !seenCalls.has(c.id)) : [];
   if (fresh.length) {
     beep();
@@ -4706,6 +4858,14 @@ document.addEventListener('click', async e => {
   else if ('stkPreview' in d) { stkRead(); sheetSticks(); }
   else if ('stkSave' in d) saveSticks(b);
   else if ('mfStick' in d) { $('mf-stick').value = d.mfStick; document.querySelectorAll('[data-mf-stick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mfStick === d.mfStick)); }
+  else if ('newsOk' in d) { try { localStorage.setItem('maila-news', String(APP_VERSION)); } catch(e){} closeSheet(); }
+  else if ('newsAll' in d) sheetNews(true);
+  else if ('news' in d) sheetNews(true);
+  else if ('clock' in d) sheetClock();
+  else if (d.clockDo) doClock(d.clockDo);
+  else if ('attend' in d) sheetAttend();
+  else if ('attHere' in d) attHere(b);
+  else if ('attSave' in d) attSave(b);
   else if (d.mtable) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.mtable, 'bill'); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
   else if ('receipts' in d) sheetReceipts();
@@ -4950,11 +5110,12 @@ async function start(){
   } else {
     let who = ''; try { who = localStorage.getItem('mala_name') || ''; } catch(e){}
     $('sub').textContent = who ? 'พนักงาน · ' + who : 'พนักงาน';
-    $('staff-tabs').hidden = false; $('logout').hidden = false; applyRole();
+    $('staff-tabs').hidden = false; $('logout').hidden = false; if (db.clock) $('clock-btn').hidden = false; applyRole();
     try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e){}
   }
   await refresh();
   db.subscribe(refresh);
+  setTimeout(newsCheck, 600);
 }
 // v30: เมนูชุดใหม่จากเซิร์ฟเวอร์มาถึงหลังโชว์ของที่เก็บไว้ในเครื่อง
 let lastSoldOut = null;
