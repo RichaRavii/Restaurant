@@ -303,6 +303,14 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 @keyframes mbub{50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.walker,.walker .spr,.bob,.cook.busy,.smoke,.bubble{animation:none}}
 @media (prefers-reduced-motion:reduce){.mt.late,.grill i{animation:none}}
+.stk{display:inline-block;width:6px;height:18px;border-radius:3px;margin-right:6px;vertical-align:-3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.stk-g{background:#3a9d5d} .stk-r{background:#d8352a} .stk-b{background:#2f6fd0} .stk-k{background:#2a2a2a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;padding:8px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13.5px} .legend:empty{display:none}
+.gpick{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:10px} .gpick button{padding:10px 0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-weight:600}
+.gpick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.grow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sunk);border-radius:10px;padding:8px 12px;margin:8px 0}
+.gstep{display:flex;gap:6px} .gstep .ghost{width:40px;margin:0;font-size:18px;padding:4px 0}
+.stkrow{display:grid;grid-template-columns:auto minmax(0,1fr) 80px auto;gap:8px;align-items:center} .stkrow input{text-align:right}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -549,6 +557,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   </div>
   <div class="track" id="track"></div>
   <div id="member"></div>
+  <div id="legend"></div>
   <div class="search" id="search-box">
     <input id="search" type="search" placeholder="ค้นหาเมนู หรือรหัสไม้ เช่น O1" autocomplete="off" aria-label="ค้นหาเมนู">
     <button id="search-clear" hidden aria-label="ล้างคำค้น">✕</button>
@@ -589,6 +598,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <div class="row"><strong style="flex:1;min-width:0">จัดการเมนู</strong><button class="primary" style="width:auto;margin:0;padding:10px 18px;font-size:15px" data-menu-new>+ เพิ่มเมนู</button></div>
   <button class="ghost" style="width:100%;margin-top:10px" id="import-btn" data-import hidden></button>
   <button class="ghost" style="width:100%;margin-top:10px" id="spicy-btn" data-spicy-all hidden></button>
+  <button class="ghost" style="width:100%;margin-top:10px" id="sticks-btn" data-sticks hidden>🎨 ตั้งสีไม้ตามราคา</button>
   <p class="note">กด "ของหมด" เมื่อวัตถุดิบหมด ลูกค้าจะเห็นว่าหมดและสั่งไม่ได้ทันที กดอีกครั้งเมื่อมีของ · เพิ่ม แก้ไข ลบเมนู และใส่รูป ทำได้เฉพาะ admin</p>
   <input type="file" id="img-file" accept="image/*" hidden>
   <div id="menu-admin"></div>
@@ -3065,7 +3075,9 @@ function makeGasDb(url){
     async loadOrders(){ return this._sync.orders; },
     async loadCalls(){ return this._sync.calls || []; },
     async addCall(t, type){ await call('custCall', {table: t, type, key: tkey}); },
-    async openTable(t){ await call('openTable', {table: t}); },
+    async openTable(t, guests){ await call('openTable', {table: t, guests}); },
+    async setGuests(sessionId, guests){ await call('setGuests', {sessionId, guests}); },
+    async setSticks(items){ return await call('setSticks', {items}); },
     async tableMode(on){ await call('tableMode', {requireOpen: on}); },
     async newTableKey(t){ await call('newTableKey', {table: t}); },
     async ackCall(id){ await call('ackCall', {id}); },
@@ -3589,6 +3601,7 @@ function renderReport(){
       ${D.fixed ? `<div class="tile neg"><span>🏠 ต้นทุนคงที่ (${fx.days} วัน)</span><b class="num">${baht(fx.share)}</b></div>` : ''}
       <div class="tile ${net >= 0 ? 'pos' : 'neg'}"><span>📈 กำไรสุทธิ (ยอดขาย − รายจ่าย${D.fixed ? ' − ต้นทุนคงที่' : ''})</span><b class="num">${net < 0 ? '−' : ''}${baht(Math.abs(net))}</b></div>` : ''}
     </div>
+    ${D.guests && D.guests.people ? `<p class="note num">👥 ลูกค้า ${D.guests.people} คน จาก ${D.guests.bills} บิลที่ใส่จำนวนคน · เฉลี่ย <b>${baht(D.guests.sales / D.guests.people)}</b> ต่อคน · ${(D.guests.people / D.guests.bills).toFixed(1)} คนต่อโต๊ะ</p>` : ''}
     ${total ? `<p class="note num">เงินสด ${baht((D.methods || {}).cash || 0)} · โอน ${baht((D.methods || {}).transfer || 0)}${(D.methods || {}).other ? ` · ไม่ระบุ ${baht(D.methods.other)}` : ''}</p>` : ''}
     ${D.discount || (D.billLog || []).length ? `<p class="note">🏷️ ส่วนลดรวม <b class="num">${baht(D.discount || 0)}</b> (หักจากยอดขายแล้ว) · ยกเลิกรายการ ${(D.billLog || []).filter(x => x.type === 'void').length} ครั้ง <button class="linkbtn" data-bill-log>ดูว่าใครทำ</button></p>` : ''}
     ${D.open ? `<p class="note">ยังมีบิลที่ไม่ได้ปิดอีก <span class="num">${baht(D.open)}</span> ไม่นับรวมในยอดขาย</p>` : ''}
@@ -3653,9 +3666,10 @@ const NO_SPICE = /ดื่ม|น้ำ|เบียร์|เหล้า|โ�
 function renderMenuAdmin(){
   const sp = menu.filter(m => !m.spicy && !NO_SPICE.test(m.category) && !/^(DR)/i.test(m.code || ''));
   if ($('spicy-btn')) { $('spicy-btn').hidden = !(isAdmin && sp.length && db.setSpicy); $('spicy-btn').textContent = `🌶️ ให้เลือกความเผ็ดทุกเมนูปิ้ง (${sp.length} เมนู)`; }
+  if ($('sticks-btn')) $('sticks-btn').hidden = !(isAdmin && db.setSticks);
   const ip = importPlan(), n = ip.upd.length + ip.add.length; $('import-btn').hidden = !n; $('import-btn').textContent = `📥 นำเข้าเมนูชุดร้าน (${n} รายการ)`;
   $('menu-admin').innerHTML = menu.map(it => `<div class="mrow ${it.available === false ? 'out' : ''}">${thumb(it)}
-    <div class="info"><div>${it.recommend ? '⭐ ' : ''}${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
+    <div class="info"><div>${stk(it.stick)}${it.recommend ? '⭐ ' : ''}${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
     <div class="acts"><button class="ghost ${it.available === false ? 'on' : ''}" data-out="${esc(it.id)}" aria-pressed="${it.available === false}">${it.available === false ? 'หมดอยู่' : 'ของหมด'}</button>
     <button class="ghost" data-img="${esc(it.id)}">${okImg(it.image) ? 'เปลี่ยนรูป' : 'ใส่รูป'}</button>
     <button class="ghost" data-menu-edit="${esc(it.id)}">แก้ไข</button></div></div>`).join('') || '<p class="empty">ยังไม่มีเมนู</p>';
@@ -3748,6 +3762,7 @@ function sheetMenuForm(id, armed){
     <label>หมวด<input type="text" id="mf-cat" maxlength="40" list="mf-cats" value="${v('category')}" placeholder="เลือกหรือพิมพ์หมวดใหม่"></label>
     <datalist id="mf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <div class="chips" style="padding:0">${cats.map(c => `<button type="button" data-mf-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('')}</div>
+    <div><b style="font-size:14px">สีไม้</b><input type="hidden" id="mf-stick" value="${esc((it && it.stick) || '')}"><div class="chips" style="padding:6px 0 0">${[['', 'ไม่มี'], ...STICKS].map(([k, t]) => `<button type="button" data-mf-stick="${k}" aria-pressed="${((it && it.stick) || '') === k}">${stk(k)}${t}</button>`).join('')}</div></div>
     <label class="check"><input type="checkbox" id="mf-spicy" ${it && it.spicy ? 'checked' : ''}><span style="color:var(--fg)">ให้ลูกค้าเลือกระดับความเผ็ด</span></label>
     <label class="check"><input type="checkbox" id="mf-rec" ${it && it.recommend ? 'checked' : ''}><span style="color:var(--fg)">⭐ เมนูแนะนำของร้าน (ขึ้นหน้าแรกของลูกค้า)</span></label>
     ${db.stock ? `<div class="two"><label>ตัดสต็อกจาก<select id="mf-stock"><option value="">ไม่ตัดสต็อก</option>${!it || !it.stockId ? `<option value="auto" ${!it && stockList.length ? 'selected' : ''}>สร้างสต็อกชื่อเดียวกับเมนู</option>` : ''}${stockList.map(k => `<option value="${esc(k.id)}" ${it && it.stockId === k.id ? 'selected' : ''}>${esc(k.name)}${k.unit ? ' (' + esc(k.unit) + ')' : ''}</option>`).join('')}</select></label>
@@ -3807,6 +3822,7 @@ function renderMenu(){
   $('call-bill').hidden = !orders.length && !cb;
   $('track').innerHTML = orders.filter(o => o.status !== 'served').map(o => `<button class="prog" data-bill>${progress(o)}</button>`).join('');
   renderMember(); renderShopInfo();
+  if ($('legend')) $('legend').innerHTML = stickLegend();
   const cats = [...new Set(menu.map(i => i.category))];
   $('chips').innerHTML = ['ทั้งหมด', ...cats].map(c => `<button aria-pressed="${c===cat}" data-cat="${esc(c)}">${catIcon(c)} ${esc(c)}</button>`).join('');
   // ค้นหา = หาทุกหมวด จากชื่อหรือรหัสไม้ ไม่สนตัวพิมพ์เล็กใหญ่และช่องว่าง
@@ -3816,7 +3832,7 @@ function renderMenu(){
   const hot = popularIds.slice(0, 5), badges = it => (it.recommend ? '<span class="badge">⭐ แนะนำ</span>' : '') + (hot.includes(it.id) ? '<span class="badge hot">🔥 ขายดี</span>' : '');
   const card = (it, rank) => { const q = cartQty(it), src = imgOf(it);
     return `<div class="hcard">${src ? `<img class="ph" loading="lazy" decoding="async" alt=""${esc(it.name)}" src="${esc(src)}">` : `<div class="ph">${esc(it.code || catIcon(it.category))}</div>`}${rank ? `<span class="rk">#${rank}</span>` : ''}
-      <div class="nm">${esc(it.name)}</div><div class="row2"><span class="price num">${baht(it.price)}</span>
+      <div class="nm">${stk(it.stick)}${esc(it.name)}</div><div class="row2"><span class="price num">${baht(it.price)}</span>
       ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
           : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}</div></div>`; };
   const ok = it => it && it.available !== false, recs = menu.filter(i => i.recommend && ok(i)), pops = popularIds.map(id => menu.find(m => m.id === id)).filter(ok).slice(0, 6);
@@ -3833,7 +3849,7 @@ function renderMenu(){
         <div class="info"><div class="name">${esc(it.name)}</div><div class="price num">${baht(it.price)}</div></div><span class="outpill">หมด</span></div>`;
       return `<div class="item">
         ${thumb(it)}
-        <div class="info"><div class="name">${esc(it.name)}${badges(it)}</div><div class="price num">${baht(it.price)}</div></div>
+        <div class="info"><div class="name">${stk(it.stick)}${esc(it.name)}${badges(it)}</div><div class="price num">${baht(it.price)}</div></div>
         ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
             : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}
       </div>`; }).join('')).join('');
@@ -4456,7 +4472,7 @@ function renderMap(){
   const D = isAdmin ? daily : null, low = D && D.stock ? D.stock.filter(k => k.qty <= k.min) : [];
   const tile = (t, i) => { const s = sessOf(t), mine = s ? orders.filter(o => o.sessionId === s.id) : [], items = mine.flatMap(o => o.items);
     const cs = calls.filter(c => c.tableNo === t), wait = mine.some(late), cook = mine.filter(o => o.status === 'new' || o.status === 'cooking').length, ready = mine.filter(o => o.status === 'ready').length;
-    const g = s ? Math.min(4, Math.max(2, s.guests || 2)) : 0;
+    const g = s ? (s.guests ? Math.min(6, s.guests) : 2) : 0;
     return `<button class="mt ${s ? 'busy' : ''} ${wait ? 'late' : ''} ${cs.length ? 'ring' : ''}" data-mtable="${esc(t)}" aria-label="${TABLE_WORD} ${esc(t)}">
       <span class="mt-name">${esc(t)}</span>
       ${cs.length ? `<span class="bubble" aria-hidden="true">${cs.some(c => c.type === 'bill') ? '🧾' : '🙋'}</span>` : ''}
@@ -4486,6 +4502,48 @@ function renderMap(){
   <p class="note">แตะโต๊ะเพื่อดูบิล/คิดเงิน · แตะครัว เคาน์เตอร์ หรือตู้แช่เพื่อไปหน้านั้น · อัปเดตเองทุกไม่กี่วินาที</p>`;
   if (el._html === html) return;   // ไม่วาดซ้ำถ้าไม่มีอะไรเปลี่ยน ตัวละครจะเดินต่อเนื่องไม่สะดุด
   el._html = html; el.innerHTML = html;
+}
+
+
+/* ---------- v30: จำนวนลูกค้า + สีไม้ ---------- */
+let guestPick = 0;
+function guestRow(s){
+  if (!db.setGuests || !s || myRole === 'kitchen') return '';
+  const g = s.guests || 0, items = orders.filter(o => o.sessionId === s.id).flatMap(o => o.items), per = g ? Math.max(0, sum(items) - discOf(s)) / g : 0;
+  return `<div class="grow"><span>👥 ${g ? `<b>${g}</b> คน${per ? ` · เฉลี่ย <b class="num">${baht(per)}</b>/คน` : ''}` : 'ยังไม่ได้ใส่จำนวนลูกค้า'}</span>
+    <span class="gstep"><button class="ghost" data-gset="${esc(s.id)}" data-n="${Math.max(0, g - 1)}" aria-label="ลดจำนวนคน">−</button><button class="ghost" data-gset="${esc(s.id)}" data-n="${g + 1}" aria-label="เพิ่มจำนวนคน">+</button></span></div>`;
+}
+const STICKS = [['g', 'ผัก', '#3a9d5d'], ['r', 'ไม้แดง', '#d8352a'], ['b', 'ไม้น้ำเงิน', '#2f6fd0'], ['k', 'ไม้ดำ', '#2a2a2a']];
+const stickOf = c => { const m = menu.find(x => x.id === c.id); return (m && m.stick) || c.stick || ''; };
+const stk = k => k ? `<i class="stk stk-${k}" title="${(STICKS.find(x => x[0] === k) || [])[1] || ''}"></i>` : '';
+// ราคาตามสีไม้จากเมนูจริง เช่น ไม้แดง ฿18 หรือ ฿18–20
+function stickLegend(){
+  const rows = STICKS.map(([k, t]) => { const ps = menu.filter(m => m.stick === k && m.available !== false).map(m => m.price); if (!ps.length) return '';
+    const lo = Math.min(...ps), hi = Math.max(...ps); return `<span>${stk(k)}${t} <b class="num">฿${lo}${hi !== lo ? '–' + hi : ''}</b></span>`; }).filter(Boolean);
+  return rows.length ? `<div class="legend"><span style="color:var(--muted)">ราคาตามสีไม้</span>${rows.join('')}</div>` : '';
+}
+const stk2 = { g: 12, r: 20, b: 29 };
+function sheetSticks(){
+  const food = menu.filter(m => unitOf(m) === 'ไม้' && !BAR_RE.test(m.category || ''));
+  const tierOf = p => p <= stk2.g ? 'g' : p <= stk2.r ? 'r' : p <= stk2.b ? 'b' : 'k';
+  const cnt = k => food.filter(m => tierOf(m.price) === k).length;
+  openSheet(head('🎨 ตั้งสีไม้ตามราคา') + `<div class="form" id="stk-form">
+    <p class="note" style="margin:0">ตั้งเพดานราคาของแต่ละสี ระบบจะใส่สีให้ทุกเมนูปิ้ง (ไม่รวมเครื่องดื่ม) แก้ทีละเมนูได้ภายหลังในหน้าแก้ไขเมนู</p>
+    <div class="stkrow">${stk('g')}<span>ผัก ราคาไม่เกิน</span><input type="number" inputmode="numeric" id="stk-g" value="${stk2.g}"><b class="num">${cnt('g')} เมนู</b></div>
+    <div class="stkrow">${stk('r')}<span>ไม้แดง ไม่เกิน</span><input type="number" inputmode="numeric" id="stk-r" value="${stk2.r}"><b class="num">${cnt('r')} เมนู</b></div>
+    <div class="stkrow">${stk('b')}<span>ไม้น้ำเงิน ไม่เกิน</span><input type="number" inputmode="numeric" id="stk-b" value="${stk2.b}"><b class="num">${cnt('b')} เมนู</b></div>
+    <div class="stkrow">${stk('k')}<span>ไม้ดำ แพงกว่านั้น</span><span></span><b class="num">${cnt('k')} เมนู</b></div>
+    <div class="err" id="mf-err"></div></div>
+    <button class="ghost" style="width:100%;margin:0 0 8px" data-stk-preview>คำนวณใหม่</button>
+    <button class="primary" style="margin-top:0" data-stk-save>ใส่สีไม้ให้ ${food.length} เมนู</button>`);
+}
+function stkRead(){ ['g','r','b'].forEach(k => { const v = +$('stk-' + k).value; if (v > 0) stk2[k] = v; }); }
+async function saveSticks(b){
+  stkRead(); const food = menu.filter(m => unitOf(m) === 'ไม้' && !BAR_RE.test(m.category || ''));
+  const tierOf = p => p <= stk2.g ? 'g' : p <= stk2.r ? 'r' : p <= stk2.b ? 'b' : 'k';
+  b.disabled = true;
+  try { const r = await db.setSticks(food.map(m => ({ id: m.id, stick: tierOf(m.price) }))); toast(`ใส่สีไม้แล้ว ${r.changed} เมนู`); closeSheet(); await menuAction(async () => {}, ''); }
+  catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v30 ก่อน' : 'บันทึกไม่สำเร็จ'; }
 }
 
 let lastReceipt = '';
@@ -4528,9 +4586,9 @@ function sheetTable(t, mode){   // mode: 'qr' | 'bill' | 'payqr' | 'pay'
       : mode === 'payqr' && s ? payCard(netOf(mine.flatMap(o => o.items), s)) + `<p class="note" style="text-align:center">ระบบไม่ได้เชื่อมกับธนาคาร จึงไม่รู้เองว่าเงินเข้า พอเห็นแจ้งเตือนเงินเข้าแล้วกดปุ่มด้านล่าง</p>
         <button class="primary" data-method="transfer" data-t="${esc(t)}">เงินเข้าแล้ว ไปปิดบิล</button>
         <button class="ghost" style="width:100%;margin-top:8px" data-tmode="bill" data-t="${esc(t)}">กลับไปที่บิล</button>`
-      : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>${db.openTable && requireOpen ? `<button class="primary" data-open-table="${esc(t)}">🔓 เปิดโต๊ะให้ลูกค้าสั่ง</button><p class="note">ลูกค้าสแกน QR ที่โต๊ะแล้วสั่งได้ทันที ปิดบิลแล้วโต๊ะจะปิดเองจนกว่าจะเปิดให้ลูกค้าชุดถัดไป</p>` : ''}`
+      : !s ? `<p class="empty">โต๊ะว่าง ยังไม่มีออเดอร์</p>${db.openTable && requireOpen ? `<p style="margin:10px 0 6px"><b>ลูกค้ากี่คน</b></p><div class="gpick">${[1,2,3,4,5,6,7,8].map(n => `<button data-gpick="${n}" aria-pressed="${guestPick === n}">${n}</button>`).join('')}</div><button class="primary" data-open-table="${esc(t)}">🔓 เปิดโต๊ะ${guestPick ? ` (${guestPick} คน)` : ''} ให้ลูกค้าสั่ง</button><p class="note">ลูกค้าสแกน QR ที่โต๊ะแล้วสั่งได้ทันที ปิดบิลแล้วโต๊ะจะปิดเองจนกว่าจะเปิดให้ลูกค้าชุดถัดไป</p>` : ''}`
       : mode === 'pay' ? memberRow(s) + payStep(t, mine)
-      : memberRow(s) + (canEditBill() && mine.length ? `<div class="editrow"><button class="ghost" data-bill-edit="${esc(t)}" aria-pressed="${billEdit}">✏️ ${billEdit ? 'เสร็จ' : 'แก้รายการ'}</button><button class="ghost" data-disc="${esc(t)}">🏷️ ส่วนลด${discOf(s) ? ` −${baht(discOf(s))}` : ''}</button></div>` : '') + billRows(mine, s, billEdit && canEditBill()) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
+      : guestRow(s) + memberRow(s) + (canEditBill() && mine.length ? `<div class="editrow"><button class="ghost" data-bill-edit="${esc(t)}" aria-pressed="${billEdit}">✏️ ${billEdit ? 'เสร็จ' : 'แก้รายการ'}</button><button class="ghost" data-disc="${esc(t)}">🏷️ ส่วนลด${discOf(s) ? ` −${baht(discOf(s))}` : ''}</button></div>` : '') + billRows(mine, s, billEdit && canEditBill()) + (pending ? `<p class="note">ยังมี ${pending} รอบที่ยังเสิร์ฟไม่ครบ</p>` : '') +
         (mine.length ? `<button class="ghost" style="width:100%;margin-top:14px" data-print-bill="${esc(t)}">🖨️ พิมพ์ใบแจ้งยอด</button>` : '') +
         (mine.length && ppTarget() ? `<button class="ghost" style="width:100%;margin-top:8px" data-tmode="payqr" data-t="${esc(t)}">แสดง QR รับเงิน</button>` : '') +
         `<button class="primary" data-tmode="pay" data-t="${esc(t)}">${mine.length ? 'คิดเงิน' : 'ปิดโต๊ะ (ไม่มีออเดอร์)'}</button>`),
@@ -4543,9 +4601,9 @@ const isBarItem = c => /^DR/i.test(c.code || '') || BAR_RE.test((menu.find(m => 
 const isBarOrder = o => o.items.length > 0 && o.items.every(isBarItem);
 const LATE_MIN = 15;   // รอเกินกี่นาทีถึงขึ้นป้าย "รอนาน"
 const unitOf = c => !c.code || /^(DR|SP)/i.test(c.code) ? 'ที่' : 'ไม้';
-const kLine = c => `<li><span>${c.code?`<small>${esc(c.code)}</small>`:''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span><b class="num">${c.qty} ${unitOf(c)}</b></li>`;
+const kLine = c => `<li><span>${stk(stickOf(c))}${c.code?`<small>${esc(c.code)}</small>`:''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}</span><b class="num">${c.qty} ${unitOf(c)}</b></li>`;
 const oNo = o => o.no ? `<span class="ono num">#${esc(o.no)}</span>` : '';
-const itemTxt = c => `<b class="num">${c.qty}×</b> ${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}`;
+const itemTxt = c => `${stk(stickOf(c))}<b class="num">${c.qty}×</b> ${c.code?esc(c.code)+' ':''}${esc(c.name)}${c.opt?` <em>${esc(c.opt)}</em>`:''}`;
 const tickBtn = (attr, id, i, c, on) => `<li><button class="serve ${on?'on':''}" data-${attr}="${esc(id)}" data-i="${i}"><span class="box">${on?'✓':''}</span><span>${itemTxt(c)}</span></button></li>`;
 const openDone = new Set();   // ตั๋วที่กางดูรายการที่ติ๊กแล้ว
 // รายการที่ติ๊กแล้วยุบลงไปเป็นแถวเดียวด้านล่าง แตะเพื่อกางดู/ยกเลิกติ๊ก
@@ -4642,6 +4700,12 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'map' && isAdmin) loadDaily(); if (view === 'stock') loadStock(); }
+  else if (d.gset) { const s = sessions.find(x => x.id === d.gset); if (!s) return; const n = Math.max(0, +d.n); s.guests = n; sheetTable(s.tableNo, 'bill');
+    try { await db.setGuests(s.id, n); } catch(e){ toast(e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v30 ก่อน' : 'บันทึกจำนวนคนไม่สำเร็จ'); refresh(); } }
+  else if ('sticks' in d) sheetSticks();
+  else if ('stkPreview' in d) { stkRead(); sheetSticks(); }
+  else if ('stkSave' in d) saveSticks(b);
+  else if ('mfStick' in d) { $('mf-stick').value = d.mfStick; document.querySelectorAll('[data-mf-stick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mfStick === d.mfStick)); }
   else if (d.mtable) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.mtable, 'bill'); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
   else if ('receipts' in d) sheetReceipts();
@@ -4668,7 +4732,7 @@ document.addEventListener('click', async e => {
   else if (d.menuEdit) sheetMenuForm(d.menuEdit);
   else if (d.mfCat) { $('mf-cat').value = d.mfCat; }
   else if ('menuSave' in d) {
-    const it = { id: d.menuSave, name: $('mf-name').value.trim(), price: Number($('mf-price').value), code: $('mf-code').value.trim(), category: $('mf-cat').value.trim(), spicy: $('mf-spicy').checked, recommend: $('mf-rec').checked, stockId: $('mf-stock') ? $('mf-stock').value : '', stockUse: $('mf-use') ? Number($('mf-use').value) || 1 : 0 };
+    const it = { id: d.menuSave, name: $('mf-name').value.trim(), price: Number($('mf-price').value), code: $('mf-code').value.trim(), category: $('mf-cat').value.trim(), stick: $('mf-stick') ? $('mf-stick').value : '', spicy: $('mf-spicy').checked, recommend: $('mf-rec').checked, stockId: $('mf-stock') ? $('mf-stock').value : '', stockUse: $('mf-use') ? Number($('mf-use').value) || 1 : 0 };
     if (!it.name) return $('mf-err').textContent = 'กรอกชื่อเมนู';
     if ($('mf-price').value === '' || !(it.price >= 0)) return $('mf-err').textContent = 'กรอกราคาเป็นตัวเลข';
     if (!it.category) return $('mf-err').textContent = 'เลือกหรือพิมพ์หมวด';
@@ -4720,11 +4784,12 @@ document.addEventListener('click', async e => {
       if (cart.length && e.message !== 'sold_out') sheetCart();
     }
   }
-  else if (d.openTable) { b.disabled = true; if (await act(() => db.openTable(d.openTable), `เปิด${TABLE_WORD} ${d.openTable} แล้ว ลูกค้าสั่งได้`)) closeSheet(); else b.disabled = false; }
+  else if (d.gpick) { guestPick = +d.gpick; document.querySelectorAll('[data-gpick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.gpick === d.gpick)); const ob = document.querySelector('[data-open-table]'); if (ob) ob.textContent = `🔓 เปิดโต๊ะ (${guestPick} คน) ให้ลูกค้าสั่ง`; }
+  else if (d.openTable) { b.disabled = true; const gp = guestPick; guestPick = 0; if (await act(() => db.openTable(d.openTable, gp), `เปิด${TABLE_WORD} ${d.openTable} แล้ว ลูกค้าสั่งได้`)) closeSheet(); else b.disabled = false; }
   else if (d.newKey) { if (!d.armed) { b.dataset.armed = '1'; b.textContent = 'กดอีกครั้งเพื่อยืนยัน QR เดิมของโต๊ะนี้จะใช้ไม่ได้ทันที'; return; }
     b.disabled = true; if (await act(() => db.newTableKey(d.newKey), 'เปลี่ยนรหัสแล้ว พิมพ์ QR ใหม่ไปติดโต๊ะ')) sheetTable(d.newKey, 'qr'); }
   else if ('tableMode' in d) { b.disabled = true; await act(() => db.tableMode(!requireOpen), !requireOpen ? 'เปิดแล้ว: ต้องเปิดโต๊ะก่อนลูกค้าสั่ง' : 'ปิดแล้ว: ลูกค้าสแกนแล้วสั่งได้เลย'); b.disabled = false; }
-  else if (d.table) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.table, 'bill'); }
+  else if (d.table) { guestPick = 0; payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.table, 'bill'); }
   else if (d.tmode) sheetTable(d.t, d.tmode);
   else if (d.billEdit) { billEdit = !billEdit; sheetTable(d.billEdit, 'bill'); }
   else if (d.void) { const s = sessions.find(x => orders.some(o => o.id === d.void && o.sessionId === x.id)); if (s) sheetVoid(s.tableNo, d.void, +d.i); }
