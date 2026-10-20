@@ -304,7 +304,7 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 @media (prefers-reduced-motion:reduce){.walker,.walker .spr,.bob,.cook.busy,.smoke,.bubble{animation:none}}
 @media (prefers-reduced-motion:reduce){.mt.late,.grill i{animation:none}}
 .stk{display:inline-block;width:6px;height:18px;border-radius:3px;margin-right:6px;vertical-align:-3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
-.stk-g{background:#3a9d5d} .stk-r{background:#d8352a} .stk-b{background:#2f6fd0} .stk-k{background:#2a2a2a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.stk-y{background:#e2b007} .stk-o{background:linear-gradient(135deg,#d9a441,#9a6a1c)} .stk-g{background:#3a9d5d} .stk-r{background:#d8352a} .stk-b{background:#2f6fd0} .stk-k{background:#2a2a2a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;padding:8px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13.5px} .legend:empty{display:none}
 .gpick{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:10px} .gpick button{padding:10px 0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-weight:600}
 .gpick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -340,6 +340,18 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .clockstrip.board{background:var(--cook-soft);border-color:var(--cook)} .bstxt{flex:1;min-width:0;text-align:left;background:none;border:0;font:inherit;color:var(--fg);padding:0} .clockstrip.board .ghost{width:auto;margin:0;padding:4px 10px}
 .mt-note{position:absolute;top:2px;right:6px;font-size:13px}
 .boardroom{--a:var(--fl1);--b:var(--fl2);display:flex;flex-direction:column;gap:6px} .bmsg{background:var(--surface);border-radius:10px;padding:6px 10px;font-size:13.5px} .bmsg small{color:var(--muted)}
+.kshift{margin:6px 0 10px} .kshift .primary{margin:0} .kon{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:10px;background:var(--ok-soft);border:1px solid var(--ok);font-size:14px} .kon .ghost{width:auto;margin:0}
+.okit{font-family:inherit;color:#000;background:#fff;padding:8mm;font-size:10pt} .okit h1{font-size:15pt;margin:0 0 3mm} .okit.pb{page-break-before:always}
+.okhead{display:flex;gap:6mm;flex-wrap:wrap;margin-bottom:3mm;font-size:11pt}
+.okcols{columns:2;column-gap:6mm} .okcat{break-inside:avoid;margin-bottom:3mm} .okcat h3{font-size:11pt;margin:0 0 1mm;border-bottom:.4mm solid #000}
+.okrow{display:grid;grid-template-columns:auto 1fr auto 12mm;gap:2mm;align-items:center;padding:.8mm 0;border-bottom:.2mm dotted #999} .okbox{display:block;height:6mm;border:.4mm solid #000;border-radius:1mm}
+.okfoot{display:grid;grid-template-columns:2fr 1fr;gap:6mm;margin-top:4mm;font-size:11pt} .okline{border-bottom:.3mm solid #000;height:7mm}
+.okw{border-bottom:.3mm solid #000;height:5mm}
+.kchk{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;font-weight:500} .kchk input{width:20px;height:20px;margin:0;flex:none} .kchk small{margin-left:auto;color:var(--muted);font-weight:400}
+.kdet{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px} .kdet>input{width:20px;height:20px;margin:2px 0 0;flex:none} .kdet details{flex:1;min-width:0} .kdet summary{list-style:none;cursor:pointer;display:flex;gap:8px} .kdet summary small{margin-left:auto;color:var(--muted)} .kdet summary::-webkit-details-marker{display:none} .kdet details[open] summary{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
+.kitems{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px} .kitems .kchk{font-weight:400;font-size:14px}
+.kxrow{display:grid;grid-template-columns:1fr 72px 110px auto;gap:6px;align-items:center} .kxrow select,.kxrow input{margin:0;min-width:0}
+.okstep li{margin:2mm 0;font-size:11pt} .okqr{display:flex;gap:6mm;align-items:center;margin-top:6mm;font-size:12pt} .okqr svg{width:55mm;height:55mm}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -506,6 +518,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 .rc-preview{border:1.5px solid var(--line);border-radius:14px;padding:6px 16px;margin:10px auto;max-width:300px}
 #print-area .rc{width:var(--rcw);margin:0 auto;padding:0}
 @page{margin:4mm}
+#print-area .okit{width:auto}
 /* ฟอร์มเพิ่ม / แก้ไขเมนู */
 .form{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .form label{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted)}
@@ -602,7 +615,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 
 <main id="v-tables" class="wrap wide" hidden>
   <div class="row"><strong style="flex:1;min-width:0">แตะโต๊ะเพื่อดูบิล คิดเงิน หรือดู QR ของโต๊ะนั้น</strong>
-    <button class="ghost" data-view="qr">QR ทุกโต๊ะ</button><button class="ghost" data-cash id="cash-btn" hidden>💵 ปิดร้าน นับเงิน</button></div>
+    <button class="ghost" data-view="qr">QR ทุกโต๊ะ</button><button class="ghost" data-cash id="cash-btn" hidden>💵 ปิดร้าน นับเงิน</button><button class="ghost" data-offline-kit>📄 ชุดสำรองเน็ตล่ม</button></div>
   <div class="tables" id="tables"></div>
 </main>
 
@@ -618,6 +631,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
 
 <main id="v-kitchen" class="wrap wide" hidden>
   <div class="khead"><strong id="kit-count"></strong><span class="pill" id="kit-pill"></span></div>
+  <div class="kshift" id="kshift"><button class="primary" data-kshift>🔔 เริ่มกะครัว (เปิดเสียง + จอไม่ดับ)</button></div>
   <div class="ksub" id="ksub"></div>
   <div class="tickets" id="tickets"></div>
 </main>
@@ -3047,6 +3061,8 @@ function makeLocalDb(){
     async loadSettings(){ return { promptpayId: DEMO_PROMPTPAY.id, promptpayName: DEMO_PROMPTPAY.name }; },
     async report(from, to){ const d = read(); let fx = null; try { fx = JSON.parse(localStorage.getItem('mala-fixed')); } catch(e){} return { ...aggregate(d.orders, from, to, d.sessions), fixed: fx || [{name:'ค่าเช่า', amount:10000}, {name:'ค่าไฟ', amount:0}, {name:'ค่าน้ำ', amount:0}, {name:'ค่าน้ำแข็ง', amount:0}, {name:'ค่าอื่นๆ', amount:0}] }; },
     async setFixed(items){ try { localStorage.setItem('mala-fixed', JSON.stringify(items)); } catch(e){} return items; },
+    async kitCfg(){ try { return JSON.parse(localStorage.getItem('mala-kit') || 'null'); } catch(e){ return null; } },
+    async setKitCfg(kit){ try { localStorage.setItem('mala-kit', JSON.stringify(kit)); } catch(e){} return kit; },
     async receipts(from, to){ const d = read(), bills = d.sessions.filter(s => s.paid && s.closedAt && ymd(new Date(s.closedAt)) >= from && ymd(new Date(s.closedAt)) <= to)
         .map(s => ({ id: s.id, tableNo: s.tableNo, closedAt: s.closedAt, method: s.payMethod || s.method || '', by: s.closedBy || '', total: s.total || 0, items: d.orders.filter(o => o.sessionId === s.id).flatMap(o => o.items) }))
         .sort((a, b) => a.closedAt < b.closedAt ? 1 : -1);
@@ -3137,6 +3153,7 @@ function makeGasDb(url){
     async cashClose(f){ return await call('cashClose', f); },
     async cashHistory(){ return (await call('cashHistory', {})).list; },
     async backupNow(){ return (await call('backupNow', {})).backup; },
+    async archiveNow(){ return (await call('archiveNow', {})).moved; },
     async backups(){ return await call('backups', {}); },
     async wipeTest(f){ return await call('wipeTest', f); },
     async memberSettings(f){ await call('memberSettings', f); },
@@ -3148,6 +3165,8 @@ function makeGasDb(url){
     async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
     async setFixed(items){ return (await call('setFixed', {items})).items; },
+    async kitCfg(){ return (await call('kitCfg', {})).kit; },
+    async setKitCfg(kit){ return (await call('setKitCfg', {kit})).kit; },
     async setGoals(day, month){ await call('setGoals', {day, month}); },
     async checkSlip(id, dataUrl, total){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       return (await call('checkSlip', {sessionId: id, total, slipMime: m ? m[1] : '', slipData: m ? m[2] : ''})).result; },
@@ -3162,11 +3181,12 @@ function makeGasDb(url){
     async checkExpense(id){ await call('checkExpense', {id}); },
     async deleteExpense(id){ await call('deleteExpense', {id}); },
     async readSlip(dataUrl){ const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || ''); return await call('readSlip', {slipMime: m ? m[1] : '', slipData: m ? m[2] : ''}); },
-    async slipKey(key){ return (await call('slipKey', key === undefined ? {} : {key})).has; },
+    async slipKey(key){ const r = await call('slipKey', key === undefined ? {} : {key}); slipCfg.used = r.used; slipCfg.usedPrev = r.usedPrev; return r.has; },
     async setMenuImage(id, dataUrl){   // dataUrl = 'data:image/jpeg;base64,....' หรือ '' เพื่อลบรูป
       const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl || '');
       await call('setMenuImage', {id, mime: m ? m[1] : '', data: m ? m[2] : ''}); },
-    subscribe(cb){ setInterval(() => { if (!tbl || !document.hidden) cb(); }, tbl ? 15000 : 5000); }   // หน้าพนักงานถามต่อแม้แท็บอยู่ข้างหลัง เพื่อให้เสียงเตือนยังดัง   // Apps Script ไม่มี realtime จึงถามซ้ำเป็นช่วง
+    // v34: หน้าพนักงานที่ไม่ได้เปิดดูอยู่ ถามทุก 10 วินาทีแทน 5 (ยังมีเสียงเตือน) ลดภาระเซิร์ฟเวอร์ช่วงพีค
+    subscribe(cb){ let last = 0; setInterval(() => { const gap = tbl ? 15000 : document.hidden ? 10000 : 5000; if (tbl && document.hidden) return; if (Date.now() - last >= gap - 200) { last = Date.now(); cb(); } }, 1000); }   // หน้าพนักงานถามต่อแม้แท็บอยู่ข้างหลัง เพื่อให้เสียงเตือนยังดัง   // Apps Script ไม่มี realtime จึงถามซ้ำเป็นช่วง
   };
 }
 const db = GAS_URL ? makeGasDb(GAS_URL) : makeLocalDb();
@@ -3563,7 +3583,7 @@ async function saveSlipKey(key){
 }
 function slipCfgPanel(){
   const st = slipCfg.state; if (st === 'demo' || st === '' || !isOwner) return '';
-  return `<div class="panel noprint"><h2>ตรวจสลิปอัตโนมัติ (Thunder)</h2>
+  return `<div class="panel noprint"><h2>ตรวจสลิปอัตโนมัติ (Thunder)</h2>${slipCfg.used !== undefined ? `<p class="note num" style="margin:4px 0 0">📊 ใช้ตรวจสลิปเดือนนี้ <b>${slipCfg.used}</b> ครั้ง · เดือนก่อน ${slipCfg.usedPrev || 0} ครั้ง (นับทั้งสลิปลูกค้าและสลิปรายจ่าย) เทียบกับโควตาแพ็กเกจในหน้าบัญชี Thunder</p>` : ''}
     ${st === 'old' ? `<p class="note">ต้องอัปเดต Code.gs เป็นรุ่น 14 ก่อนจึงจะใช้ได้</p>` :
       `<p class="note">${st === 'on' ? '✅ เปิดใช้อยู่ พนักงานถ่ายสลิปตอนปิดบิลแล้วระบบจะตรวจให้ทันที' : 'ยังไม่ได้ใส่ API key วางจากหน้า Thunder แล้วกดบันทึก'}</p>
       <div class="keybox"><input id="thunder-key" type="password" autocomplete="off" placeholder="${st === 'on' ? 'วาง key ใหม่เพื่อเปลี่ยน' : 'วาง API key ที่นี่'}">
@@ -3720,22 +3740,63 @@ function renderMenuAdmin(){
 }
 /* ---------- เมนูชุด Ravii (จากแผ่นเมนูที่เจ้าของร้านส่งมา ใช้รหัสตามป้ายใต้รูป) ----------
    [หมวด, รหัสไม้, ชื่อ, ราคา] — ปุ่ม "นำเข้าเมนูชุดร้าน" จะปรับเมนูเดิมที่รหัสตรงกันและเพิ่มที่ยังไม่มี กดซ้ำได้ ไม่เพิ่มซ้ำ */
-const MENU_SET = [
-  ['เนื้อสัตว์ (หมู)','O1','สามชั้น',20], ['เนื้อสัตว์ (หมู)','O2','สันคอหมู',20], ['เนื้อสัตว์ (หมู)','O4','สันนอกหมู',20], ['เนื้อสัตว์ (หมู)','O5','คอหมูหมักงา',25],
-  ['เนื้อสัตว์ (หมู)','O6','หมูหมาล่า',25], ['เนื้อสัตว์ (หมู)','O7','หมูพริกไทยดำ',25], ['เนื้อสัตว์ (หมู)','O8','หมูสไลซ์',20], ['เนื้อสัตว์ (หมู)','O9','หมูสามชั้นพันเห็ดเข็มทอง',29],
-  ['เนื้อสัตว์ (หมู)','O10','หมูสามชั้นพันกระเจี๊ยบ',29], ['เนื้อสัตว์ (หมู)','O11','หมูสามชั้นพันหน่อไม้ฝรั่ง',29], ['เนื้อสัตว์ (หมู)','O12','หมูสามชั้นพันพริกหยวก',29], ['เนื้อสัตว์ (หมู)','O13','หมูสามชั้นพันข้าวโพดอ่อน',29],
-  ['เนื้อสัตว์ (วัว)','Y1','สันนอก สับปะรด',25], ['เนื้อสัตว์ (วัว)','Y2','สันคอวัว',29], ['เนื้อสัตว์ (วัว)','Y3','เนื้อโคขุน',35], ['เนื้อสัตว์ (วัว)','Y4','เอ็นข้อไก่',20],
-  ['เนื้อสัตว์ (วัว)','Y5','ลิ้นวัว',35], ['เนื้อสัตว์ (วัว)','Y6','เนื้อสไลซ์พริกไทยดำ',35],
-  ['อาหารทะเล','O3','กุ้งขาว',25], ['อาหารทะเล','S1','ปลาหมึก',29], ['อาหารทะเล','S2','ปลาดอลลี่',25], ['อาหารทะเล','S3','หอยเชลล์',29], ['อาหารทะเล','S4','กุ้งแม่น้ำ',35], ['อาหารทะเล','S5','หมึกสาย',35],
-  ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU1','ไส้กรอกไก่',18], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU2','ไส้กรอกชีส',25], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU3','เต้าหู้ปลา',18], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU4','ปูอัด',18],
-  ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU5','ลูกชิ้นหมู',15], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU6','ลูกชิ้นเนื้อ',18], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU7','เต้าหู้ชีส',20], ['ลูกชิ้น · ไส้กรอก · เต้าหู้','PU8','หมูยอ',18],
-  ['ผัก','R2','กระเทียม',15], ['ผัก','R3','กระเจี๊ยบ',15], ['ผัก','R4','พริกหยวก',15], ['ผัก','R5','หอมหัวใหญ่',15], ['ผัก','R6','มะเขือเทศ',15], ['ผัก','R7','ข้าวโพดอ่อน',15],
-  ['ผัก','R8','บรอกโคลี',15], ['ผัก','R9','เห็ดออรินจิ',15], ['ผัก','R10','เห็ดเข็มทอง',15], ['ผัก','R11','เห็ดชิเมจิ',15], ['ผัก','R12','หน่อไม้ฝรั่ง',20], ['ผัก','R13','ข้าวโพดหวาน',29],
-  ['ข้าว · เส้น · ทานเล่น','W1','ข้าวโพดข้าวเหนียว',29], ['ข้าว · เส้น · ทานเล่น','W2','ข้าวโพดหวาน',29], ['ข้าว · เส้น · ทานเล่น','W3','ข้าวปั้นย่าง',20],
-  ['ข้าว · เส้น · ทานเล่น','W4','เส้นอุด้ง',20], ['ข้าว · เส้น · ทานเล่น','W5','เส้นบะหมี่',20], ['ข้าว · เส้น · ทานเล่น','W6','วุ้นเส้น',20],
-  ['เครื่องดื่ม','DR1','น้ำเปล่า',20], ['เครื่องดื่ม','DR2','น้ำแข็งเปล่า',2], ['เครื่องดื่ม','DR3','น้ำอัดลม',20], ['เครื่องดื่ม','DR4','ชาจีน',20],
-  ['เครื่องดื่ม','DR5','ชามะนาว',25], ['เครื่องดื่ม','DR6','เบียร์',100], ['เครื่องดื่ม','DR7','จินโร โซจู',249],
-  ['เมนูพิเศษ','SP1','พริกสกรู กระทะร้อน',129], ['เมนูพิเศษ','SP2','ซุปมิโซะ',20], ['เมนูพิเศษ','SP3','ไข่ตุ๋น',25], ['เมนูพิเศษ','SP4','เฟรนช์ฟรายส์',39]
+const MENU_SET = [   // v36: ราคาใหม่ (ร้านนั่งกินดื่ม วัยทำงาน/นักศึกษา) [หมวด, รหัส, ชื่อ, ราคา, สีไม้]
+  ["เนื้อสัตว์ (หมู)", "O1", "สามชั้น", 22, "b"],
+  ["เนื้อสัตว์ (หมู)", "O2", "สันคอหมู", 22, "b"],
+  ["เนื้อสัตว์ (หมู)", "O4", "สันนอกหมู", 22, "b"],
+  ["เนื้อสัตว์ (หมู)", "O8", "หมูสไลซ์", 22, "b"],
+  ["เนื้อสัตว์ (หมู)", "O6", "หมูหมักหม่าล่า", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O7", "หมูพริกไทยดำ", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O9", "หมูสามชั้นพันเห็ดเข็มทอง", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O10", "หมูสามชั้นพันกระเจี๊ยบ", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O11", "หมูสามชั้นพันหน่อไม้ฝรั่ง", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O12", "หมูสามชั้นพันพริกหยวก", 29, "y"],
+  ["เนื้อสัตว์ (หมู)", "O13", "หมูสามชั้นพันข้าวโพดอ่อน", 29, "y"],
+  ["เนื้อสัตว์ (ไก่)", "Y4", "เอ็นข้อไก่", 22, "b"],
+  ["เนื้อสัตว์ (วัว)", "Y1", "สันนอก สับปะรด", 29, "y"],
+  ["เนื้อสัตว์ (วัว)", "Y2", "สันคอวัว", 39, "r"],
+  ["เนื้อสัตว์ (วัว)", "Y6", "เนื้อสไลซ์พริกไทยดำ", 39, "r"],
+  ["เนื้อสัตว์ (วัว)", "Y3", "เนื้อโคขุน", 59, "o"],
+  ["เนื้อสัตว์ (วัว)", "Y5", "ลิ้นวัว", 59, "o"],
+  ["อาหารทะเล", "S1", "ปลาหมึก", 29, "y"],
+  ["อาหารทะเล", "S2", "ปลาดอลลี่", 29, "y"],
+  ["อาหารทะเล", "O3", "กุ้งขาว", 39, "r"],
+  ["อาหารทะเล", "S3", "หอยเชลล์", 39, "r"],
+  ["อาหารทะเล", "S5", "หมึกสาย", 39, "r"],
+  ["อาหารทะเล", "S4", "กุ้งแม่น้ำ (ตัว)", 119, ""],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU1", "ไส้กรอกไก่", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU3", "เต้าหู้ปลา", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU4", "ปูอัด", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU5", "ลูกชิ้นหมู", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU6", "ลูกชิ้นเนื้อ", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU8", "หมูยอ", 15, "g"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU2", "ไส้กรอกชีส", 29, "y"],
+  ["ลูกชิ้น · ไส้กรอก · เต้าหู้", "PU7", "เต้าหู้ชีส", 29, "y"],
+  ["ผัก", "R2", "กระเทียม", 15, "g"],
+  ["ผัก", "R3", "กระเจี๊ยบ", 15, "g"],
+  ["ผัก", "R4", "พริกหยวก", 15, "g"],
+  ["ผัก", "R5", "หอมหัวใหญ่", 15, "g"],
+  ["ผัก", "R6", "มะเขือเทศ", 15, "g"],
+  ["ผัก", "R7", "ข้าวโพดอ่อน", 15, "g"],
+  ["ผัก", "R8", "บรอกโคลี", 15, "g"],
+  ["ผัก", "R9", "เห็ดออรินจิ", 15, "g"],
+  ["ผัก", "R10", "เห็ดเข็มทอง", 15, "g"],
+  ["ผัก", "R11", "เห็ดชิเมจิ", 15, "g"],
+  ["ผัก", "R12", "หน่อไม้ฝรั่ง", 29, "y"],
+  ["ข้าว · ทานเล่น", "W1", "ข้าวโพดข้าวเหนียว", 15, "g"],
+  ["ข้าว · ทานเล่น", "W2", "ข้าวโพดหวาน", 15, "g"],
+  ["ข้าว · ทานเล่น", "W3", "ข้าวปั้นย่าง", 29, "y"],
+  ["เครื่องดื่ม", "DR1", "น้ำเปล่า", 15, ""],
+  ["เครื่องดื่ม", "DR2", "น้ำแข็งเปล่า", 5, ""],
+  ["เครื่องดื่ม", "DR3", "น้ำอัดลม", 25, ""],
+  ["เครื่องดื่ม", "DR4", "ชาจีน (ต่อคน)", 15, ""],
+  ["เครื่องดื่ม", "DR5", "ชามะนาว", 39, ""],
+  ["เครื่องดื่ม", "DR6", "เบียร์ ขวดใหญ่", 95, ""],
+  ["เครื่องดื่ม", "DR7", "จินโร โซจู", 169, ""],
+  ["เมนูพิเศษ", "SP1", "พริกสกรู กระทะร้อน", 129, ""],
+  ["เมนูพิเศษ", "SP2", "ซุปมิโซะ", 29, ""],
+  ["เมนูพิเศษ", "SP3", "ไข่ตุ๋น", 39, ""],
+  ["เมนูพิเศษ", "SP4", "เฟรนช์ฟรายส์", 59, ""]
 ];
 const SET_CATS = [...new Set(MENU_SET.map(r => r[0]))];
 // เรียงเมนู: ตามลำดับหมวดในชุด Ravii แล้วตามรหัสไม้ (O1, O2, O4 … O13) เมนูนอกชุดอยู่ท้าย
@@ -3748,11 +3809,11 @@ function sortMenu(list){
 const fetchMenu = async () => sortMenu(await db.loadMenu());
 function importPlan(){
   const up = v => String(v || '').trim().toUpperCase(), used = new Set(), upd = [], add = [];
-  MENU_SET.forEach(([category, code, name, price]) => {
+  MENU_SET.forEach(([category, code, name, price, stick = '']) => {
     const m = menu.find(x => !used.has(x.id) && up(x.code) === code) || menu.find(x => !used.has(x.id) && !x.code && x.name === name);
-    if (!m) return add.push({ category, code, name, price });
+    if (!m) return add.push({ category, code, name, price, stick });
     used.add(m.id);
-    if (m.name !== name || m.price !== price || m.category !== category || m.code !== code) upd.push({ m, to: { category, code, name, price } });
+    if (m.name !== name || m.price !== price || m.category !== category || m.code !== code || (m.stick || '') !== stick) upd.push({ m, to: { category, code, name, price, stick } });
   });
   return { upd, add, extra: menu.filter(x => !used.has(x.id)) };
 }
@@ -3779,7 +3840,7 @@ async function runImport(btn){
   const tick = () => { const el = $('imp-status'); if (el) el.textContent = `กำลังนำเข้า ${done} / ${total} อย่าปิดหน้านี้`; };
   const one = async it => { try { await db.saveMenu(it); } catch(e){ console.error(e); failed++; stop = importStop(e); } done++; tick(); };
   tick();
-  for (const u of upd) { if (stop) break; await one({ id: u.m.id, ...u.to, spicy: !!u.m.spicy }); }
+  for (const u of upd) { if (stop) break; await one({ id: u.m.id, ...u.to, spicy: !!u.m.spicy, recommend: !!u.m.recommend, stockId: u.m.stockId || '', stockUse: u.m.stockUse || 0 }); }
   for (const a of add) { if (stop) break; await one({ id: '', ...a, spicy: false }); }
   try { menu = await fetchMenu(); } catch(e){ console.error(e); }
   importing = false; renderMenuAdmin();
@@ -3952,7 +4013,7 @@ function ppTarget(){
 function ppPayload(amount){
   const t = ppTarget(); if (!t) return '';
   const f = (id, v) => id + String(v.length).padStart(2, '0') + v;
-  let p = f('00', '01') + f('01', '12') + f('29', f('00', 'A000000677010111') + f(t[0], t[1])) + f('58', 'TH') + f('53', '764') + f('54', amount.toFixed(2)) + '6304';
+  let p = f('00', '01') + f('01', amount ? '12' : '11') + f('29', f('00', 'A000000677010111') + f(t[0], t[1])) + f('58', 'TH') + f('53', '764') + (amount ? f('54', amount.toFixed(2)) : '') + '6304';  // v34: amount 0 = QR คงที่ ลูกค้าพิมพ์ยอดเอง
   let crc = 0xFFFF;                                     // CRC-16/CCITT-FALSE
   for (let i = 0; i < p.length; i++) { crc ^= p.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
   return p + crc.toString(16).toUpperCase().padStart(4, '0');
@@ -4234,10 +4295,11 @@ function renderMembers(){
       <label class="check"><input type="checkbox" id="mc-on" ${c.on ? 'checked' : ''}><span>เปิดระบบสะสมแต้ม</span></label>
       <div class="two"><label>ทุกกี่บาทได้ 1 แต้ม<input id="mc-per" type="number" inputmode="numeric" min="1" value="${c.per}"></label>
         <label>ครบกี่แต้มแลกรางวัล<input id="mc-goal" type="number" inputmode="numeric" min="1" value="${c.goal}"></label></div>
-      <label>ของรางวัล<input id="mc-reward" type="text" maxlength="60" value="${esc(c.reward)}" placeholder="เช่น ฟรี 5 ไม้"></label>
+      <div class="two"><label>ของรางวัล<input id="mc-reward" type="text" maxlength="60" value="${esc(c.reward)}" placeholder="เช่น ฟรี 5 ไม้"></label>
+        <label>มูลค่ารางวัล (ราคาขาย บาท)<input id="mc-val" type="number" inputmode="numeric" min="0" value="${c.value === undefined ? 145 : c.value}"></label></div>
       <div class="two"><label>แต้มต้อนรับสมาชิกใหม่<input id="mc-new" type="number" inputmode="numeric" min="0" value="${c.newBonus}"></label>
         <label>ได้แต้มสูงสุดกี่บิล/วัน<input id="mc-cap" type="number" inputmode="numeric" min="1" value="${c.cap}"></label></div>
-      <p class="note" style="margin:0">ลูกค้าต้องจ่ายครบ ${baht(c.goal * c.per)} จึงแลกรางวัลได้ 1 ครั้ง · ถ้าของรางวัลมีต้นทุน ฿50 เท่ากับคืนลูกค้า ${Math.round(5000 / (c.goal * c.per) * 10) / 10}% ของยอดขาย</p>
+      <p class="note" style="margin:0" id="mc-calc">${rewardCalc(c.per, c.goal, c.value === undefined ? 145 : c.value)}</p>
       <div class="two"><label>ชื่อ WiFi<input id="mc-wn" type="text" maxlength="60" value="${esc(W.name || '')}"></label>
         <label>รหัส WiFi<input id="mc-wp" type="text" maxlength="60" value="${esc(W.pass || '')}"></label></div>
       <label>ลิงก์ Instagram<input id="mc-ig" type="url" placeholder="https://instagram.com/..." value="${esc(L.ig || '')}"></label>
@@ -4248,13 +4310,13 @@ function renderMembers(){
     <button class="primary" style="margin-top:0" data-mc-save>บันทึกการตั้งค่า</button>`);
 }
 async function saveMemberCfg(b){
-  const v = id => $(id).value.trim(), f = { on: $('mc-on').checked, per: +v('mc-per'), goal: +v('mc-goal'), reward: v('mc-reward'), newBonus: +v('mc-new'), cap: +v('mc-cap'),
+  const v = id => $(id).value.trim(), f = { on: $('mc-on').checked, per: +v('mc-per'), goal: +v('mc-goal'), reward: v('mc-reward'), value: +v('mc-val') || 0, newBonus: +v('mc-new'), cap: +v('mc-cap'),
     wifiName: v('mc-wn'), wifiPass: v('mc-wp'), ig: v('mc-ig'), tiktok: v('mc-tt'), line: v('mc-line'), review: v('mc-rv') };
   const bad = ['ig','tiktok','line','review'].find(k => f[k] && !/^https:\/\//i.test(f[k]));
   if (bad) return $('mf-err').textContent = 'ลิงก์ต้องขึ้นต้นด้วย https://';
   if (!(f.per >= 1) || !(f.goal >= 1)) return $('mf-err').textContent = 'ใส่ตัวเลขบาทต่อแต้ม และแต้มที่ใช้แลก ให้มากกว่า 0';
   b.disabled = true;
-  try { await db.memberSettings(f); settings = { ...settings, member: { on: f.on, per: f.per, goal: f.goal, reward: f.reward || 'ฟรี 5 ไม้', newBonus: f.newBonus, cap: f.cap }, links: { ig: f.ig, tiktok: f.tiktok, line: f.line, review: f.review } };
+  try { await db.memberSettings(f); settings = { ...settings, member: { on: f.on, per: f.per, goal: f.goal, value: f.value, reward: f.reward || 'ฟรี 5 ไม้', newBonus: f.newBonus, cap: f.cap }, links: { ig: f.ig, tiktok: f.tiktok, line: f.line, review: f.review } };
     toast('บันทึกการตั้งค่าแต้มแล้ว'); sheetMembers(); }
   catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'forbidden' ? 'เฉพาะแอดมิน' : 'บันทึกไม่สำเร็จ'; }
 }
@@ -4339,6 +4401,8 @@ function renderBackup(){
       <span>${last ? `สำรองล่าสุด ${date(last)} ${time(last)}` : 'ยังไม่เคยสำรอง'}</span>
       ${D.auto ? '' : '<span>เปิดได้ครั้งเดียวจบ: ในหน้า Apps Script เลือกฟังก์ชัน <b>setupBackup</b> แล้วกด Run และกดอนุญาตสิทธิ์</span>'}</div>
     <button class="ghost" style="width:100%;margin-top:10px" data-backup-now>สำรองข้อมูลตอนนี้</button>
+    ${D.rows ? `<p class="note num" style="margin:10px 0 4px">ชีตออเดอร์ตอนนี้ ${D.rows.orders} แถว · บิล ${D.rows.sessions} แถว · เก็บไว้แล้ว ${D.rows.archive} แถว<br>ทุกคืนระบบย้ายบิลที่ปิดเกิน 7 วันไปชีตเก็บ (OrdersArchive) ให้เอง ระบบจะไม่ช้าลงเมื่อเปิดไปนาน ๆ รายงานย้อนหลังยังเห็นครบ</p>
+    <button class="ghost" style="width:100%" data-archive-now>ย้ายบิลเก่าไปชีตเก็บตอนนี้</button>` : ''}
     ${bk.msg ? `<p class="note">${bk.msg}</p>` : ''}
     ${D.list.length ? `<div class="rlist" style="margin-top:10px;max-height:28vh">${D.list.map(f => `<a class="rrow" href="${esc(f.url)}" target="_blank" rel="noopener"><span>${esc(f.name)}</span><small>เปิด ↗</small></a>`).join('')}</div>` : ''}
     <h3 style="margin:20px 0 6px">ล้างข้อมูลซ้อมก่อนเปิดร้านจริง</h3>
@@ -4562,7 +4626,7 @@ function guestRow(s){
   return `<div class="grow"><span>👥 ${g ? `<b>${g}</b> คน${per ? ` · เฉลี่ย <b class="num">${baht(per)}</b>/คน` : ''}` : 'ยังไม่ได้ใส่จำนวนลูกค้า'}</span>
     <span class="gstep"><button class="ghost" data-gset="${esc(s.id)}" data-n="${Math.max(0, g - 1)}" aria-label="ลดจำนวนคน">−</button><button class="ghost" data-gset="${esc(s.id)}" data-n="${g + 1}" aria-label="เพิ่มจำนวนคน">+</button></span></div>`;
 }
-const STICKS = [['g', 'ผัก', '#3a9d5d'], ['r', 'ไม้แดง', '#d8352a'], ['b', 'ไม้น้ำเงิน', '#2f6fd0'], ['k', 'ไม้ดำ', '#2a2a2a']];
+const STICKS = [['g', 'ไม้เขียว', '#3a9d5d'], ['b', 'ไม้น้ำเงิน', '#2f6fd0'], ['y', 'ไม้เหลือง', '#e2b007'], ['r', 'ไม้แดง', '#d8352a'], ['k', 'ไม้ดำ', '#2a2a2a'], ['o', 'ไม้ทอง', '#b9852a']];
 const stickOf = c => { const m = menu.find(x => x.id === c.id); return (m && m.stick) || c.stick || ''; };
 const stk = k => k ? `<i class="stk stk-${k}" title="${(STICKS.find(x => x[0] === k) || [])[1] || ''}"></i>` : '';
 // ราคาตามสีไม้จากเมนูจริง เช่น ไม้แดง ฿18 หรือ ฿18–20
@@ -4675,7 +4739,7 @@ function renderAttend(){
   attText = () => `เวลาเข้างาน ${f === t ? f : f + ' ถึง ' + t}\n` + names.filter(n => per[n]).map(n => { const p = per[n];
     return `\n${n}: มา ${p.days} วัน · ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ' · สาย ' + p.late + ' ครั้ง' : ''}${p.early ? ' · ออกก่อน ' + p.early + ' ครั้ง' : ''}${p.ot ? ' · OT ' + Math.floor(p.ot / 60) + ' ชม. ' + (p.ot % 60) + ' น.' : ''}\n` + dates.filter(d => cell[n + '|' + d]).map(d => { const x = cell[n + '|' + d], lm = lateMin(x.inAt, G.shift, gr);
       return `  ${d.slice(8)}/${d.slice(5, 7)} ${hm(x.inAt)}-${x.outAt ? hm(x.outAt) : '?'}${lm ? ' (สาย ' + lm + ' น.)' : ''}`; }).join('\n'); }).join('\n');
-  openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · เริ่มกะ ${esc(G.shift)} (สายเกิน 5 นาทีขึ้นป้าย) · ${att.range && rep.preset === 'today' ? 'แสดงเดือนนี้' : 'ช่วงวันตามที่เลือกในแท็บบัญชี'}</p>
+  openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · กะ ${esc(G.shift)}–${esc(G.end || "23:00")} ผ่อนผันสาย ${G.grace === undefined ? 5 : G.grace} นาที · ${att.range && rep.preset === 'today' ? 'แสดงเดือนนี้' : 'ช่วงวันตามที่เลือกในแท็บบัญชี'}</p>
     <div class="opts" style="margin:0 0 10px"><button data-att-view="grid" aria-pressed="${attView === 'grid'}">📅 ตาราง</button><button data-att-view="list" aria-pressed="${attView === 'list'}">📋 รายการ</button></div>
     ${attView === 'grid' ? (names.length ? grid : '<p class="empty">ยังไม่มีพนักงาน</p>') : `
     ${Object.keys(per).length ? `<div class="rlist" style="max-height:none">${Object.entries(per).map(([n, p]) => `<div class="rrow"><span><b>${esc(n)}</b><br><small class="num">มา ${p.days} วัน · รวม ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ` · <b style="color:var(--accent)">สาย ${p.late} ครั้ง</b>` : ''}${p.early ? ` · <b style="color:var(--accent)">ออกก่อน ${p.early} ครั้ง</b>` : ''}${p.ot ? ` · OT ${Math.floor(p.ot / 60)} ชม. ${p.ot % 60} น.` : ''}${p.offWork ? ` · มาวันหยุด ${p.offWork} วัน` : ''}</small></span></div>`).join('')}</div>` : '<p class="empty">ยังไม่มีการลงเวลาในช่วงนี้</p>'}
@@ -4709,8 +4773,11 @@ async function attSave(b){
 
 
 /* ---------- v32: มีอะไรใหม่ + เตือนอัปเดต Code.gs ---------- */
-const APP_VERSION = 33, NEED_SERVER = 33;
+const APP_VERSION = 36, NEED_SERVER = 36;
 const CHANGELOG = [
+  [36, '20 ต.ค. 2569', ['🍢 เมนูชุดใหม่ 56 รายการ ราคาสำหรับร้านนั่งกินดื่ม: ไม้เขียว 15 · น้ำเงิน 22 · เหลือง 29 · แดง 39 · ทอง 59 (แท็บเมนู → นำเข้าเมนูชุดร้าน)', '🟡 เพิ่มไม้สีเหลืองและไม้ทอง', '🔒 นำเข้าเมนูแล้วเมนูแนะนำและการผูกสต็อกเดิมไม่หาย']],
+  [35, '20 ต.ค. 2569', ['📄 ใบจดออเดอร์สำรองแก้เองได้: เปลี่ยนหัวกระดาษ ช่องกรอก เลือกหมวด/เมนูที่จะพิมพ์ เพิ่มรายการนอกเมนู บรรทัดว่าง จำนวนชุด และขั้นตอน แล้วกดบันทึกให้ทุกเครื่องใช้แบบเดียวกัน']],
+  [34, '20 ต.ค. 2569', ['🔔 ครัวกด "เริ่มกะครัว" ครั้งเดียว เปิดเสียงเตือน และจอไม่ดับเอง', '📄 ปุ่ม "ชุดสำรองเน็ตล่ม" ที่แท็บโต๊ะ พิมพ์ใบจดออเดอร์จากเมนูจริง + QR พร้อมเพย์ + ขั้นตอนตอนเน็ตล่ม', '🗄️ ทุกคืนย้ายบิลเก่าไปชีตเก็บอัตโนมัติ ระบบไม่ช้าลงเมื่อเปิดไปนาน ๆ', '📊 นับจำนวนตรวจสลิปรายเดือน ดูได้ที่แท็บบัญชี', '⭐ ค่าเริ่มต้นแต้มใหม่ 15 แต้ม = ฟรี 5 ไม้ (คืนลูกค้า ~9.7%) และหน้าตั้งค่าบอก % ที่คืนจริงจากราคาขาย']],
   [33, '20 ต.ค. 2569', ['👔 ตำแหน่งใหม่ "ผู้จัดการ" (role = manager) ทำงานหน้าร้านได้ครบ แต่ไม่เห็นกำไร ต้นทุน รายจ่าย และตั้งค่าระบบ', '🕘 ลงเวลาละเอียดขึ้น: เวลาเลิกกะ ผ่อนผันมาสาย วันหยุดร้าน ออกก่อนเวลา OT และคนที่เช็คอินนอกร้านได้', '📌 โน้ตโต๊ะถึงครัว + ลูกค้าเขียนหมายเหตุตอนสั่งได้ ขึ้นในใบออเดอร์ครัว', '📢 กระดานข้อความทีม ข้อความใหม่ขึ้นแถบด้านบนให้ทุกคนเห็น']],
   [32, '20 ต.ค. 2569', ['แจ้ง "มีอะไรใหม่" ทุกครั้งที่อัปเดตเว็บ เปิดดูย้อนหลังได้ที่ปุ่ม 🆕 แท็บบัญชี', 'เตือนแอดมินเมื่อ Code.gs บนเซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า']],
   [31, '20 ต.ค. 2569', ['🕘 เช็คอิน-เช็คเอาต์พนักงานด้วย GPS (ปุ่ม 🕘 มุมบนขวา)', 'แอดมินดูเวลาเข้างาน มาสาย รวมชั่วโมง และตั้งตำแหน่งร้านได้ที่แท็บบัญชี', 'ผังร้านมีห้อง "พนักงานวันนี้" ใครมาแล้ว ใครยังไม่มา']],
@@ -4780,6 +4847,99 @@ async function boardPost(b){
   b.disabled = true;
   try { board = await db.boardPost(t); if (board[0]) { try { localStorage.setItem('maila-board-seen', board[0].id); } catch(e){} } sheetBoard(); toast('ส่งข้อความถึงทีมแล้ว'); }
   catch(e){ b.disabled = false; $('mf-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v33 ก่อน' : 'ส่งไม่สำเร็จ'; }
+}
+
+
+/* ---------- v34: แต้ม / กะครัว / ชุดสำรองเน็ตล่ม / ย้ายข้อมูลเก่า ---------- */
+function rewardCalc(per, goal, value){
+  const spend = per * goal, pct = spend ? value / spend * 100 : 0;
+  return `ลูกค้าจ่ายครบ <b class="num">${baht(spend)}</b> แลกรางวัลได้ 1 ครั้ง · คืนลูกค้า <b class="num" style="color:${pct > 10 ? 'var(--accent)' : 'var(--ok)'}">${pct.toFixed(1)}%</b> ของยอดขาย (คิดจากราคาขาย ร้านทั่วไป 5–10%)${pct > 10 ? ' · สูงไป ลองเพิ่มแต้มที่ใช้แลก หรือลดของรางวัล' : ''}`;
+}
+document.addEventListener('input', e => { if (['mc-per', 'mc-goal', 'mc-val'].includes(e.target.id) && $('mc-calc')) $('mc-calc').innerHTML = rewardCalc(+$('mc-per').value || 0, +$('mc-goal').value || 0, +$('mc-val').value || 0); });
+let wake = null, kOn = false;
+async function keepAwake(){ try { if ('wakeLock' in navigator && document.visibilityState === 'visible') { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; renderKShift(); }); } } catch(e){ wake = null; } renderKShift(); }
+document.addEventListener('visibilitychange', () => { if (kOn && document.visibilityState === 'visible' && !wake) keepAwake(); });
+function renderKShift(){
+  const el = $('kshift'); if (!el) return;
+  if (!kOn) return el.innerHTML = '<button class="primary" data-kshift>🔔 เริ่มกะครัว (เปิดเสียง + จอไม่ดับ)</button>';
+  el.innerHTML = `<div class="kon"><span>🔔 เสียงเปิดแล้ว · ${wake ? '🔆 จอจะไม่ดับเอง' : '⚠️ เครื่องนี้กันจอดับไม่ได้ ตั้ง Auto-Lock = ไม่ใช้'}</span><button class="ghost" data-ktest>ลองเสียง</button></div>`;
+}
+const KIT_DEF = () => ({ title: 'ใบจดออเดอร์ (ใช้ตอนเน็ตล่ม)', fields: ['โต๊ะ', 'จำนวนคน', 'เวลา', 'พนักงาน'], hide: [], hideItems: [], extra: [],
+  blank: 4, copies: 1, showPrice: true, showQR: true, note: 'หมายเหตุถึงครัว', steps: [
+  'สลับมือถือไปใช้ฮอตสปอตสำรองก่อน ถ้าระบบกลับมาก็ใช้ต่อได้เลย',
+  'ถ้าเน็ตล่มนาน แจกใบจดออเดอร์ให้ทุกโต๊ะ เขียนจำนวนในช่อง ส่งให้ครัวเป็นกระดาษ',
+  'เก็บเงินสด หรือให้ลูกค้าสแกน QR ด้านล่างแล้วพิมพ์ยอดเอง ดูยอดเงินเข้าในแอปธนาคารของร้านทุกครั้ง ห้ามดูแค่สลิป',
+  'เก็บใบจดออเดอร์ทุกใบไว้ เน็ตกลับมาแล้วให้แอดมินคีย์ย้อนหลัง ยอดขายและสต็อกจะได้ตรง'] });
+let kitEdit = null, kitMsg = '', kitSaved = false;
+const kitCats = () => [...new Set(menu.map(m => m.category))];
+function offlineKit(c){
+  c = { ...KIT_DEF(), ...(c || kitEdit || {}) };
+  const amtQR = (() => { try { const q = qrcode(0, 'M'); q.addData(ppPayload(0)); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch(e){ return ''; } })();
+  const box = '<span class="okbox"></span>', price = v => c.showPrice ? `<span class="num">${v || ''}</span>` : '<span></span>';
+  const extraCat = x => x.cat && kitCats().includes(x.cat) ? x.cat : 'เพิ่มเติม';
+  const cats = kitCats().filter(k => !c.hide.includes(k)).concat(c.extra.some(x => extraCat(x) === 'เพิ่มเติม') ? ['เพิ่มเติม'] : []);
+  const rows = k => menu.filter(m => m.category === k && !c.hideItems.includes(m.id)).map(m => `<div class="okrow"><span>${stk(m.stick)}</span><span>${m.code ? `<b>${esc(m.code)}</b> ` : ''}${esc(m.name)}</span>${price(m.price)}${box}</div>`).join('')
+    + c.extra.filter(x => extraCat(x) === k).map(x => `<div class="okrow"><span></span><span>${esc(x.name)}</span>${price(x.price)}${box}</div>`).join('');
+  const blanks = c.blank ? `<div class="okcat"><h3>เขียนเพิ่มเอง</h3>${Array.from({ length: c.blank }, () => `<div class="okrow"><span></span><span class="okw"></span>${price('')}${box}</div>`).join('')}</div>` : '';
+  const form = n => `<div class="okit${n ? ' pb' : ''}"><h1>${esc(SHOP_NAME)} · ${esc(c.title || 'ใบจดออเดอร์')}</h1>
+    ${c.fields.length ? `<div class="okhead">${c.fields.map(f => `<span>${esc(f)} ______</span>`).join('')}</div>` : ''}
+    <div class="okcols">${cats.map(k => { const r = rows(k); return r ? `<div class="okcat"><h3>${esc(k)}</h3>${r}</div>` : ''; }).join('')}${blanks}</div>
+    <div class="okfoot"><div><b>${esc(c.note || 'หมายเหตุ')}</b><div class="okline"></div><div class="okline"></div></div><div><b>รวม</b> _____________ บาท</div></div></div>`;
+  const plan = c.steps.length || c.showQR ? `<div class="okit pb"><h1>${esc(SHOP_NAME)} · แผนสำรองเมื่อเน็ตล่ม</h1>
+    ${c.steps.length ? `<ol class="okstep">${c.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
+    ${!c.showQR ? '' : amtQR && ppTarget() ? `<div class="okqr">${amtQR}<div><b>สแกนจ่ายพร้อมเพย์</b><br>${esc(settings.promptpayName || '')}<br><small>ลูกค้าพิมพ์ยอดเอง แล้วโชว์หน้าจอโอนสำเร็จให้พนักงาน</small></div></div>` : '<p>ตั้ง PromptPay ในระบบก่อน จึงจะมี QR ในหน้านี้</p>'}</div>` : '';
+  return Array.from({ length: c.copies || 1 }, (_, n) => form(n)).join('') + plan;
+}
+async function openKit(){
+  kitMsg = ''; openSheet(head('📄 ใบจดออเดอร์สำรอง') + '<p class="empty">กำลังโหลด…</p>');
+  let saved = null; kitSaved = false;
+  try { saved = await db.kitCfg(); kitSaved = !!saved; } catch(e){ if (e.message === 'unknown_action') kitMsg = 'ต้องอัปเดต Code.gs เป็น v35 ก่อน จึงจะบันทึกได้ (ตอนนี้แก้แล้วพิมพ์ได้ แต่ไม่จำค่า)'; }
+  kitEdit = { ...KIT_DEF(), ...(saved || {}) }; sheetKit();
+}
+function sheetKit(){
+  const c = kitEdit, cats = kitCats(), chk = (on, attr, label, sub = '') => `<label class="kchk"><input type="checkbox" ${attr} ${on ? 'checked' : ''}><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</label>`;
+  openSheet(head('📄 ใบจดออเดอร์สำรอง') + `<div class="form" id="kit-form">
+    <p class="note" style="margin:0">แก้ได้ตามต้องการ เมนูดึงจากระบบอัตโนมัติ เพิ่มเมนูใหม่ในระบบเมื่อไหร่ ใบนี้ก็มีให้เอง${isAdmin ? '' : ' · พนักงานพิมพ์ได้ ส่วนการบันทึกเป็นของแอดมิน/ผู้จัดการ'}</p>
+    ${kitMsg ? `<p class="note" style="margin:0;color:var(--accent)">${kitMsg}</p>` : ''}
+    <label>หัวกระดาษ<input type="text" id="kit-title" maxlength="80" value="${esc(c.title)}"></label>
+    <label>ช่องกรอกด้านบน (คั่นด้วย ,)<input type="text" id="kit-fields" maxlength="160" value="${esc(c.fields.join(', '))}" placeholder="โต๊ะ, จำนวนคน, เวลา"></label>
+    <h3 style="margin:8px 0 0">เลือกเมนูที่จะพิมพ์</h3>
+    ${cats.map((k, ci) => { const items = menu.filter(m => m.category === k), on = items.filter(m => !c.hideItems.includes(m.id)).length;
+      return `<div class="kdet"><input type="checkbox" data-kcat="${ci}" ${c.hide.includes(k) ? '' : 'checked'} aria-label="พิมพ์หมวด ${esc(k)}"><details><summary><b>${esc(k)}</b><small>${on}/${items.length} รายการ ▾</small></summary>
+        <div class="kitems">${items.map(m => chk(!c.hideItems.includes(m.id), `data-kitem="${esc(m.id)}"`, `${m.code ? esc(m.code) + ' ' : ''}${esc(m.name)}`)).join('')}</div></details></div>`; }).join('')}
+    <h3 style="margin:8px 0 0">รายการเพิ่มเติม (ไม่มีในเมนู)</h3>
+    <p class="note" style="margin:0">เช่น น้ำจิ้มเพิ่ม ถ้วยเปล่า ข้าวเปล่า เลือกหมวดให้ไปอยู่ หรือปล่อยว่างจะอยู่หมวด "เพิ่มเติม"</p>
+    ${c.extra.map((x, i) => `<div class="kxrow"><input type="text" maxlength="40" data-kxn="${i}" value="${esc(x.name)}" placeholder="ชื่อรายการ" aria-label="ชื่อรายการ">
+      <input type="number" inputmode="decimal" min="0" data-kxp="${i}" value="${x.price || ''}" placeholder="ราคา" aria-label="ราคา">
+      <select data-kxc="${i}" aria-label="หมวด"><option value="">เพิ่มเติม</option>${cats.map(k => `<option ${x.cat === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>
+      <button class="ghost danger" data-kxdel="${i}" aria-label="ลบ">✕</button></div>`).join('')}
+    <button class="ghost" data-kxadd>+ เพิ่มรายการ</button>
+    <div class="two"><label>บรรทัดว่างให้เขียนเอง<input type="number" id="kit-blank" min="0" max="20" value="${c.blank}"></label>
+      <label>พิมพ์ใบจดกี่ชุด<input type="number" id="kit-copies" min="1" max="10" value="${c.copies}"></label></div>
+    ${chk(c.showPrice, 'id="kit-price"', 'แสดงราคา')}${chk(c.showQR, 'id="kit-qr"', 'แนบ QR พร้อมเพย์ (ลูกค้าพิมพ์ยอดเอง)')}
+    <label>หัวข้อช่องเขียนท้ายใบ<input type="text" id="kit-note" maxlength="200" value="${esc(c.note)}"></label>
+    <label>ขั้นตอนตอนเน็ตล่ม (บรรทัดละข้อ)<textarea id="kit-steps" rows="5" maxlength="3000">${esc(c.steps.join('\n'))}</textarea></label>
+    <div class="err" id="kit-err"></div></div>
+    <div class="two"><button class="ghost" data-kit-print>🖨️ พิมพ์</button>${isAdmin ? '<button class="primary" style="margin:0" data-kit-save>บันทึก</button>' : ''}</div>
+    ${isAdmin ? '<button class="ghost" style="width:100%;margin-top:8px" data-kit-reset>คืนค่าเริ่มต้น</button>' : ''}`, sheetKit);
+}
+function kitRead(){
+  const c = kitEdit, v = id => $(id) ? $(id).value : '', cats = kitCats();
+  c.title = v('kit-title').trim(); c.fields = v('kit-fields').split(/[,，]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+  c.hide = [...document.querySelectorAll('[data-kcat]')].filter(x => !x.checked).map(x => cats[+x.dataset.kcat]);
+  c.hideItems = [...document.querySelectorAll('[data-kitem]')].filter(x => !x.checked).map(x => x.dataset.kitem);
+  document.querySelectorAll('[data-kxn]').forEach(i => c.extra[+i.dataset.kxn].name = i.value);
+  document.querySelectorAll('[data-kxp]').forEach(i => c.extra[+i.dataset.kxp].price = +i.value || 0);
+  document.querySelectorAll('[data-kxc]').forEach(i => c.extra[+i.dataset.kxc].cat = i.value);
+  c.blank = Math.min(20, Math.max(0, Math.floor(+v('kit-blank') || 0))); c.copies = Math.min(10, Math.max(1, Math.floor(+v('kit-copies') || 1)));
+  c.showPrice = !!($('kit-price') && $('kit-price').checked); c.showQR = !!($('kit-qr') && $('kit-qr').checked);
+  c.note = v('kit-note').trim(); c.steps = v('kit-steps').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 12);
+}
+document.addEventListener('change', e => { const t = e.target; if (t.dataset && 'kcat' in t.dataset) { const d = t.closest('.kdet'); d && d.querySelectorAll('[data-kitem]').forEach(x => x.checked = t.checked); } });
+async function saveKit(b){
+  kitRead(); const c = kitEdit; c.extra = c.extra.filter(x => x.name.trim()); b.disabled = true;
+  try { kitEdit = { ...KIT_DEF(), ...(await db.setKitCfg(c)) }; kitSaved = true; toast('บันทึกใบจดออเดอร์แล้ว ทุกเครื่องใช้แบบนี้'); sheetKit(); }
+  catch(e){ b.disabled = false; $('kit-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v35 ก่อน' : e.message === 'forbidden' ? 'เฉพาะแอดมิน/ผู้จัดการ' : 'บันทึกไม่สำเร็จ'; }
 }
 
 let lastReceipt = '';
@@ -5075,6 +5235,15 @@ document.addEventListener('click', async e => {
   else if ('fxadd' in d) { fixedRead(); fixedEdit.push({ name: '', amount: 0 }); sheetFixed(); }
   else if (d.fxdel) { fixedRead(); fixedEdit.splice(+d.fxdel, 1); sheetFixed(); }
   else if ('fxsave' in d) saveFixed(b);
+  else if ('kshift' in d) { kOn = true; beep(); keepAwake(); toast('เริ่มกะครัวแล้ว มีออเดอร์ใหม่จะมีเสียงเตือน'); }
+  else if ('ktest' in d) beep();
+  else if ('offlineKit' in d) openKit();
+  else if ('kitPrint' in d) { kitRead(); printHtml(offlineKit(kitEdit)); }
+  else if ('kitSave' in d) saveKit(b);
+  else if ('kitReset' in d) { kitEdit = KIT_DEF(); sheetKit(); toast('คืนค่าเริ่มต้นแล้ว กดบันทึกเพื่อใช้ค่านี้'); }
+  else if ('kxadd' in d) { kitRead(); kitEdit.extra.push({ name: '', price: 0, cat: '' }); sheetKit(); const l = document.querySelectorAll('[data-kxn]'); l.length && l[l.length - 1].focus(); }
+  else if (d.kxdel) { kitRead(); kitEdit.extra.splice(+d.kxdel, 1); sheetKit(); }
+  else if ('archiveNow' in d) { b.disabled = true; try { const r = await db.archiveNow(); toast(`ย้ายบิลเก่าแล้ว ${r.orders} รายการ`); sheetBackup(); } catch(e){ b.disabled = false; toast(e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v34 ก่อน' : 'ย้ายไม่สำเร็จ'); } }
   else if ('cash' in d) sheetCash();
   else if ('cashSave' in d) saveCash(b);
   else if ('cashHist' in d) sheetCashHistory();
