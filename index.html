@@ -326,6 +326,15 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 .clockstrip.upd{background:var(--sunk);border-color:var(--accent)} .clockstrip.upd .ghost{width:auto;margin:0}
 .news{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0} .news-h{display:flex;justify-content:space-between;gap:8px} .news-h span{color:var(--muted);font-size:13px}
 .news ul{margin:6px 0 0;padding-left:20px} .news li{margin:3px 0}
+.tsheet-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;-webkit-overflow-scrolling:touch}
+.tsheet{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:100%}
+.tsheet th,.tsheet td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:5px 6px;text-align:center;white-space:nowrap}
+.tsheet thead th{background:var(--sunk);position:sticky;top:0} .tsheet thead th small{display:block;color:var(--muted);font-weight:400}
+.tsheet thead th.we{color:var(--accent)}
+.tsheet tbody th{position:sticky;left:0;background:var(--surface);text-align:left;z-index:1;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.tsheet td b,.tsheet td small,.tsheet td i{display:block;font-style:normal} .tsheet td small{color:var(--muted)} .tsheet td i{color:var(--accent);font-size:11px}
+.tsheet td.ok{background:var(--ok-soft)} .tsheet td.in{background:var(--wait-soft)} .tsheet td.late{background:var(--accent-soft,#fde3df)} .tsheet td.ab{color:var(--muted)} .tsheet td.bad{color:var(--accent);font-weight:700}
+.crew[data-attend-open]{cursor:pointer} .crewlink{position:absolute;top:8px;right:10px;font-size:12.5px;color:var(--accent);font-weight:600}
 .fold{display:flex;justify-content:space-between;width:100%;margin:6px 0;background:var(--ok-soft);border:1px dashed var(--ok);border-radius:8px;padding:8px 10px;color:var(--ok);font-weight:600} .fold span{font-weight:400}
 ul.folded{opacity:.75} .khint{font-size:12px;color:var(--muted);margin:4px 0 8px}
 .ticket.ready{border-top-color:var(--ok)}
@@ -4516,8 +4525,8 @@ function renderMap(){
     <div class="room hall"><div class="rlabel">🍽️ โซนนั่ง</div>
       <div class="hallgrid"><div class="col">${L.map((t, i) => tile(t, i)).join('')}</div><div class="aisle" aria-hidden="true">${walkers ? `<span class="walker w1">${sprite('staff', '#1f5fa8', '#2a1a12', 2)}</span>` : ''}${walkers > 1 ? `<span class="walker w2 ${calls.length ? 'fast' : ''}">${sprite('staff', '#2f7d57', '#6b3f22', 2)}</span>` : ''}</div><div class="col">${R.map((t, i) => tile(t, i + half)).join('')}</div></div>
     </div>
-    ${staffToday.length ? `<div class="room crew"><div class="rlabel">👥 พนักงานวันนี้ · มา ${staffToday.filter(x => x.inAt && !x.outAt).length}/${staffToday.length}</div>
-      <div class="crewrow">${staffToday.map((x, i) => { const on = x.inAt && !x.outAt;
+    ${staffToday.length ? `<div class="room crew"${isAdmin ? ' role="button" tabindex="0" data-attend-open' : ''}><div class="rlabel">👥 พนักงานวันนี้ · มา ${staffToday.filter(x => x.inAt && !x.outAt).length}/${staffToday.length}</div>
+      ${isAdmin ? '<span class="crewlink">ดูตารางเข้างาน →</span>' : ''}<div class="crewrow">${staffToday.map((x, i) => { const on = x.inAt && !x.outAt;
         return `<span class="crewp ${on ? 'on' : 'off'}">${on ? `<span class="bob" style="animation-delay:-${i * .7}s">` : '<span>'}${sprite(x.role === 'kitchen' ? 'chef' : 'staff', x.role === 'kitchen' ? '#ffffff' : x.role === 'admin' ? '#a8690a' : '#1f5fa8', GUEST_C[i % 3] === '#2f7d57' ? '#2a1a12' : '#6b3f22', 3)}</span>${on ? '' : '<i class="zz">💤</i>'}<b>${esc(x.name)}</b><small class="num">${on ? 'เข้า ' + hm(x.inAt) : x.outAt ? 'ออก ' + hm(x.outAt) : 'ยังไม่มา'}</small></span>`; }).join('')}</div></div>` : ''}
     <div class="backrow">
       <button class="room kitchen ${lateN ? 'alarm' : ''}" data-view="kitchen" aria-label="ครัว"><div class="rlabel">🔥 เตาย่าง · ครัว</div>
@@ -4620,24 +4629,40 @@ async function doClock(kind){
   clk.busy = false; renderClock();
 }
 // แอดมิน: ตารางเวลาเข้างาน + ตั้งตำแหน่งร้าน
-const att = { data: null, err: '', msg: '' };
-async function sheetAttend(){
-  att.data = null; att.err = ''; renderAttend();
-  const [f, t] = repRange();
+const att = { data: null, err: '', msg: '' }; let attView = 'grid', attText = () => '';
+async function sheetAttend(month){
+  att.data = null; att.err = ''; const td = ymd(new Date());
+  att.range = month ? [td.slice(0, 8) + '01', td] : repRange(); renderAttend();
+  const [f, t] = att.range;
   try { att.data = await db.attendance(f, t); } catch(e){ att.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v31 ก่อน' : 'โหลดไม่ได้'; }
   renderAttend();
 }
 function lateMin(iso, shift){ if (!iso || !shift) return 0; const [h, m] = shift.split(':').map(Number), d = new Date(iso), lm = d.getHours() * 60 + d.getMinutes() - (h * 60 + m); return lm > 5 ? lm : 0; }
 function renderAttend(){
-  const top = head('🕘 เวลาเข้างานพนักงาน'), [f, t] = repRange();
+  const top = head('🕘 เวลาเข้างานพนักงาน'), [f, t] = att.range || repRange();
   if (att.err) return openSheet(top + `<p class="empty">${att.err}</p>`);
   if (!att.data) return openSheet(top + `<p class="empty">กำลังโหลด…</p>`);
   const L = att.data.list, G = att.data.geo, per = {};
   L.forEach(x => { const p = per[x.name] || (per[x.name] = { days: 0, min: 0, late: 0 }); p.days++; if (x.inAt && x.outAt) p.min += Math.round((new Date(x.outAt) - new Date(x.inAt)) / 60000); if (lateMin(x.inAt, G.shift)) p.late++; });
-  openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · เริ่มกะ ${esc(G.shift)} (สายเกิน 5 นาทีขึ้นป้าย)</p>
+  const dates = []; for (let d = new Date(f + 'T00:00:00'); ymd(d) <= t && dates.length < 62; d.setDate(d.getDate() + 1)) dates.push(ymd(d));
+  const names = [...new Set([...staffToday.map(x => x.name), ...L.map(x => x.name)])], cell = {};
+  L.forEach(x => cell[x.name + '|' + x.date] = x);
+  const grid = `<div class="tsheet-wrap"><table class="tsheet"><thead><tr><th>พนักงาน</th>${dates.map(d => { const dd = new Date(d + 'T00:00:00'); return `<th class="${dd.getDay() === 0 || dd.getDay() === 6 ? 'we' : ''}">${dd.getDate()}<small>${DAY_TH[dd.getDay()].slice(0, 2)}</small></th>`; }).join('')}<th>วัน</th><th>ชม.</th><th>สาย</th></tr></thead>
+    <tbody>${names.map(n => { const p = per[n] || { days: 0, min: 0, late: 0 };
+      return `<tr><th>${esc(n)}</th>${dates.map(d => { const x = cell[n + '|' + d]; if (!x) return '<td class="ab">–</td>'; const lm = lateMin(x.inAt, G.shift);
+        return `<td class="${lm ? 'late' : x.outAt ? 'ok' : 'in'}" title="${esc(n)} ${d}"><b>${hm(x.inAt)}</b><small>${x.outAt ? hm(x.outAt) : 'ยังไม่ออก'}</small>${lm ? `<i>สาย ${lm}</i>` : ''}</td>`; }).join('')}
+        <td class="num">${p.days}</td><td class="num">${Math.floor(p.min / 60)}:${String(p.min % 60).padStart(2, '0')}</td><td class="num ${p.late ? 'bad' : ''}">${p.late}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="note" style="margin:6px 0 0">เขียว = เข้า-ออกครบ · เหลือง = ยังไม่เช็คเอาต์ · แดง = มาสาย · – = ไม่ได้เช็คอิน · เลื่อนตารางซ้าย-ขวาได้</p>
+    <button class="ghost" style="width:100%;margin-top:8px" data-att-copy>📋 คัดลอกตารางส่ง LINE</button>`;
+  attText = () => `เวลาเข้างาน ${f === t ? f : f + ' ถึง ' + t}\n` + names.filter(n => per[n]).map(n => { const p = per[n];
+    return `\n${n}: มา ${p.days} วัน · ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ' · สาย ' + p.late + ' ครั้ง' : ''}\n` + dates.filter(d => cell[n + '|' + d]).map(d => { const x = cell[n + '|' + d], lm = lateMin(x.inAt, G.shift);
+      return `  ${d.slice(8)}/${d.slice(5, 7)} ${hm(x.inAt)}-${x.outAt ? hm(x.outAt) : '?'}${lm ? ' (สาย ' + lm + ' น.)' : ''}`; }).join('\n'); }).join('\n');
+  openSheet(top + `<p class="note num" style="margin-top:0">${f === t ? f : f + ' ถึง ' + t} · เริ่มกะ ${esc(G.shift)} (สายเกิน 5 นาทีขึ้นป้าย) · ${att.range && rep.preset === 'today' ? 'แสดงเดือนนี้' : 'ช่วงวันตามที่เลือกในแท็บบัญชี'}</p>
+    <div class="opts" style="margin:0 0 10px"><button data-att-view="grid" aria-pressed="${attView === 'grid'}">📅 ตาราง</button><button data-att-view="list" aria-pressed="${attView === 'list'}">📋 รายการ</button></div>
+    ${attView === 'grid' ? (names.length ? grid : '<p class="empty">ยังไม่มีพนักงาน</p>') : `
     ${Object.keys(per).length ? `<div class="rlist" style="max-height:none">${Object.entries(per).map(([n, p]) => `<div class="rrow"><span><b>${esc(n)}</b><br><small class="num">มา ${p.days} วัน · รวม ${Math.floor(p.min / 60)} ชม. ${p.min % 60} น.${p.late ? ` · <b style="color:var(--accent)">สาย ${p.late} ครั้ง</b>` : ''}</small></span></div>`).join('')}</div>` : '<p class="empty">ยังไม่มีการลงเวลาในช่วงนี้</p>'}
     ${L.length ? `<h3 style="margin:14px 0 6px">รายวัน</h3><div class="rlist">${L.map(x => { const lm = lateMin(x.inAt, G.shift);
-      return `<div class="rrow"><span><b>${esc(x.name)}</b> <small class="num">${esc(x.date)}</small><br><small class="num">เข้า ${hm(x.inAt)}${x.inDist !== null ? ` (${x.inDist} ม.)` : ''} · ออก ${hm(x.outAt)}${x.outAt ? ' · ' + hrs(x.inAt, x.outAt) : ''}${x.note ? ' · ' + esc(x.note) : ''}</small></span>${lm ? `<b class="cashdiff bad num">สาย ${lm} น.</b>` : ''}</div>`; }).join('')}</div>` : ''}
+      return `<div class="rrow"><span><b>${esc(x.name)}</b> <small class="num">${esc(x.date)}</small><br><small class="num">เข้า ${hm(x.inAt)}${x.inDist !== null ? ` (${x.inDist} ม.)` : ''} · ออก ${hm(x.outAt)}${x.outAt ? ' · ' + hrs(x.inAt, x.outAt) : ''}${x.note ? ' · ' + esc(x.note) : ''}</small></span>${lm ? `<b class="cashdiff bad num">สาย ${lm} น.</b>` : ''}</div>`; }).join('')}</div>` : ''}`}
     <h3 style="margin:18px 0 6px">ตั้งค่า</h3>
     <div class="form">
       <p class="note" style="margin:0">${G.lat !== null ? `📍 ตั้งตำแหน่งร้านแล้ว (<span class="num">${G.lat.toFixed(5)}, ${G.lng.toFixed(5)}</span>) <a href="https://maps.google.com/?q=${G.lat},${G.lng}" target="_blank" rel="noopener">ดูบนแผนที่</a>` : '⚠️ ยังไม่ได้ตั้งตำแหน่งร้าน พนักงานจะเช็คอินจากที่ไหนก็ได้'}</p>
@@ -4646,6 +4671,7 @@ function renderAttend(){
         <label>เวลาเริ่มกะ<input id="att-s" type="time" value="${esc(G.shift)}"></label></div>
       <div class="err" id="mf-err">${esc(att.msg)}</div></div>
     <button class="primary" style="margin-top:0" data-att-save>บันทึกการตั้งค่า</button>`);
+  requestAnimationFrame(() => { const w = document.querySelector('.tsheet-wrap'); if (w) w.scrollLeft = w.scrollWidth; });   // เลื่อนไปวันล่าสุด
 }
 async function attHere(b){
   b.disabled = true; b.textContent = 'กำลังอ่านตำแหน่ง…';
@@ -4849,6 +4875,7 @@ function render(){
 /* ---------- เหตุการณ์ ---------- */
 document.addEventListener('click', async e => {
   if (e.target === $('veil')) return closeSheet();
+  if (e.target.closest && e.target.closest('[data-attend-open]') && !e.target.closest('button')) return sheetAttend(true);
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if (d.view) { view = d.view; render(); if (view === 'menu') { renderMenuAdmin(); if (db.stock && !stockList.length) loadStock(true); } if (view === 'sales') { loadReport(); loadDaily(); } if (view === 'map' && isAdmin) loadDaily(); if (view === 'stock') loadStock(); }
@@ -4863,9 +4890,11 @@ document.addEventListener('click', async e => {
   else if ('news' in d) sheetNews(true);
   else if ('clock' in d) sheetClock();
   else if (d.clockDo) doClock(d.clockDo);
-  else if ('attend' in d) sheetAttend();
+  else if ('attend' in d) sheetAttend(rep.preset === 'today');
   else if ('attHere' in d) attHere(b);
   else if ('attSave' in d) attSave(b);
+  else if (d.attView) { attView = d.attView; renderAttend(); }
+  else if ('attCopy' in d) copyText(attText(), 'เวลาเข้างาน');
   else if (d.mtable) { payState.method = ''; payState.seen = false; payState.slip = ''; payState.check = null; sheetTable(d.mtable, 'bill'); }
   else if (d.preset) { rep.preset = d.preset; loadReport(); }
   else if ('receipts' in d) sheetReceipts();
