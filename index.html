@@ -110,6 +110,18 @@ h2{font-family:var(--display);font-size:18px;margin:22px 0 4px}
 
 .pill.drink{background:#dff1f8;color:#1d6f8f} .ticket.drink{border-top-color:#3aa0c8}
 /* หน้าแรกลูกค้า: ร้านแนะนำ + ขายดี */
+.pcards{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x mandatory;scrollbar-width:none} .pcards::-webkit-scrollbar{display:none}
+.pcard{flex:0 0 78%;max-width:300px;scroll-snap-align:start;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:linear-gradient(150deg,#fff3e6,#ffe1cf);border:1.5px solid #f3c7a8;color:#3a1d10;position:relative}
+.pcard.k-happy{background:linear-gradient(150deg,#fff8d9,#ffe9a3);border-color:#ecd27a} .pcard.k-info{background:linear-gradient(150deg,#eef4ff,#dde8ff);border-color:#b9cdf3}
+.pcard:not(.on){opacity:.88} .ptop{display:flex;align-items:center;justify-content:space-between} .pe{font-size:26px;line-height:1}
+.pwhen{font-size:12px;padding:3px 8px;border-radius:99px;background:rgba(0,0,0,.07)} .pwhen.live{background:#1f8a4c;color:#fff;font-weight:600}
+.pt{font-weight:700;font-size:17px} .pd{font-size:13px;opacity:.8} .pin{font-size:13px;line-height:1.5} .pin s,.prow s{opacity:.55;font-size:12px}
+.prow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap} .prow b{font-size:20px;color:#b3261e} .save{font-size:12px;font-weight:600;color:#1f8a4c}
+.pact{margin-top:6px;display:flex;justify-content:flex-end} .pbtn{margin:0!important;width:auto!important;padding:8px 16px!important} .poff{font-size:13px;opacity:.7}
+.price+s.was,s.was{margin-left:6px;color:var(--muted);font-size:13px} .badge.hh{background:#ffe9a3;color:#6b4a00}
+.promo-line{color:var(--ok)} .prow-a{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)} .prow-a .info{flex:1;display:flex;flex-direction:column;min-width:0} .prow-a small{color:var(--muted)} .prow-a.off{opacity:.55} .prow-a .ghost{width:auto;margin:0}
+.pnew{display:grid;gap:8px} .pnew button{display:flex;flex-direction:column;align-items:flex-start;margin:0;text-align:left} .pnew small{color:var(--muted);font-weight:400}
+.pxrow{display:grid;grid-template-columns:1fr 78px auto;gap:6px;align-items:center} .pxrow select,.pxrow input{margin:0;min-width:0} .pdays{flex-wrap:wrap;overflow:visible} .pdays button{min-width:44px}
 .picks h2{margin-top:18px}
 .hcards{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
 .hcards::-webkit-scrollbar{display:none}
@@ -646,6 +658,7 @@ h2,.brand,.sheet-head h3,.tbl b,.ticket h3,.tile b,.slip b,.prog-top b,.tag{font
   <button class="ghost" style="width:100%;margin-top:10px" id="import-btn" data-import hidden></button>
   <button class="ghost" style="width:100%;margin-top:10px" id="spicy-btn" data-spicy-all hidden></button>
   <button class="ghost" style="width:100%;margin-top:10px" id="sticks-btn" data-sticks hidden>🎨 ตั้งสีไม้ตามราคา</button>
+  <button class="ghost" style="width:100%;margin-top:10px" id="promo-btn" data-promos hidden>🎁 โปรโมชั่น (ลูกค้าเห็นหน้าเมนู)</button>
   <p class="note">กด "ของหมด" เมื่อวัตถุดิบหมด ลูกค้าจะเห็นว่าหมดและสั่งไม่ได้ทันที กดอีกครั้งเมื่อมีของ · เพิ่ม แก้ไข ลบเมนู และใส่รูป ทำได้เฉพาะ admin</p>
   <input type="file" id="img-file" accept="image/*" hidden>
   <div id="menu-admin"></div>
@@ -3015,7 +3028,7 @@ const baht = n => '฿' + Number(n).toLocaleString('en-US', {minimumFractionDigi
 const time = t => new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
 const date = t => new Date(t).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'});
 const sum = list => list.reduce((s,c) => s + c.price * c.qty, 0);
-const count = list => list.reduce((s,c) => s + c.qty, 0);
+const count = list => list.reduce((s,c) => s + (c.promo ? 0 : c.qty), 0);   // v37: บรรทัดส่วนลดโปรไม่นับเป็นชิ้น
 const label = c => esc(c.name) + (c.code ? ' (' + esc(c.code) + ')' : '');
 const newId = p => p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 const STATUS = {new:['รอทำ',''], cooking:['กำลังย่าง',''], ready:['รอเสิร์ฟ',''], served:['เสิร์ฟแล้ว','ok']};
@@ -3135,7 +3148,7 @@ function makeGasDb(url){
     async newTableKey(t){ await call('newTableKey', {table: t}); },
     async ackCall(id){ await call('ackCall', {id}); },
     async loadSessions(){ this._sync = await call('sync'); if (Array.isArray(this._sync.staff)) staffToday = this._sync.staff; if (this._sync.version) { serverVer = +this._sync.version; try { localStorage.setItem('ravii-sv', serverVer); } catch(e){} } if (this._sync.tableKeys) tableKeys = this._sync.tableKeys; requireOpen = !!this._sync.requireOpen; if (typeof this._sync.admin === 'boolean') isAdmin = this._sync.admin; if (typeof this._sync.owner === 'boolean') { isOwner = this._sync.owner; try { localStorage.setItem('mala_owner', isOwner ? '1' : '0'); } catch(e){} } if (Array.isArray(this._sync.board)) board = this._sync.board; if (typeof this._sync.role === 'string' && this._sync.role !== myRole) { myRole = this._sync.role; try { localStorage.setItem('mala_role', myRole); } catch(e){} applyRole(); } return this._sync.sessions; },
-    async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, note: o.note || '', items: o.items.map(c => ({id:c.id, qty:c.qty, opt:c.opt}))}); },
+    async addOrder(o){ await call('custOrder', {table: o.tableNo, key: tkey, note: o.note || '', items: o.items.map(c => c.set ? {set:c.set, qty:c.qty} : {id:c.id, qty:c.qty, opt:c.opt})}); },
     async setTableNote(sessionId, note){ await call('setTableNote', {sessionId, note}); },
     async boardPost(text){ return (await call('boardPost', {text})).board; },
     async boardDelete(id){ return (await call('boardDelete', {id})).board; },
@@ -3165,6 +3178,9 @@ function makeGasDb(url){
     async receipts(from, to){ return await call('receipts', {from, to}); },
     async daily(){ return await call('daily', {}); },
     async setFixed(items){ return (await call('setFixed', {items})).items; },
+    async promos(){ return (await call('promos', {})).promos; },
+    async savePromo(promo){ return (await call('savePromo', {promo})).promos; },
+    async deletePromo(id){ return (await call('deletePromo', {id})).promos; },
     async kitCfg(){ return (await call('kitCfg', {})).kit; },
     async setKitCfg(kit){ return (await call('setKitCfg', {kit})).kit; },
     async setGoals(day, month){ await call('setGoals', {day, month}); },
@@ -3226,6 +3242,7 @@ async function refresh(){
 }
 // ของหมด: อัปเดตเมนูตามรายการจากเซิร์ฟเวอร์ และเอาของที่หมดออกจากตะกร้าพร้อมบอกลูกค้า
 function applySoldOut(ids){
+  cart = cart.filter(c => { if (!c.set) return true; const p = promos().find(x => x.id === c.set); const bad = !p || (p.items || []).some(x => ids.includes(x.id)); if (bad) toast(`${c.name}: มีของในเซ็ตหมด นำออกจากตะกร้าแล้ว`); return !bad; });
   if (!Array.isArray(ids)) return;
   lastSoldOut = ids;
   menu.forEach(m => m.available = !ids.includes(m.id));
@@ -3236,6 +3253,7 @@ async function act(fn, okMsg){
   try { await fn(); if (okMsg) toast(okMsg); await refresh(); return true; }
   catch(e){ console.error(e);
     if (e.message === 'bill_changed') refresh();
+    if (e.message === 'promo_off') { cart = cart.filter(c => !c.set || promoNow(promos().find(x => x.id === c.set))); renderMenu(); toast('โปรนี้หมดเวลาหรือปิดไปแล้ว นำออกจากตะกร้าให้แล้ว'); if (cart.length) sheetCart(); else closeSheet(); return false; }
     if (e.message === 'sold_out') { applySoldOut([...menu.filter(m => m.available === false).map(m => m.id), ...((e.data && e.data.ids) || [])]); renderMenu(); if (cart.length) sheetCart(); else closeSheet(); return false; }
     toast(e.message === 'table_closed' ? (tclosed = true, renderMenu(), 'โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน') : e.message === 'bad_table' ? 'ลิงก์นี้ใช้ไม่ได้ กรุณาสแกน QR ที่โต๊ะอีกครั้ง' : e.message === 'forbidden' ? 'บัญชีนี้ไม่มีสิทธิ์ทำรายการนี้' : e.message === 'slip_blocked' ? 'สลิปไม่ผ่าน ต้องให้ Admin เป็นคนปิดบิลนี้' : e.message === 'bill_changed' ? 'บิลนี้เพิ่งถูกแก้รายการหรือส่วนลด ตรวจยอดใหม่แล้วกดปิดบิลอีกครั้ง' : e.message === 'slip_failed' ? 'บันทึกรูปสลิปไม่ได้ บิลยังไม่ถูกปิด ลองถ่ายใหม่' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง'); return false; }
 }
@@ -3731,6 +3749,7 @@ function renderMenuAdmin(){
   const sp = menu.filter(m => !m.spicy && !NO_SPICE.test(m.category) && !/^(DR)/i.test(m.code || ''));
   if ($('spicy-btn')) { $('spicy-btn').hidden = !(isAdmin && sp.length && db.setSpicy); $('spicy-btn').textContent = `🌶️ ให้เลือกความเผ็ดทุกเมนูปิ้ง (${sp.length} เมนู)`; }
   if ($('sticks-btn')) $('sticks-btn').hidden = !(isAdmin && db.setSticks);
+  if ($('promo-btn')) $('promo-btn').hidden = !(isAdmin && db.savePromo);
   const ip = importPlan(), n = ip.upd.length + ip.add.length; $('import-btn').hidden = !n; $('import-btn').textContent = `📥 นำเข้าเมนูชุดร้าน (${n} รายการ)`;
   $('menu-admin').innerHTML = menu.map(it => `<div class="mrow ${it.available === false ? 'out' : ''}">${thumb(it)}
     <div class="info"><div>${stk(it.stick)}${it.recommend ? '⭐ ' : ''}${label(it)}</div><div class="opt" style="color:var(--muted);font-size:13px">${esc(it.category)}</div></div>
@@ -3913,6 +3932,53 @@ let railTick = false;
 window.addEventListener('scroll', () => { if (!tbl || railTick) return; railTick = true; requestAnimationFrame(() => { railTick = false; railSpy(); }); }, { passive: true });
 
 const cartQty = it => cart.filter(c => c.id === it.id).reduce((s,c) => s + c.qty, 0);
+/* ---------- v37: โปรโมชั่น ---------- */
+const DAY_S = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+const hmv = v => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '').trim()); return m ? +m[1] * 60 + +m[2] : -1; };
+function promoNow(p){   // เวลาไทยเหมือนฝั่งเซิร์ฟเวอร์ (promoNow_)
+  if (!p || p.active === false) return false;
+  const t = new Date(Date.now() + 7 * 3600000), now = t.getUTCHours() * 60 + t.getUTCMinutes(), a = hmv(p.start), b = hmv(p.end);
+  let day = t.getUTCDay(); if (a >= 0 && b >= 0 && b < a && now < b) day = (day + 6) % 7;
+  if ((p.days || []).length && !p.days.includes(day)) return false;
+  if (a < 0 || b < 0 || a === b) return true;
+  return a < b ? now >= a && now < b : now >= a || now < b;
+}
+function promoWhen(p){
+  const d = (p.days || []).length && p.days.length < 7 ? (p.days.join() === '1,2,3,4,5' ? 'จ–ศ' : p.days.join() === '0,6' ? 'ส–อา' : p.days.map(x => DAY_S[x]).join(' ')) : 'ทุกวัน';
+  return d + (hmv(p.start) >= 0 && hmv(p.end) >= 0 && p.start !== p.end ? ` ${p.start}–${p.end}` : '');
+}
+const promos = () => (settings.promos || []).filter(p => p.active !== false);
+const promoMenu = id => menu.find(m => m.id === id);
+// ราคาที่ลูกค้าจ่ายตอนนี้ (ราคาพิเศษตามช่วงเวลา) เซิร์ฟเวอร์คิดซ้ำเสมอ
+function priceOf(it){
+  let best = null; promos().filter(p => p.kind === 'happy' && promoNow(p)).forEach(p => (p.items || []).forEach(x => { if (x.id === it.id && x.price < it.price && (!best || x.price < best.price)) best = { price: x.price, title: p.title }; }));
+  return best ? { p: best.price, was: it.price, hh: best.title } : { p: it.price };
+}
+const priceHtml = it => { const r = priceOf(it); return `<span class="price num">${baht(r.p)}</span>${r.was ? `<s class="was num">${baht(r.was)}</s>` : ''}`; };
+const setFull = p => (p.items || []).reduce((a, x) => { const m = promoMenu(x.id); return a + (m ? m.price * x.qty : 0); }, 0);
+const setOut = p => (p.items || []).some(x => { const m = promoMenu(x.id); return !m || m.available === false; });
+function promoCards(){
+  const list = promos(); if (!list.length) return '';
+  return `<h2 id="promo">🎁 โปรโมชั่น</h2><div class="pcards">${list.map(p => {
+    const on = promoNow(p), out = p.kind === 'set' && setOut(p), q = cart.filter(c => c.set === p.id).reduce((a, c) => a + c.qty, 0);
+    let mid = '', act = '';
+    if (p.kind === 'set') { const full = setFull(p);
+      mid = `<div class="pin">${(p.items || []).map(x => { const m = promoMenu(x.id); return m ? `${esc(m.name)} ×${x.qty}` : ''; }).filter(Boolean).join(' · ')}</div>
+        <div class="prow"><b class="num">${baht(p.price)}</b>${full > p.price ? `<s class="num">${baht(full)}</s><span class="save num">ประหยัด ${baht(full - p.price)}</span>` : ''}</div>`;
+      act = out ? '<span class="outpill">ของหมด</span>' : !on ? `<span class="poff">ยังไม่ถึงเวลา</span>`
+        : q ? `<div class="qty step"><button data-set-dec="${esc(p.id)}" aria-label="ลด">−</button><b class="num">${q}</b><button data-add-set="${esc(p.id)}" aria-label="เพิ่ม">+</button></div>`
+        : `<button class="primary pbtn" data-add-set="${esc(p.id)}">+ ใส่ตะกร้า</button>`; }
+    if (p.kind === 'happy') mid = `<div class="pin">${(p.items || []).slice(0, 5).map(x => { const m = promoMenu(x.id); return m ? `${esc(m.name)} <b class="num">${baht(x.price)}</b> <s class="num">${baht(m.price)}</s>` : ''; }).filter(Boolean).join('<br>')}${(p.items || []).length > 5 ? `<br>และอีก ${p.items.length - 5} รายการ` : ''}</div>`;
+    return `<div class="pcard k-${p.kind}${on ? ' on' : ''}"><div class="ptop"><span class="pe">${esc(p.emoji || (p.kind === 'set' ? '🍢' : p.kind === 'happy' ? '⏰' : '📣'))}</span>
+      <span class="pwhen ${on ? 'live' : ''}">${on ? '● ใช้ได้ตอนนี้' : '⏰ ' + esc(promoWhen(p))}</span></div>
+      <div class="pt">${esc(p.title)}</div>${p.desc ? `<div class="pd">${esc(p.desc)}</div>` : ''}${mid}
+      ${on && (p.start || (p.days || []).length) ? `<div class="pd">⏰ ${esc(promoWhen(p))}</div>` : ''}${act ? `<div class="pact">${act}</div>` : ''}</div>`; }).join('')}</div>`;
+}
+function addSet(id){
+  const p = promos().find(x => x.id === id); if (!p || !promoNow(p) || setOut(p)) return renderMenu();
+  const hit = cart.find(c => c.set === id); if (hit) hit.qty++; else cart.push({ id: 'set:' + id, set: id, name: p.title, code: '', price: p.price, qty: 1, opt: '' });
+  renderMenu();
+}
 function renderMenu(){
   if (!valid) {
     $('chips').innerHTML = ''; $('track').innerHTML = ''; $('member').innerHTML = ''; $('shopinfo').innerHTML = ''; $('search-box').hidden = true; $('hero').hidden = true; $('callrow').hidden = true; $('bar').hidden = true; $('open-bill').hidden = true;
@@ -3937,11 +4003,12 @@ function renderMenu(){
   const hot = popularIds.slice(0, 5), badges = it => (it.recommend ? '<span class="badge">⭐ แนะนำ</span>' : '') + (hot.includes(it.id) ? '<span class="badge hot">🔥 ขายดี</span>' : '');
   const card = (it, rank) => { const q = cartQty(it), src = imgOf(it);
     return `<div class="hcard">${src ? `<img class="ph" loading="lazy" decoding="async" alt=""${esc(it.name)}" src="${esc(src)}">` : `<div class="ph">${esc(it.code || catIcon(it.category))}</div>`}${rank ? `<span class="rk">#${rank}</span>` : ''}
-      <div class="nm">${stk(it.stick)}${esc(it.name)}</div><div class="row2"><span class="price num">${baht(it.price)}</span>
+      <div class="nm">${stk(it.stick)}${esc(it.name)}</div><div class="row2"><span>${priceHtml(it)}</span>
       ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
           : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}</div></div>`; };
   const ok = it => it && it.available !== false, recs = menu.filter(i => i.recommend && ok(i)), pops = popularIds.map(id => menu.find(m => m.id === id)).filter(ok).slice(0, 6);
-  const picks = !k && cat === 'ทั้งหมด' && (recs.length || pops.length) ? `<div class="picks">
+  const pc = !k && cat === 'ทั้งหมด' ? promoCards() : '';
+  const picks = !k && cat === 'ทั้งหมด' && (recs.length || pops.length || pc) ? `<div class="picks">${pc}
       ${recs.length ? `<h2>⭐ ร้านแนะนำ</h2><div class="hcards">${recs.map(it => card(it)).join('')}</div>` : ''}
       ${pops.length ? `<h2>🔥 ขายดีประจำร้าน</h2><div class="hcards">${pops.map((it, i) => card(it, i + 1)).join('')}</div>` : ''}</div>` : '';
   // v30: แถบหมวดด้านซ้ายแบบแอปสั่งอาหาร เลื่อนแล้วไฮไลต์หมวดที่กำลังดู แตะเพื่อกระโดดไปหมวดนั้น
@@ -3954,11 +4021,11 @@ function renderMenu(){
         <div class="info"><div class="name">${esc(it.name)}</div><div class="price num">${baht(it.price)}</div></div><span class="outpill">หมด</span></div>`;
       return `<div class="item">
         ${thumb(it)}
-        <div class="info"><div class="name">${stk(it.stick)}${esc(it.name)}${badges(it)}</div><div class="price num">${baht(it.price)}</div></div>
+        <div class="info"><div class="name">${stk(it.stick)}${esc(it.name)}${badges(it)}${priceOf(it).was ? '<span class="badge hh">⏰ ราคาพิเศษ</span>' : ''}</div><div>${priceHtml(it)}</div></div>
         ${q ? `<div class="qty step"><button data-dec="${esc(it.id)}" aria-label="ลด ${esc(it.name)}">−</button><b class="num">${q}</b><button data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button></div>`
             : `<button class="add" data-add="${esc(it.id)}" aria-label="เพิ่ม ${esc(it.name)}">+</button>`}
       </div>`; }).join('')).join('');
-  const rail = [...(picks ? [['top', '⭐', 'แนะนำ']] : []), ...showCats.map((c, ci) => ['sec-' + ci, catIcon(c), c])];
+  const rail = [...(pc ? [['promo', '🎁', 'โปร']] : []), ...(picks && (recs.length || pops.length) ? [['top', '⭐', 'แนะนำ']] : []), ...showCats.map((c, ci) => ['sec-' + ci, catIcon(c), c])];
   $('menu').innerHTML = !body && !picks ? `<p class="empty">${k ? 'ไม่พบเมนูที่ค้นหา ลองคำอื่น' : 'ยังไม่มีเมนู'}</p>`
     : useRail ? `<div class="mlay"><nav class="rail" aria-label="หมวดเมนู">${rail.map(([id, ic, t]) => `<button data-jump="${id}" aria-current="${railOn === id}"><span>${ic}</span>${esc(t)}</button>`).join('')}</nav>
         <div class="mcol"><div id="top"></div>${picks}${body}</div></div>` : picks + body;
@@ -3970,7 +4037,8 @@ function renderMenu(){
 }
 function addToCart(it, opt, qty){
   const hit = cart.find(c => c.id===it.id && c.opt===opt);
-  if (hit) hit.qty += qty; else cart.push({id:it.id, name:it.name, code:it.code||'', price:it.price, qty, opt});
+  const pr = priceOf(it).p;
+  if (hit) { hit.qty += qty; hit.price = pr; } else cart.push({id:it.id, name:it.name, code:it.code||'', price:pr, qty, opt});
   renderMenu();
 }
 
@@ -3991,7 +4059,7 @@ function sheetCart(){
   if (!cart.length) return closeSheet(), renderMenu();
   openSheet(head(`ตะกร้า ${TABLE_WORD} ${esc(tbl)}`) + cart.map((c,i) =>
     `<div class="line"><div class="info"><div>${label(c)}</div>
-       <div class="opt">${c.opt ? esc(c.opt)+' · ' : ''}<span class="num">${baht(c.price)}</span></div></div>
+       <div class="opt">${c.set ? '🎁 เซ็ตโปร · ' : ''}${c.opt ? esc(c.opt)+' · ' : ''}<span class="num">${baht(c.price)}</span></div></div>
        <div class="qty"><button data-cq="-1" data-i="${i}" aria-label="ลด">−</button><b class="num">${c.qty}</b><button data-cq="1" data-i="${i}" aria-label="เพิ่ม">+</button></div></div>`).join('') +
     `<div class="total"><span>รวมรอบนี้</span><span class="num">${baht(sum(cart))}</span></div>
      ${tclosed ? `<p class="note" style="color:var(--accent);font-weight:600">โต๊ะนี้ยังไม่เปิด กด "เรียกพนักงาน" ให้มาเปิดโต๊ะก่อน แล้วค่อยกดส่ง</p>` : ''}
@@ -4045,12 +4113,14 @@ function totals(all, s){
 }
 function billRows(mine, s, edit){
   mine = mine.filter(o => o.items.length);
-  return (mine.length ? mine.map(o => (tbl ? `<div class="prog">${progress(o)}</div>` : '') +
+  const tag = c => [c.set ? '🎁 ' + esc(c.set) : '', c.hh ? '⏰ ' + esc(c.hh) : '', c.opt ? esc(c.opt) : ''].filter(Boolean).join(' · ');
+  return (mine.length ? mine.map(o => o.items.every(c => c.promo) ? o.items.map((c, i) => `<div class="line promo-line"><span class="q num"></span>
+         <div class="info"><div>${esc(c.name)}</div></div><span class="num">${baht(c.price*c.qty)}</span>${edit ? `<button class="vbtn" data-void="${esc(o.id)}" data-i="${i}" aria-label="แก้ ${esc(c.name)}">แก้</button>` : ''}</div>`).join('') : (tbl ? `<div class="prog">${progress(o)}</div>` : '') +
       `<div class="round-head"><span class="num">${time(o.createdAt)}</span>
          <span class="pill ${STATUS[o.status][1]}">${STATUS[o.status][0]}</span>
          <span class="pill n">${count(o.items)} รายการ</span></div>` +
       o.items.map((c, i) => `<div class="line"><span class="q num">${c.qty}</span>
-         <div class="info"><div>${label(c)}</div>${c.opt?`<div class="opt">${esc(c.opt)}</div>`:''}</div>
+         <div class="info"><div>${label(c)}</div>${tag(c)?`<div class="opt">${tag(c)}</div>`:''}</div>
          <span class="num">${baht(c.price*c.qty)}</span>${edit ? `<button class="vbtn" data-void="${esc(o.id)}" data-i="${i}" aria-label="แก้ ${esc(c.name)}">แก้</button>` : ''}</div>`).join('')).join('')
       : `<p class="empty">ยังไม่มีออเดอร์</p>`) + totals(mine.flatMap(o => o.items), s);
 }
@@ -4773,8 +4843,9 @@ async function attSave(b){
 
 
 /* ---------- v32: มีอะไรใหม่ + เตือนอัปเดต Code.gs ---------- */
-const APP_VERSION = 36, NEED_SERVER = 36;
+const APP_VERSION = 37, NEED_SERVER = 37;
 const CHANGELOG = [
+  [37, '20 ต.ค. 2569', ['🎁 โปรโมชั่นหน้าเมนูลูกค้า: เซ็ตราคาเดียว (กดใส่ตะกร้าได้) · ราคาพิเศษตามวันและเวลา (Happy Hour) · ประกาศ', 'ตั้งได้ที่แท็บเมนู → 🎁 โปรโมชั่น ระบบคิดราคาโปรให้เองตามเวลาไทย ครัวยังติ๊กทีละไม้ สต็อกตัดตามของจริงในเซ็ต']],
   [36, '20 ต.ค. 2569', ['🍢 เมนูชุดใหม่ 56 รายการ ราคาสำหรับร้านนั่งกินดื่ม: ไม้เขียว 15 · น้ำเงิน 22 · เหลือง 29 · แดง 39 · ทอง 59 (แท็บเมนู → นำเข้าเมนูชุดร้าน)', '🟡 เพิ่มไม้สีเหลืองและไม้ทอง', '🔒 นำเข้าเมนูแล้วเมนูแนะนำและการผูกสต็อกเดิมไม่หาย']],
   [35, '20 ต.ค. 2569', ['📄 ใบจดออเดอร์สำรองแก้เองได้: เปลี่ยนหัวกระดาษ ช่องกรอก เลือกหมวด/เมนูที่จะพิมพ์ เพิ่มรายการนอกเมนู บรรทัดว่าง จำนวนชุด และขั้นตอน แล้วกดบันทึกให้ทุกเครื่องใช้แบบเดียวกัน']],
   [34, '20 ต.ค. 2569', ['🔔 ครัวกด "เริ่มกะครัว" ครั้งเดียว เปิดเสียงเตือน และจอไม่ดับเอง', '📄 ปุ่ม "ชุดสำรองเน็ตล่ม" ที่แท็บโต๊ะ พิมพ์ใบจดออเดอร์จากเมนูจริง + QR พร้อมเพย์ + ขั้นตอนตอนเน็ตล่ม', '🗄️ ทุกคืนย้ายบิลเก่าไปชีตเก็บอัตโนมัติ ระบบไม่ช้าลงเมื่อเปิดไปนาน ๆ', '📊 นับจำนวนตรวจสลิปรายเดือน ดูได้ที่แท็บบัญชี', '⭐ ค่าเริ่มต้นแต้มใหม่ 15 แต้ม = ฟรี 5 ไม้ (คืนลูกค้า ~9.7%) และหน้าตั้งค่าบอก % ที่คืนจริงจากราคาขาย']],
@@ -4942,6 +5013,82 @@ async function saveKit(b){
   catch(e){ b.disabled = false; $('kit-err').textContent = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v35 ก่อน' : e.message === 'forbidden' ? 'เฉพาะแอดมิน/ผู้จัดการ' : 'บันทึกไม่สำเร็จ'; }
 }
 
+/* ---------- v37: จัดการโปรโมชั่น (แอดมิน/ผู้จัดการ) ---------- */
+let pr = { list: null, err: '' }, pe = null;
+const KIND_TH = { set: '🍢 เซ็ตราคาเดียว', happy: '⏰ ราคาพิเศษตามเวลา', info: '📣 ประกาศ' };
+function promoTemplate(kind){
+  if (kind === 'set') return { id: '', kind, title: 'เซ็ตแก๊ง 4 คน', desc: 'ไม้รวม + เบียร์ คุ้มกว่าสั่งแยก', emoji: '🍻', price: 0, items: [{ id: '', qty: 1 }], days: [], start: '', end: '', active: true };
+  if (kind === 'happy') return { id: '', kind, title: 'Happy Hour', desc: 'เลิกงานแวะมาก่อน ราคาพิเศษ', emoji: '🍺', price: 0, items: [{ id: '', price: 0 }], days: [1, 2, 3, 4, 5], start: '17:00', end: '19:00', active: true };
+  return { id: '', kind: 'info', title: '', desc: '', emoji: '📣', price: 0, items: [], days: [], start: '', end: '', active: true };
+}
+async function openPromos(){
+  pr = { list: null, err: '' }; sheetPromos();
+  try { pr.list = await db.promos(); } catch(e){ pr.err = e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v37 ก่อน' : e.message === 'forbidden' ? 'เฉพาะแอดมิน/ผู้จัดการ' : 'โหลดไม่ได้ ลองอีกครั้ง'; }
+  sheetPromos();
+}
+function sheetPromos(){
+  const top = head('🎁 โปรโมชั่น');
+  if (pr.err) return openSheet(top + `<p class="empty">${pr.err}</p>`);
+  if (!pr.list) return openSheet(top + '<p class="empty">กำลังโหลด…</p>');
+  openSheet(top + `<p class="note" style="margin:0 0 10px">โปรที่เปิดอยู่จะขึ้นบนสุดของหน้าเมนูลูกค้า ระบบคิดราคาโปรให้เองตามวันและเวลาที่ตั้ง</p>
+    ${pr.list.length ? pr.list.map(p => `<div class="prow-a${p.active ? '' : ' off'}"><span class="pe">${esc(p.emoji || '🎁')}</span>
+      <div class="info"><b>${esc(p.title)}</b><small>${KIND_TH[p.kind] || ''} · ${esc(promoWhen(p))}${p.kind === 'set' ? ' · ' + baht(p.price) : ''}${p.active ? (promoNow(p) ? ' · <span style="color:var(--ok)">ใช้ได้ตอนนี้</span>' : '') : ' · ปิดอยู่'}</small></div>
+      <button class="ghost ${p.active ? 'on' : ''}" data-ptoggle="${esc(p.id)}" aria-pressed="${p.active}">${p.active ? 'เปิด' : 'ปิด'}</button>
+      <button class="ghost" data-pedit="${esc(p.id)}">แก้ไข</button></div>`).join('') : '<p class="empty">ยังไม่มีโปร</p>'}
+    <div class="err" id="pr-err"></div>
+    <h3 style="margin:16px 0 6px">เพิ่มโปรใหม่</h3>
+    <div class="pnew"><button class="ghost" data-pnew="set">🍢 เซ็ตราคาเดียว<small>เช่น 20 ไม้ + เบียร์ 3 ขวด 599</small></button>
+      <button class="ghost" data-pnew="happy">⏰ ราคาพิเศษตามเวลา<small>เช่น เบียร์ 79 ช่วง 17–19 น.</small></button>
+      <button class="ghost" data-pnew="info">📣 ประกาศ<small>เช่น วันเกิดรับฟรี 5 ไม้</small></button></div>`, sheetPromos);
+}
+function sheetPromoEdit(){
+  const p = pe, food = menu.slice(), opts = sel => `<option value="">เลือกเมนู…</option>${[...new Set(food.map(m => m.category))].map(c => `<optgroup label="${esc(c)}">${food.filter(m => m.category === c).map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)} · ${m.price}</option>`).join('')}</optgroup>`).join('')}`;
+  const full = p.kind === 'set' ? p.items.reduce((a, x) => { const m = promoMenu(x.id); return a + (m ? m.price * (+x.qty || 0) : 0); }, 0) : 0;
+  openSheet(head((p.id ? 'แก้ไข' : 'เพิ่ม') + ' ' + KIND_TH[p.kind]) + `<div class="form" id="pe-form">
+    <div class="two"><label>ชื่อโปร<input type="text" id="pe-title" maxlength="60" value="${esc(p.title)}" placeholder="เช่น เซ็ตแก๊ง 4 คน"></label>
+      <label style="max-width:90px">ไอคอน<input type="text" id="pe-emoji" maxlength="8" value="${esc(p.emoji)}"></label></div>
+    <label>คำอธิบายสั้น ๆ<input type="text" id="pe-desc" maxlength="200" value="${esc(p.desc)}" placeholder="ลูกค้าเห็นใต้ชื่อโปร"></label>
+    ${p.kind === 'set' ? `<h3 style="margin:6px 0 0">ในเซ็ตมีอะไร</h3>${p.items.map((x, i) => `<div class="pxrow"><select data-pxi="${i}" aria-label="เมนู">${opts(x.id)}</select>
+        <input type="number" inputmode="numeric" min="1" max="50" data-pxq="${i}" value="${x.qty || 1}" aria-label="จำนวน"><button class="ghost danger" data-pxdel="${i}" aria-label="ลบ">✕</button></div>`).join('')}
+      <button class="ghost" data-pxadd>+ เพิ่มเมนูในเซ็ต</button>
+      <label>ราคาเซ็ต (บาท)<input type="number" inputmode="numeric" min="0" id="pe-price" value="${p.price || ''}" placeholder="เช่น 599"></label>
+      <div class="cashsum"><span>ถ้าสั่งแยก</span><b class="num">${baht(full)}</b></div>
+      ${full && p.price ? `<p class="note num" style="margin:0;color:${p.price >= full ? 'var(--accent)' : 'var(--ok)'}">${p.price >= full ? 'ราคาเซ็ตไม่ถูกกว่าสั่งแยก ลูกค้าจะไม่เห็นความคุ้ม' : `ลูกค้าประหยัด ${baht(full - p.price)} (${Math.round((full - p.price) / full * 100)}%)`}</p>` : ''}` : ''}
+    ${p.kind === 'happy' ? `<h3 style="margin:6px 0 0">เมนูและราคาพิเศษ</h3>${p.items.map((x, i) => { const m = promoMenu(x.id); return `<div class="pxrow"><select data-pxi="${i}" aria-label="เมนู">${opts(x.id)}</select>
+        <input type="number" inputmode="decimal" min="0" data-pxp="${i}" value="${x.price || ''}" placeholder="${m ? m.price : 'ราคา'}" aria-label="ราคาพิเศษ"><button class="ghost danger" data-pxdel="${i}" aria-label="ลบ">✕</button></div>`; }).join('')}
+      <button class="ghost" data-pxadd>+ เพิ่มเมนู</button>` : ''}
+    <h3 style="margin:6px 0 0">วันและเวลา</h3>
+    <div class="chips pdays">${[1, 2, 3, 4, 5, 6, 0].map(n => `<button type="button" data-pday="${n}" aria-pressed="${p.days.includes(n)}">${DAY_S[n]}</button>`).join('')}</div>
+    <p class="note" style="margin:0">ไม่เลือกวัน = ทุกวัน · เวลาว่าง = ทั้งวัน · ข้ามเที่ยงคืนได้ เช่น 22:00–02:00</p>
+    <div class="two"><label>เริ่ม<input type="time" id="pe-start" value="${esc(p.start)}"></label><label>ถึง<input type="time" id="pe-end" value="${esc(p.end)}"></label></div>
+    <label class="kchk"><input type="checkbox" id="pe-active" ${p.active ? 'checked' : ''}><span>เปิดใช้โปรนี้</span></label>
+    <div class="err" id="pe-err"></div></div>
+    <button class="primary" data-psave>บันทึก</button>
+    <div class="two" style="margin-top:8px"><button class="ghost" data-pback>กลับ</button>${p.id ? `<button class="ghost danger" data-pdel="${esc(p.id)}">ลบโปรนี้</button>` : ''}</div>`, sheetPromoEdit);
+}
+function peRead(){
+  if (!$('pe-form')) return; const v = id => $(id) ? $(id).value : '';
+  pe.title = v('pe-title').trim(); pe.emoji = v('pe-emoji').trim(); pe.desc = v('pe-desc').trim(); pe.price = +v('pe-price') || 0;
+  pe.start = v('pe-start'); pe.end = v('pe-end'); pe.active = !!($('pe-active') && $('pe-active').checked);
+  document.querySelectorAll('[data-pxi]').forEach(x => pe.items[+x.dataset.pxi].id = x.value);
+  document.querySelectorAll('[data-pxq]').forEach(x => pe.items[+x.dataset.pxq].qty = Math.max(1, Math.floor(+x.value || 1)));
+  document.querySelectorAll('[data-pxp]').forEach(x => pe.items[+x.dataset.pxp].price = +x.value || 0);
+}
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('#pe-form') && (e.target.matches('select') || e.target.matches('[data-pxq]') || e.target.id === 'pe-price')) { peRead(); sheetPromoEdit(); } });
+const promoErr = e => ({ need_title: 'ใส่ชื่อโปรก่อน', need_items: 'เลือกเมนูอย่างน้อย 1 รายการ', need_price: 'ใส่ราคาเซ็ต', forbidden: 'เฉพาะแอดมิน/ผู้จัดการ', unknown_action: 'ต้องอัปเดต Code.gs เป็น v37 ก่อน' })[e.message] || 'บันทึกไม่สำเร็จ';
+async function savePromo(b, p, fromEdit){
+  const clean = { ...p, items: (p.items || []).filter(x => x.id) };
+  if (fromEdit && p.kind === 'happy' && clean.items.some(x => { const m = promoMenu(x.id); return m && !(x.price < m.price); })) return $('pe-err').textContent = 'ราคาพิเศษต้องถูกกว่าราคาปกติ';
+  b.disabled = true;
+  try { pr.list = await db.savePromo(clean); settings = { ...settings, promos: pr.list.filter(x => x.active) }; toast('บันทึกโปรแล้ว ลูกค้าเห็นทันทีเมื่อเปิดเมนูใหม่'); sheetPromos(); }
+  catch(e){ b.disabled = false; const el = $(fromEdit ? 'pe-err' : 'pr-err'); if (el) el.textContent = promoErr(e); }
+}
+async function delPromo(b, id){
+  b.disabled = true;
+  try { pr.list = await db.deletePromo(id); settings = { ...settings, promos: pr.list.filter(x => x.active) }; toast('ลบโปรแล้ว'); sheetPromos(); }
+  catch(e){ b.disabled = false; $('pe-err').textContent = promoErr(e); }
+}
+
 let lastReceipt = '';
 // v24: ใบเสร็จย้อนหลัง
 const rcp = { list: null, q: '', err: '' };
@@ -5023,7 +5170,7 @@ function serveTickets(list){
 const serveList = () => orders.filter(o => o.status === 'ready' || partial(o));
 function renderKitchen(){
   const kit = orders.filter(o => o.status === 'new' || o.status === 'cooking'), rdy = serveList(),
-        done = orders.filter(o => o.status === 'served').slice().reverse();
+        done = orders.filter(o => o.status === 'served' && !o.items.every(c => c.promo)).slice().reverse();
   $('kit-count').textContent = `${SHOP_NAME} Kitchen`;
   $('kit-pill').textContent = `${kit.length} ออเดอร์`; $('kit-pill').hidden = !kit.length;
   $('ksub').innerHTML = [['kit','ครัว',kit.length],['rdy','พร้อมเสิร์ฟ',rdy.length],['done','เสิร์ฟแล้ว',0]].map(([k,t,n]) =>
@@ -5111,6 +5258,18 @@ document.addEventListener('click', async e => {
   else if (d.gset) { const s = sessions.find(x => x.id === d.gset); if (!s) return; const n = Math.max(0, +d.n); s.guests = n; sheetTable(s.tableNo, 'bill');
     try { await db.setGuests(s.id, n); } catch(e){ toast(e.message === 'unknown_action' ? 'ต้องอัปเดต Code.gs เป็น v30 ก่อน' : 'บันทึกจำนวนคนไม่สำเร็จ'); refresh(); } }
   else if ('sticks' in d) sheetSticks();
+  else if (d.addSet) addSet(d.addSet);
+  else if (d.setDec) { const c = cart.find(x => x.set === d.setDec); if (c) { c.qty--; if (c.qty < 1) cart.splice(cart.indexOf(c), 1); } renderMenu(); }
+  else if ('promos' in d) openPromos();
+  else if (d.pnew) { pe = promoTemplate(d.pnew); sheetPromoEdit(); }
+  else if (d.pedit) { const p = (pr.list || []).find(x => x.id === d.pedit); if (p) { pe = JSON.parse(JSON.stringify(p)); sheetPromoEdit(); } }
+  else if (d.ptoggle) { const p = (pr.list || []).find(x => x.id === d.ptoggle); if (p) savePromo(b, { ...p, active: !p.active }); }
+  else if (d.pdel) { if (b.dataset.armed) delPromo(b, d.pdel); else { b.dataset.armed = 1; b.textContent = 'กดอีกครั้งเพื่อลบ'; } }
+  else if ('pback' in d) sheetPromos();
+  else if ('pxadd' in d) { peRead(); pe.items.push(pe.kind === 'set' ? { id: '', qty: 1 } : { id: '', price: 0 }); sheetPromoEdit(); }
+  else if (d.pxdel) { peRead(); pe.items.splice(+d.pxdel, 1); sheetPromoEdit(); }
+  else if (d.pday) { peRead(); const n = +d.pday; pe.days = pe.days.includes(n) ? pe.days.filter(x => x !== n) : pe.days.concat(n).sort(); sheetPromoEdit(); }
+  else if ('psave' in d) { peRead(); savePromo(b, pe, true); }
   else if ('stkPreview' in d) { stkRead(); sheetSticks(); }
   else if ('stkSave' in d) saveSticks(b);
   else if ('mfStick' in d) { $('mf-stick').value = d.mfStick; document.querySelectorAll('[data-mf-stick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mfStick === d.mfStick)); }
@@ -5201,7 +5360,7 @@ document.addEventListener('click', async e => {
     if (tclosed) return toast('โต๊ะนี้ยังไม่เปิด กดเรียกพนักงานให้มาเปิดโต๊ะก่อน');
     if ($('cart-note')) cartNote = $('cart-note').value.trim();
     const o = { id: newId('o'), tableNo: tbl, status:'new', paid:false, createdAt: new Date().toISOString(), note: cartNote,
-                items: cart.map(({id,name,code,price,qty,opt}) => ({id,name,code,price,qty,opt,served:false})) };
+                items: cart.map(({id,name,code,price,qty,opt,set}) => ({id,name,code,price,qty,opt,served:false,...(set ? {set} : {})})) };
     const snapNote = cartNote; cartNote = '';
     const snap = cart, tmp = { ...o, queue: 0, pending: true };
     pendingOrders.push(tmp); orders = orders.concat(tmp); cart = []; renderMenu(); sheetBill(); toast('ส่งออเดอร์แล้ว 🔥');
@@ -5209,7 +5368,7 @@ document.addEventListener('click', async e => {
     catch(e){
       pendingOrders = pendingOrders.filter(x => x !== tmp); orders = orders.filter(x => x !== tmp); cart = snap.concat(cart); cartNote = snapNote; renderMenu();
       await act(() => { throw e; });
-      if (cart.length && e.message !== 'sold_out') sheetCart();
+      if (cart.length && e.message !== 'sold_out' && e.message !== 'promo_off') sheetCart();
     }
   }
   else if (d.gpick) { guestPick = +d.gpick; document.querySelectorAll('[data-gpick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.gpick === d.gpick)); const ob = document.querySelector('[data-open-table]'); if (ob) ob.textContent = `🔓 เปิดโต๊ะ (${guestPick} คน) ให้ลูกค้าสั่ง`; }
